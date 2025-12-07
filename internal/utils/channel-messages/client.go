@@ -2,6 +2,7 @@ package utils
 
 import (
 	"context"
+	"fmt"
 
 	lib "github.com/pzsp-teams/lib"
 	channelsLib "github.com/pzsp-teams/lib/channels"
@@ -35,7 +36,7 @@ func (c *ChannelMessagesClient) filterOutArchivedTeams(teams []*teamsLib.Team) [
 func (c *ChannelMessagesClient) getActiveTeams() ([]*teamsLib.Team, error) {
 	teams, err := c.teamsClient.Teams.ListMyJoined(context.TODO())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %v", ErrListingTeamsFailed, err)
 	}
 	teams = c.filterOutArchivedTeams(teams)
 	return teams, nil
@@ -46,7 +47,7 @@ func (c *ChannelMessagesClient) getChannels(teams []*teamsLib.Team) (TeamChannel
 	for _, team := range teams {
 		channels, err := c.teamsClient.Channels.ListChannels(context.TODO(), team.DisplayName)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%w: %s: %v", ErrListingChannelsFailed, team.DisplayName, err)
 		}
 		channelNames := make([]string, len(channels))
 		for i, channel := range channels {
@@ -69,7 +70,8 @@ func (c *ChannelMessagesClient) getMessagesInTimeRange(teamChannels TeamChannels
 		for _, channel := range channels {
 			messages, err := c.teamsClient.Channels.ListMessages(context.TODO(), team, channel, opts)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("%w: team=%s channel=%s: %v",
+					ErrListingMessagesFailed, team, channel, err)
 			}
 
 			for _, message := range messages {
@@ -104,4 +106,3 @@ func (c *ChannelMessagesClient) GetMessages() ([]*DisplayMessageInfo, error) {
 	}
 	return messagesInfo, nil
 }
-
