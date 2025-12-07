@@ -39,7 +39,7 @@ func (f *fakeChannelsService) ListChannels(ctx context.Context, team string) ([]
     return []*channelsLib.Channel{}, nil
 }
 
-func (f *fakeChannelsService) ListMessages(ctx context.Context, team, channel string, opts *channelsLib.ListMessagesOptions) ([]*channelsLib.Message, error) {
+func (f *fakeChannelsService) ListMessages(ctx context.Context, team string, channel string, opts *channelsLib.ListMessagesOptions) ([]*channelsLib.Message, error) {
     if f.MessagesErr != nil {
         return nil, f.MessagesErr
     }
@@ -92,13 +92,13 @@ func newFakeTeamsClientWithInterface(hasTeams, hasChannels, hasMessages bool) *f
 	if hasMessages {
 		channelsSvc.MessagesByChannel = map[string][]*channelsLib.Message{
 			"general": {
-				{Content: "Hello, world!"},
+				{Content: "Hello, world!", CreatedDateTime: time.Unix(1, 1)},
 			},
 			"party": {
-				{Content: "Party time!"},
+				{Content: "Party time!", CreatedDateTime: time.Unix(1, 1)},
 			},
 			"general B": {
-				{Content: "This is Team B."},
+				{Content: "This is Team B.", CreatedDateTime: time.Unix(1, 1)},
 			},
 		}
 	}
@@ -285,7 +285,7 @@ func TestChannelMessagesClient_FetchMessagesError(t *testing.T) {
 	teamChannels := TeamChannels{
 		"Team A": {"general"},
 	}
-	
+
 	_, err := client.getMessagesInTimeRange(teamChannels)
 	if err == nil {
 		t.Fatalf("Expected error, got nil")
