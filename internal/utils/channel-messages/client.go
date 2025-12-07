@@ -56,7 +56,9 @@ func (c *ChannelMessagesClient) getChannels(teams []*teamsLib.Team) (TeamChannel
 		for i, channel := range channels {
 			channelNames[i] = channel.Name
 		}
-		teamChannels[team.DisplayName] = channelNames
+		if len(channelNames) > 0 {
+			teamChannels[team.DisplayName] = channelNames
+		}
 	}
 	if len(teamChannels) == 0 {
 		return nil, ErrNoChannelsFound

@@ -30,24 +30,25 @@ type fakeChannelsService struct {
 }
 
 func (f *fakeChannelsService) ListChannels(ctx context.Context, team string) ([]*channelsLib.Channel, error) {
-	if f.ChannelsErr != nil {
-		return nil, f.ChannelsErr
-	}
-	if channels, ok := f.ChannelsByTeam[team]; ok {
-		return channels, nil
-	}
-	return []*channelsLib.Channel{}, nil
+    if f.ChannelsErr != nil {
+        return nil, f.ChannelsErr
+    }
+    if channels, ok := f.ChannelsByTeam[team]; ok {
+        return channels, nil
+    }
+    return []*channelsLib.Channel{}, nil
 }
 
 func (f *fakeChannelsService) ListMessages(ctx context.Context, team, channel string, opts *channelsLib.ListMessagesOptions) ([]*channelsLib.Message, error) {
-	if f.MessagesErr != nil {
-		return nil, f.MessagesErr
-	}
-	if messages, ok := f.MessagesByChannel[channel]; ok {
-		return messages, nil
-	}
-	return []*channelsLib.Message{}, nil
+    if f.MessagesErr != nil {
+        return nil, f.MessagesErr
+    }
+    if messages, ok := f.MessagesByChannel[channel]; ok {
+        return messages, nil
+    }
+    return []*channelsLib.Message{}, nil
 }
+
 
 type fakeTeamsClient struct {
 	teamsSvc    TeamsService
@@ -254,7 +255,7 @@ func TestChannelMessagesClient_GetMessages(t *testing.T) {
 func TestChannelMessagesClient_FetchTeamsError(t *testing.T) {
 	client := getNewTestChannelMessagesClientWithError()
 
-	_, err := client.GetMessages()
+	_, err := client.getActiveTeams()
 	if err == nil {
 		t.Fatalf("Expected error, got nil")
 	}
@@ -265,8 +266,11 @@ func TestChannelMessagesClient_FetchTeamsError(t *testing.T) {
 
 func TestChannelMessagesClient_FetchChannelsError(t *testing.T) {
 	client := getNewTestChannelMessagesClientWithError()
+	teams := []*teamsLib.Team{
+		{DisplayName: "Team A"},
+	}
 
-	_, err := client.GetMessages()
+	_, err := client.getChannels(teams)
 	if err == nil {
 		t.Fatalf("Expected error, got nil")
 	}
@@ -278,7 +282,11 @@ func TestChannelMessagesClient_FetchChannelsError(t *testing.T) {
 func TestChannelMessagesClient_FetchMessagesError(t *testing.T) {
 	client := getNewTestChannelMessagesClientWithError()
 
-	_, err := client.GetMessages()
+	teamChannels := TeamChannels{
+		"Team A": {"general"},
+	}
+	
+	_, err := client.getMessagesInTimeRange(teamChannels)
 	if err == nil {
 		t.Fatalf("Expected error, got nil")
 	}
