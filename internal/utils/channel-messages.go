@@ -10,7 +10,19 @@ import (
 
 type TeamChannels = map[string][]string
 
-func filterOutArchivedTeams(teams []*teamsLib.Team) []*teamsLib.Team {
+type ChannelMessagesClient struct {
+	teamsClient *lib.Client
+	TimeRange   TimeRange
+}
+
+func NewChannelMessagesClient(client *lib.Client, timeRange TimeRange) *ChannelMessagesClient {
+	return &ChannelMessagesClient{
+		teamsClient: client,
+		TimeRange:   timeRange,
+	}
+}
+
+func (c *ChannelMessagesClient) filterOutArchivedTeams(teams []*teamsLib.Team) []*teamsLib.Team {
 	activeTeams := teams[:0]
 	for _, team := range teams {
 		if !team.IsArchived {
@@ -20,19 +32,19 @@ func filterOutArchivedTeams(teams []*teamsLib.Team) []*teamsLib.Team {
 	return activeTeams
 }
 
-func getActiveTeams(client *lib.Client) ([]*teamsLib.Team, error) {
-	teams, err := client.Teams.ListMyJoined(context.TODO())
+func (c *ChannelMessagesClient) getActiveTeams() ([]*teamsLib.Team, error) {
+	teams, err := c.teamsClient.Teams.ListMyJoined(context.TODO())
 	if err != nil {
 		return nil, err
 	}
-	teams = filterOutArchivedTeams(teams)
+	teams = c.filterOutArchivedTeams(teams)
 	return teams, nil
 }
 
-func getChannels(client *lib.Client, teams []*teamsLib.Team) (TeamChannels, error) {
+func (c *ChannelMessagesClient) getChannels(teams []*teamsLib.Team) (TeamChannels, error) {
 	teamChannels := make(TeamChannels)
 	for _, team := range teams {
-		channels, err := client.Channels.ListChannels(context.TODO(), team.DisplayName)
+		channels, err := c.teamsClient.Channels.ListChannels(context.TODO(), team.DisplayName)
 		if err != nil {
 			return nil, err
 		}
@@ -45,7 +57,7 @@ func getChannels(client *lib.Client, teams []*teamsLib.Team) (TeamChannels, erro
 	return teamChannels, nil
 }
 
-func getMessagesInTimeRange(client *lib.Client, teamChannels TeamChannels, timeRange TimeRange) ([]*DisplayMessageInfo, error) {
+func (c *ChannelMessagesClient) getMessagesInTimeRange(teamChannels TeamChannels) ([]*DisplayMessageInfo, error) {
 	var messagesInfo []*DisplayMessageInfo
 	top := int32(100)
 	opts := &channelsLib.ListMessagesOptions{
@@ -55,13 +67,13 @@ func getMessagesInTimeRange(client *lib.Client, teamChannels TeamChannels, timeR
 
 	for team, channels := range teamChannels {
 		for _, channel := range channels {
-			messages, err := client.Channels.ListMessages(context.TODO(), team, channel, opts)
+			messages, err := c.teamsClient.Channels.ListMessages(context.TODO(), team, channel, opts)
 			if err != nil {
 				return nil, err
 			}
 
 			for _, message := range messages {
-				if message.CreatedDateTime.After(timeRange.Start) && message.CreatedDateTime.Before(timeRange.End) {
+				if message.CreatedDateTime.After(c.TimeRange.Start) && message.CreatedDateTime.Before(c.TimeRange.End) {
 					messagesInfo = append(messagesInfo, &DisplayMessageInfo{
 						TeamName:    team,
 						ChannelName: channel,
