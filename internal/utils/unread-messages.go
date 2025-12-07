@@ -5,6 +5,7 @@ import (
 
 	lib "github.com/pzsp-teams/lib"
 	teamsLib "github.com/pzsp-teams/lib/teams"
+	channelsLib "github.com/pzsp-teams/lib/channels"
 )
 
 func filterOutArchivedTeams(teams []*teamsLib.Team) []*teamsLib.Team {
@@ -26,4 +27,15 @@ func getActiveTeams(client *lib.Client) ([]*teamsLib.Team, error) {
 	return teams, nil
 }
 
-// func getChannels(client )
+func getChannels(client *lib.Client, teams []*teamsLib.Team) (map[*teamsLib.Team][]*channelsLib.Channel, error) {
+	teamChannels := make(map[*teamsLib.Team][]*channelsLib.Channel);
+	for _, team := range teams {
+		channels, err := client.Channels.ListChannels(context.TODO(), team.DisplayName)
+		if err != nil {
+			return nil, err
+		}
+		teamChannels[team] = channels
+	}
+	return teamChannels, nil
+}
+
