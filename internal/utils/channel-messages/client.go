@@ -9,13 +9,15 @@ import (
 	teamsLib "github.com/pzsp-teams/lib/teams"
 )
 
-type TeamChannels = map[string][]string
+type teamChannels = map[string][]string
 
+// ChannelMessagesClient will be used later
 type ChannelMessagesClient struct {
-	teamsClient TeamsClient
+	teamsClient teamsClient
 	TimeRange   TimeRange
 }
 
+// NewChannelMessagesClient will be used later
 func NewChannelMessagesClient(client *lib.Client, timeRange TimeRange) *ChannelMessagesClient {
 	return &ChannelMessagesClient{
 		teamsClient: wrapRealClient(client),
@@ -34,7 +36,7 @@ func (c *ChannelMessagesClient) filterOutArchivedTeams(teams []*teamsLib.Team) [
 }
 
 func (c *ChannelMessagesClient) getActiveTeams() ([]*teamsLib.Team, error) {
-	teams, err := c.teamsClient.Teams().ListMyJoined(context.TODO())
+	teams, err := c.teamsClient.teams().ListMyJoined(context.TODO())
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrListingTeamsFailed, err)
 	}
@@ -45,10 +47,10 @@ func (c *ChannelMessagesClient) getActiveTeams() ([]*teamsLib.Team, error) {
 	return teams, nil
 }
 
-func (c *ChannelMessagesClient) getChannels(teams []*teamsLib.Team) (TeamChannels, error) {
-	teamChannels := make(TeamChannels)
+func (c *ChannelMessagesClient) getChannels(teams []*teamsLib.Team) (teamChannels, error) {
+	teamChannels := make(teamChannels)
 	for _, team := range teams {
-		channels, err := c.teamsClient.Channels().ListChannels(context.TODO(), team.DisplayName)
+		channels, err := c.teamsClient.channels().ListChannels(context.TODO(), team.DisplayName)
 		if err != nil {
 			return nil, fmt.Errorf("%w: %s: %v", ErrListingChannelsFailed, team.DisplayName, err)
 		}
@@ -66,7 +68,7 @@ func (c *ChannelMessagesClient) getChannels(teams []*teamsLib.Team) (TeamChannel
 	return teamChannels, nil
 }
 
-func (c *ChannelMessagesClient) getMessagesInTimeRange(teamChannels TeamChannels) ([]*DisplayMessageInfo, error) {
+func (c *ChannelMessagesClient) getMessagesInTimeRange(teamChannels teamChannels) ([]*DisplayMessageInfo, error) {
 	var messagesInfo []*DisplayMessageInfo
 	top := int32(100)
 	opts := &channelsLib.ListMessagesOptions{
@@ -76,7 +78,7 @@ func (c *ChannelMessagesClient) getMessagesInTimeRange(teamChannels TeamChannels
 
 	for team, channels := range teamChannels {
 		for _, channel := range channels {
-			messages, err := c.teamsClient.Channels().ListMessages(context.TODO(), team, channel, opts)
+			messages, err := c.teamsClient.channels().ListMessages(context.TODO(), team, channel, opts)
 			if err != nil {
 				return nil, fmt.Errorf("%w: team=%s channel=%s: %v",
 					ErrListingMessagesFailed, team, channel, err)
@@ -97,6 +99,7 @@ func (c *ChannelMessagesClient) getMessagesInTimeRange(teamChannels TeamChannels
 	return messagesInfo, nil
 }
 
+// GetMessages will be used later
 func (c *ChannelMessagesClient) GetMessages() ([]*DisplayMessageInfo, error) {
 	teams, err := c.getActiveTeams()
 	if err != nil {

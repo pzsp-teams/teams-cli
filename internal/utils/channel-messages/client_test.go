@@ -30,36 +30,35 @@ type fakeChannelsService struct {
 }
 
 func (f *fakeChannelsService) ListChannels(ctx context.Context, team string) ([]*channelsLib.Channel, error) {
-    if f.ChannelsErr != nil {
-        return nil, f.ChannelsErr
-    }
-    if channels, ok := f.ChannelsByTeam[team]; ok {
-        return channels, nil
-    }
-    return []*channelsLib.Channel{}, nil
+	if f.ChannelsErr != nil {
+		return nil, f.ChannelsErr
+	}
+	if channels, ok := f.ChannelsByTeam[team]; ok {
+		return channels, nil
+	}
+	return []*channelsLib.Channel{}, nil
 }
 
-func (f *fakeChannelsService) ListMessages(ctx context.Context, team string, channel string, opts *channelsLib.ListMessagesOptions) ([]*channelsLib.Message, error) {
-    if f.MessagesErr != nil {
-        return nil, f.MessagesErr
-    }
-    if messages, ok := f.MessagesByChannel[channel]; ok {
-        return messages, nil
-    }
-    return []*channelsLib.Message{}, nil
+func (f *fakeChannelsService) ListMessages(ctx context.Context, team, channel string, opts *channelsLib.ListMessagesOptions) ([]*channelsLib.Message, error) {
+	if f.MessagesErr != nil {
+		return nil, f.MessagesErr
+	}
+	if messages, ok := f.MessagesByChannel[channel]; ok {
+		return messages, nil
+	}
+	return []*channelsLib.Message{}, nil
 }
-
 
 type fakeTeamsClient struct {
-	teamsSvc    TeamsService
-	channelsSvc ChannelsService
+	teamsSvc    teamsService
+	channelsSvc channelsService
 }
 
-func (f *fakeTeamsClient) Teams() TeamsService {
+func (f *fakeTeamsClient) teams() teamsService {
 	return f.teamsSvc
 }
 
-func (f *fakeTeamsClient) Channels() ChannelsService {
+func (f *fakeTeamsClient) channels() channelsService {
 	return f.channelsSvc
 }
 
@@ -282,7 +281,7 @@ func TestChannelMessagesClient_FetchChannelsError(t *testing.T) {
 func TestChannelMessagesClient_FetchMessagesError(t *testing.T) {
 	client := getNewTestChannelMessagesClientWithError()
 
-	teamChannels := TeamChannels{
+	teamChannels := teamChannels{
 		"Team A": {"general"},
 	}
 

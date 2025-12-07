@@ -8,16 +8,16 @@ import (
 	teamsLib "github.com/pzsp-teams/lib/teams"
 )
 
-type TeamsClient interface {
-	Teams() TeamsService
-	Channels() ChannelsService
+type teamsClient interface {
+	teams() teamsService
+	channels() channelsService
 }
 
-type TeamsService interface {
+type teamsService interface {
 	ListMyJoined(ctx context.Context) ([]*teamsLib.Team, error)
 }
 
-type ChannelsService interface {
+type channelsService interface {
 	ListChannels(ctx context.Context, team string) ([]*channelsLib.Channel, error)
 	ListMessages(ctx context.Context, team, channel string, opts *channelsLib.ListMessagesOptions) ([]*channelsLib.Message, error)
 }
@@ -26,14 +26,14 @@ type clientAdapter struct {
 	client *lib.Client
 }
 
-func (c *clientAdapter) Teams() TeamsService {
+func (c *clientAdapter) teams() teamsService {
 	return c.client.Teams
 }
 
-func (c *clientAdapter) Channels() ChannelsService {
+func (c *clientAdapter) channels() channelsService {
 	return c.client.Channels
 }
 
-func wrapRealClient(client *lib.Client) TeamsClient {
+func wrapRealClient(client *lib.Client) teamsClient {
 	return &clientAdapter{client}
 }

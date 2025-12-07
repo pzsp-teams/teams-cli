@@ -4,6 +4,7 @@ import (
 	"errors"
 )
 
+// ErrListingTeamsFailed will be used later
 var (
 	ErrListingTeamsFailed    = errors.New("listing teams failed")
 	ErrListingChannelsFailed = errors.New("listing channels failed")
