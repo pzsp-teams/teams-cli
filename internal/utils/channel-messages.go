@@ -86,3 +86,22 @@ func (c *ChannelMessagesClient) getMessagesInTimeRange(teamChannels TeamChannels
 
 	return messagesInfo, nil
 }
+
+func (c *ChannelMessagesClient) GetMessages() ([]*DisplayMessageInfo, error) {
+	teams, err := c.getActiveTeams()
+	if err != nil {
+		return nil, err
+	}
+	// TODO: Apply Teams filters here
+	teamChannels, err := c.getChannels(teams)
+	if err != nil {
+		return nil, err
+	}
+	//TODO: Apply Channels filters here
+	messagesInfo, err := c.getMessagesInTimeRange(teamChannels)
+	if err != nil {
+		return nil, err
+	}
+	return messagesInfo, nil
+}
+
