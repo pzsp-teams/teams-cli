@@ -121,4 +121,10 @@ func getNewTestChannelMessagesClient(hasTeams, hasChannels, hasMessages bool) *C
 
 // Actual tests
 
+// func TestChannelMessagesClient_NoTeams(t *testing.T) {
+// 	client := getNewTestChannelMessagesClient(false, false, false)
+
+// 	teams, err := client.getActiveTeams()
+
+
 

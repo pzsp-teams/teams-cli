@@ -39,6 +39,9 @@ func (c *ChannelMessagesClient) getActiveTeams() ([]*teamsLib.Team, error) {
 		return nil, fmt.Errorf("%w: %v", ErrListingTeamsFailed, err)
 	}
 	teams = c.filterOutArchivedTeams(teams)
+	if len(teams) == 0 {
+		return nil, ErrNoTeamsFound
+	}
 	return teams, nil
 }
 
@@ -54,6 +57,9 @@ func (c *ChannelMessagesClient) getChannels(teams []*teamsLib.Team) (TeamChannel
 			channelNames[i] = channel.Name
 		}
 		teamChannels[team.DisplayName] = channelNames
+	}
+	if len(teamChannels) == 0 {
+		return nil, ErrNoChannelsFound
 	}
 	return teamChannels, nil
 }
