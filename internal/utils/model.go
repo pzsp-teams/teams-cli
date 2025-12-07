@@ -1,12 +1,18 @@
 package utils
 
 import (
+	"time"
+
 	"github.com/pzsp-teams/lib/channels"
-	"github.com/pzsp-teams/lib/teams"
 )
 
+type TimeRange struct {
+	Start time.Time
+	End   time.Time
+}
+
 type DisplayMessageInfo struct {
-	Team         *teams.Team
-	Channel      *channels.Channel
-	Message 	 *channels.Message
+	TeamName    string
+	ChannelName string
+	Message     *channels.Message
 }
