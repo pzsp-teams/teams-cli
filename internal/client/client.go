@@ -3,12 +3,13 @@ package client
 import (
 	"context"
 
+	"github.com/pzsp-teams/cli/internal/messaging"
 	"github.com/pzsp-teams/lib"
 )
 
-// TeamsClient wraps the library client
+// TeamsClient aggregates service wrappers for the Teams API
 type TeamsClient struct {
-	*lib.Client
+	ChannelSender messaging.Sender
 }
 
 // NewTeamsClient creates a new TeamsClient by constructing the underlying library client
@@ -19,6 +20,6 @@ func NewTeamsClient(ctx context.Context, authConfig *lib.AuthConfig, senderConfi
 	}
 
 	return &TeamsClient{
-		Client: libClient,
+		ChannelSender: messaging.NewChannelSender(libClient.Channels),
 	}, nil
 }

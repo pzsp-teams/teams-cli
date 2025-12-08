@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/pzsp-teams/cli/internal/client"
 	"github.com/pzsp-teams/cli/internal/initializers"
 	"github.com/pzsp-teams/lib/channels"
 )
@@ -16,12 +15,29 @@ type SendResult struct {
 	Error      error
 }
 
+// Sender defines the interface for sending messages to channels
+type Sender interface {
+	SendToChannels(ctx context.Context, teamRef string, messages map[string]string) []SendResult
+}
+
+// ChannelSender wraps the channels service from the library
+type ChannelSender struct {
+	channelService *channels.Service
+}
+
+// NewChannelSender creates a new ChannelSender with the provided channels service
+func NewChannelSender(channelService *channels.Service) *ChannelSender {
+	return &ChannelSender{
+		channelService: channelService,
+	}
+}
+
 // SendToChannels sends messages to multiple channels within a team
 //
 // teamRef: team name or ID
 // messages: map of channel reference (name or ID) to message content
 // Returns a slice of SendResult containing the outcome for each channel
-func SendToChannels(ctx context.Context, c *client.TeamsClient, teamRef string, messages map[string]string) []SendResult {
+func (s *ChannelSender) SendToChannels(ctx context.Context, teamRef string, messages map[string]string) []SendResult {
 	results := make([]SendResult, 0, len(messages))
 	logger := initializers.Logger
 
@@ -43,7 +59,7 @@ func SendToChannels(ctx context.Context, c *client.TeamsClient, teamRef string, 
 			"team", teamRef,
 			"channel", channelRef)
 
-		msg, err := c.Channels.SendMessage(ctx, teamRef, channelRef, messageBody)
+		msg, err := s.channelService.SendMessage(ctx, teamRef, channelRef, messageBody)
 		if err != nil {
 			logger.Error("Failed to send message",
 				"team", teamRef,

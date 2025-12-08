@@ -8,7 +8,6 @@ import (
 	"github.com/pzsp-teams/cli/internal/client"
 	"github.com/pzsp-teams/cli/internal/initializers"
 	"github.com/pzsp-teams/cli/internal/logger"
-	"github.com/pzsp-teams/cli/internal/messaging"
 	"github.com/pzsp-teams/cli/internal/templates"
 )
 
@@ -90,7 +89,7 @@ func bulkMessageDemo() {
 	}
 
 	teamName := "pzsp2"
-	results := messaging.SendToChannels(ctx, teamsClient, teamName, messages)
+	results := teamsClient.ChannelSender.SendToChannels(ctx, teamName, messages)
 
 	successCount := 0
 	for _, result := range results {
