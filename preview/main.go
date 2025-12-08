@@ -1,11 +1,15 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
+	"github.com/pzsp-teams/cli/internal/client"
 	"github.com/pzsp-teams/cli/internal/initializers"
 	"github.com/pzsp-teams/cli/internal/logger"
+	"github.com/pzsp-teams/cli/internal/messaging"
+	"github.com/pzsp-teams/cli/internal/templates"
 )
 
 func init() {
@@ -38,7 +42,74 @@ func init() {
 }
 
 func main() {
-	charmDemo()
+	bulkMessageDemo()
+}
+
+func bulkMessageDemo() {
+	log := initializers.Logger
+	ctx := context.TODO()
+
+	dataFile, err := os.Open("data.yaml")
+	if err != nil {
+		log.Error("Failed to open data.yaml", "error", err)
+		os.Exit(1)
+	}
+
+	templateFile, err := os.Open("message.txt")
+	if err != nil {
+		_ = dataFile.Close()
+		log.Error("Failed to open message.txt", "error", err)
+		os.Exit(1)
+	}
+
+	parser := &templates.YAMLParser{}
+	messageParser, err := templates.NewMessageParser(templateFile, dataFile, parser)
+	_ = templateFile.Close()
+	_ = dataFile.Close()
+	if err != nil {
+		log.Error("Failed to create message parser", "error", err)
+		os.Exit(1)
+	}
+
+	messages, err := messageParser.Parse()
+	if err != nil {
+		log.Error("Failed to render messages", "error", err)
+		os.Exit(1)
+	}
+
+	for recipient, message := range messages {
+		log.Debug("Rendered message", "recipient", recipient, "content", message)
+	}
+
+	senderConfig := newSenderConfig()
+	authConfig := loadAuthConfig()
+	teamsClient, err := client.NewTeamsClient(ctx, authConfig, senderConfig)
+	if err != nil {
+		log.Error("Error creating Teams client", "error", err)
+		os.Exit(1)
+	}
+
+	teamName := "pzsp2"
+	results := messaging.SendToChannels(ctx, teamsClient, teamName, messages)
+
+	successCount := 0
+	for _, result := range results {
+		if result.Error == nil {
+			successCount++
+			log.Info("Message sent successfully",
+				"channel", result.ChannelRef,
+				"message_id", result.Message.ID)
+		} else {
+			log.Error("Failed to send message",
+				"channel", result.ChannelRef,
+				"error", result.Error)
+		}
+	}
+
+	log.Info("Bulk message demo completed",
+		"total", len(results),
+		"successful", successCount,
+		"failed", len(results)-successCount)
 }
 
 func charmDemo() {

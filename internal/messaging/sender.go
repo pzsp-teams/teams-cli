@@ -34,7 +34,6 @@ func SendToChannels(ctx context.Context, c *client.TeamsClient, teamRef string, 
 			ChannelRef: channelRef,
 		}
 
-		// Wrap message in MessageBody type from library
 		messageBody := channels.MessageBody{
 			Content:     content,
 			ContentType: channels.MessageContentTypeHTML,
@@ -44,7 +43,6 @@ func SendToChannels(ctx context.Context, c *client.TeamsClient, teamRef string, 
 			"team", teamRef,
 			"channel", channelRef)
 
-		// Send message using library's SendMessage method through the embedded client
 		msg, err := c.Channels.SendMessage(ctx, teamRef, channelRef, messageBody)
 		if err != nil {
 			logger.Error("Failed to send message",

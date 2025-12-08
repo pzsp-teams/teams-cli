@@ -1,0 +1,4 @@
+Hello {{.name}}!
+
+Your order #{{.order}} is ready.
+Thank you!
