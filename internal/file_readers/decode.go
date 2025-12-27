@@ -72,7 +72,7 @@ func NewCSVDecoder(r io.Reader) *CSVDecoder {
 func (d *CSVDecoder) Decode(v any) error {
 	dst, ok := v.(*map[string]string)
 	if !ok {
-		return fmt.Errorf("CSVMapDecoder: expected *map[string]string, got %T", v)
+		return fmt.Errorf("CSVDecoder: expected *map[string]string, got %T", v)
 	}
 	if !d.headerLoaded {
 		header, err := d.r.Read()
@@ -80,7 +80,7 @@ func (d *CSVDecoder) Decode(v any) error {
 			return io.EOF
 		}
 		if err != nil {
-			return fmt.Errorf("CSVMapDecoder: cannot read csv header: %w", err)
+			return fmt.Errorf("CSVDecoder: cannot read csv header: %w", err)
 		}
 		d.header = header
 		d.headerLoaded = true
@@ -88,7 +88,7 @@ func (d *CSVDecoder) Decode(v any) error {
 	row, err := d.r.Read()
 	if err != nil {
 		if err == csv.ErrFieldCount {
-			return fmt.Errorf("CSVMapDecoder: invalid field count: %w", err)
+			return fmt.Errorf("CSVDecoder: invalid field count: %w", err)
 		}
 		return err
 	}
