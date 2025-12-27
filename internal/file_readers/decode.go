@@ -36,12 +36,21 @@ func DecodeTOML(r io.Reader, v any) error {
 
 // DecodeCSV decodes CSV data from the reader into the provided structure
 func DecodeCSV(r io.Reader, v any) error {
-	err := NewCSVDecoder(r).Decode(v)
-	if err == io.EOF{
-		return io.EOF
-	} 
-	if err != nil {
-		return fmt.Errorf(decodeFailedTemplate, CSV, err)
+	dst, ok := v.(*[]map[string]string)
+	if !ok {
+		return fmt.Errorf("DecodeCSV: expected *[]map[string]string, got %T", v)
+	}	
+	decoder := NewCSVDecoder(r)
+	for {
+		var record map[string]string
+		err := decoder.Decode(&record)
+		if err == io.EOF{
+			break
+		} 
+		if err != nil {
+			return fmt.Errorf(decodeFailedTemplate, CSV, err)
+		}
+		*dst = append(*dst, record)
 	}
 	return nil
 }
@@ -67,6 +76,9 @@ func (d *CSVDecoder) Decode(v any) error {
 	}
 	if !d.headerLoaded {
 		header, err := d.r.Read()
+		if err == io.EOF {
+			return io.EOF
+		}
 		if err != nil {
 			return fmt.Errorf("CSVMapDecoder: cannot read csv header: %w", err)
 		}
