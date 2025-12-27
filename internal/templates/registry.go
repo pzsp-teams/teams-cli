@@ -11,32 +11,32 @@ import (
 
 // Registry manages available parsers for different file formats
 type Registry struct {
-	parsers map[string]file_readers.Parser
+	parsers map[string]file_readers.DecodeFunc
 }
 
 // NewParserRegistry creates a new registry with default parsers
 func NewParserRegistry() *Registry {
 	registry := &Registry{
-		parsers: make(map[string]file_readers.Parser),
+		parsers: make(map[string]file_readers.DecodeFunc),
 	}
 
-	registry.Register("json", &file_readers.JSONParser{})
-	registry.Register("yaml", &file_readers.YAMLParser{})
-	registry.Register("yml", &file_readers.YAMLParser{})
-	registry.Register("toml", &file_readers.TOMLParser{})
+	registry.Register("json", file_readers.DecodeJSON)
+	registry.Register("yaml", file_readers.DecodeYAML)
+	registry.Register("yml", file_readers.DecodeYAML)
+	registry.Register("toml", file_readers.DecodeTOML)
 
 	initializers.Logger.Info("Parser registry initialized", "supported_formats", registry.SupportedFormats())
 	return registry
 }
 
 // Register adds a parser for a specific file extension
-func (r *Registry) Register(ext string, parser file_readers.Parser) {
+func (r *Registry) Register(ext string, parser file_readers.DecodeFunc) {
 	normalizedExt := strings.ToLower(ext)
 	r.parsers[normalizedExt] = parser
 }
 
 // GetParser returns a parser for the given file extension
-func (r *Registry) GetParser(filename string) (file_readers.Parser, error) {
+func (r *Registry) GetParser(filename string) (file_readers.DecodeFunc, error) {
 	ext := strings.TrimPrefix(strings.ToLower(filepath.Ext(filename)), ".")
 
 	parser, ok := r.parsers[ext]

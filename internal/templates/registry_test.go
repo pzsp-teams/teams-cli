@@ -3,6 +3,7 @@ package templates
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	"github.com/pzsp-teams/cli/internal/file_readers"
@@ -45,10 +46,10 @@ func TestRegistry_ParseJSONFile(t *testing.T) {
 		t.Fatalf("Failed to open test file: %v", err)
 	}
 	defer closeFile(t, file)
-
-	messages, err := parser.Parse(file)
-	if err != nil {
-		t.Fatalf("Parser.Parse() unexpected error: %v", err)
+	messages := make(map[string]file_readers.TemplateData)
+	messagesErr := parser(file, &messages)
+	if messagesErr != nil {
+		t.Fatalf("Parser.Parse() unexpected error: %v", messagesErr)
 	}
 
 	if len(messages) != 2 {
@@ -92,10 +93,10 @@ channel2:
 		t.Fatalf("Failed to open test file: %v", err)
 	}
 	defer closeFile(t, file)
-
-	messages, err := parser.Parse(file)
-	if err != nil {
-		t.Fatalf("Parser.Parse() unexpected error: %v", err)
+	messages := make(map[string]file_readers.TemplateData)
+	messagesErr := parser(file, messages)
+	if messagesErr != nil {
+		t.Fatalf("Parser.Parse() unexpected error: %v", messagesErr)
 	}
 
 	if len(messages) != 2 {
@@ -138,9 +139,10 @@ channel2:
 	}
 	defer closeFile(t, file)
 
-	messages, err := parser.Parse(file)
-	if err != nil {
-		t.Fatalf("Parser.Parse() unexpected error: %v", err)
+	messages := make(map[string]file_readers.TemplateData)
+	messagesErr := parser(file, messages)
+	if messagesErr != nil {
+		t.Fatalf("Parser.Parse() unexpected error: %v", messagesErr)
 	}
 
 	if len(messages) != 2 {
@@ -182,9 +184,10 @@ email = "bob@example.com"
 	}
 	defer closeFile(t, file)
 
-	messages, err := parser.Parse(file)
-	if err != nil {
-		t.Fatalf("Parser.Parse() unexpected error: %v", err)
+	messages := make(map[string]file_readers.TemplateData)
+	messagesErr := parser(file, &messages)
+	if messagesErr != nil {
+		t.Fatalf("Parser.Parse() unexpected error: %v", messagesErr)
 	}
 
 	if len(messages) != 2 {
@@ -245,7 +248,7 @@ func TestRegistry_CustomParser(t *testing.T) {
 
 	registry := NewParserRegistry()
 
-	customParser := &file_readers.JSONParser{}
+	customParser := file_readers.DecodeJSON
 	registry.Register("custom", customParser)
 
 	parser, err := registry.GetParser(filePath)
@@ -253,7 +256,7 @@ func TestRegistry_CustomParser(t *testing.T) {
 		t.Fatalf("Registry.GetParser() unexpected error: %v", err)
 	}
 
-	if parser != customParser {
+	if reflect.ValueOf(parser).Pointer() != reflect.ValueOf(customParser).Pointer() {
 		t.Error("Registry.GetParser() did not return registered custom parser")
 	}
 }

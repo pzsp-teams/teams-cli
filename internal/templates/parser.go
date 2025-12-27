@@ -21,14 +21,15 @@ type TemplateParser struct {
 
 // NewMessageParser returns a MessageParser with given config.
 // It parses the template and data immediately, storing the parsed objects.
-func NewMessageParser(templateReader, dataReader io.Reader, dataParser file_readers.Parser) (*TemplateParser, error) {
+func NewMessageParser(templateReader, dataReader io.Reader, dataParser file_readers.DecodeFunc) (*TemplateParser, error) {
 	tmpl, err := readTemplate(templateReader)
 	if err != nil {
 		// readTemplate already logs and wraps the error
 		return nil, err
 	}
-
-	recipients, err := dataParser.Parse(dataReader)
+	
+	recipients := make(map[string]file_readers.TemplateData)
+	err = dataParser(dataReader, &recipients)
 	if err != nil {
 		initializers.Logger.Error(errDataParseFailed.Error(), "error", err)
 		return nil, fmt.Errorf("%w: %w", errDataParseFailed, err)
