@@ -10,9 +10,6 @@ var (
 
 	// Data parsing errors
 	errDataParseFailed  = errors.New("failed to parse message data")
-	errJSONDecodeFailed = errors.New("failed to decode JSON data")
-	errYAMLDecodeFailed = errors.New("failed to decode YAML data")
-	errTOMLDecodeFailed = errors.New("failed to decode TOML data")
 
 	// Registry errors
 	errNoParserRegistered = errors.New("no parser registered for extension")

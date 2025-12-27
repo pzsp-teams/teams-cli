@@ -3,6 +3,8 @@ package templates
 import (
 	"strings"
 	"testing"
+
+	"github.com/pzsp-teams/cli/internal/file_readers"
 )
 
 func TestMessageParser_JSONFormatMultipleRecipients(t *testing.T) {
@@ -21,7 +23,7 @@ func TestMessageParser_JSONFormatMultipleRecipients(t *testing.T) {
 	tmplReader := strings.NewReader(template)
 	dataReader := strings.NewReader(data)
 
-	mp, err := NewMessageParser(tmplReader, dataReader, &JSONParser{})
+	mp, err := NewMessageParser(tmplReader, dataReader, &file_readers.JSONParser{})
 	if err != nil {
 		t.Fatalf("NewMessageParser() unexpected error: %v", err)
 	}
@@ -78,7 +80,7 @@ See you there!`
 	tmplReader := strings.NewReader(template)
 	dataReader := strings.NewReader(data)
 
-	mp, err := NewMessageParser(tmplReader, dataReader, &JSONParser{})
+	mp, err := NewMessageParser(tmplReader, dataReader, &file_readers.JSONParser{})
 	if err != nil {
 		t.Fatalf("NewMessageParser() unexpected error: %v", err)
 	}
@@ -120,7 +122,7 @@ bob:
 	tmplReader := strings.NewReader(template)
 	dataReader := strings.NewReader(data)
 
-	mp, err := NewMessageParser(tmplReader, dataReader, &YAMLParser{})
+	mp, err := NewMessageParser(tmplReader, dataReader, &file_readers.YAMLParser{})
 	if err != nil {
 		t.Fatalf("NewMessageParser() unexpected error: %v", err)
 	}
@@ -163,7 +165,7 @@ name = "Bob"
 	tmplReader := strings.NewReader(template)
 	dataReader := strings.NewReader(data)
 
-	mp, err := NewMessageParser(tmplReader, dataReader, &TOMLParser{})
+	mp, err := NewMessageParser(tmplReader, dataReader, &file_readers.TOMLParser{})
 	if err != nil {
 		t.Fatalf("NewMessageParser() unexpected error: %v", err)
 	}
@@ -200,7 +202,7 @@ func TestMessageParser_InvalidTemplateSyntax(t *testing.T) {
 	tmplReader := strings.NewReader(template)
 	dataReader := strings.NewReader(data)
 
-	_, err := NewMessageParser(tmplReader, dataReader, &JSONParser{})
+	_, err := NewMessageParser(tmplReader, dataReader, &file_readers.JSONParser{})
 
 	if err == nil {
 		t.Error("NewMessageParser() expected error for invalid template syntax, got nil")
@@ -214,7 +216,7 @@ func TestMessageParser_InvalidJSONData(t *testing.T) {
 	tmplReader := strings.NewReader(template)
 	dataReader := strings.NewReader(data)
 
-	_, err := NewMessageParser(tmplReader, dataReader, &JSONParser{})
+	_, err := NewMessageParser(tmplReader, dataReader, &file_readers.JSONParser{})
 
 	if err == nil {
 		t.Error("NewMessageParser() expected error for invalid JSON data, got nil")
@@ -232,7 +234,7 @@ func TestMessageParser_InvalidYAMLData(t *testing.T) {
 	tmplReader := strings.NewReader(template)
 	dataReader := strings.NewReader(data)
 
-	_, err := NewMessageParser(tmplReader, dataReader, &YAMLParser{})
+	_, err := NewMessageParser(tmplReader, dataReader, &file_readers.YAMLParser{})
 
 	if err == nil {
 		t.Error("NewMessageParser() expected error for invalid YAML data, got nil")
@@ -249,7 +251,7 @@ email = invalid toml without quotes
 	tmplReader := strings.NewReader(template)
 	dataReader := strings.NewReader(data)
 
-	_, err := NewMessageParser(tmplReader, dataReader, &TOMLParser{})
+	_, err := NewMessageParser(tmplReader, dataReader, &file_readers.TOMLParser{})
 
 	if err == nil {
 		t.Error("NewMessageParser() expected error for invalid TOML data, got nil")
@@ -263,7 +265,7 @@ func TestMessageParser_MissingPlaceholderInData(t *testing.T) {
 	tmplReader := strings.NewReader(template)
 	dataReader := strings.NewReader(data)
 
-	mp, err := NewMessageParser(tmplReader, dataReader, &JSONParser{})
+	mp, err := NewMessageParser(tmplReader, dataReader, &file_readers.JSONParser{})
 	if err != nil {
 		t.Fatalf("NewMessageParser() unexpected error: %v", err)
 	}
@@ -278,7 +280,7 @@ func TestMessageParser_EmptyData(t *testing.T) {
 	tmplReader := strings.NewReader("Hello {{.name}}!")
 	dataReader := strings.NewReader(`{}`)
 
-	mp, err := NewMessageParser(tmplReader, dataReader, &JSONParser{})
+	mp, err := NewMessageParser(tmplReader, dataReader, &file_readers.JSONParser{})
 	if err != nil {
 		t.Fatalf("NewMessageParser() unexpected error: %v", err)
 	}
@@ -304,7 +306,7 @@ func TestMessageParser_PlainTextWithCRLF(t *testing.T) {
 	tmplReader := strings.NewReader(template)
 	dataReader := strings.NewReader(data)
 
-	mp, err := NewMessageParser(tmplReader, dataReader, &JSONParser{})
+	mp, err := NewMessageParser(tmplReader, dataReader, &file_readers.JSONParser{})
 	if err != nil {
 		t.Fatalf("NewMessageParser() unexpected error: %v", err)
 	}
@@ -333,7 +335,7 @@ func TestMessageParser_HTMLContentPreserved(t *testing.T) {
 	tmplReader := strings.NewReader(template)
 	dataReader := strings.NewReader(data)
 
-	mp, err := NewMessageParser(tmplReader, dataReader, &JSONParser{})
+	mp, err := NewMessageParser(tmplReader, dataReader, &file_readers.JSONParser{})
 	if err != nil {
 		t.Fatalf("NewMessageParser() unexpected error: %v", err)
 	}
@@ -362,7 +364,7 @@ func TestMessageParser_HTMLContentWithCRLF(t *testing.T) {
 	tmplReader := strings.NewReader(template)
 	dataReader := strings.NewReader(data)
 
-	mp, err := NewMessageParser(tmplReader, dataReader, &JSONParser{})
+	mp, err := NewMessageParser(tmplReader, dataReader, &file_readers.JSONParser{})
 	if err != nil {
 		t.Fatalf("NewMessageParser() unexpected error: %v", err)
 	}
@@ -390,7 +392,7 @@ func TestMessageParser_HTMLWithBoldAndItalic(t *testing.T) {
 	tmplReader := strings.NewReader(template)
 	dataReader := strings.NewReader(data)
 
-	mp, err := NewMessageParser(tmplReader, dataReader, &JSONParser{})
+	mp, err := NewMessageParser(tmplReader, dataReader, &file_readers.JSONParser{})
 	if err != nil {
 		t.Fatalf("NewMessageParser() unexpected error: %v", err)
 	}
@@ -418,7 +420,7 @@ func TestMessageParser_HTMLWithLinks(t *testing.T) {
 	tmplReader := strings.NewReader(template)
 	dataReader := strings.NewReader(data)
 
-	mp, err := NewMessageParser(tmplReader, dataReader, &JSONParser{})
+	mp, err := NewMessageParser(tmplReader, dataReader, &file_readers.JSONParser{})
 	if err != nil {
 		t.Fatalf("NewMessageParser() unexpected error: %v", err)
 	}
@@ -446,7 +448,7 @@ func TestMessageParser_HTMLWithBRTag(t *testing.T) {
 	tmplReader := strings.NewReader(template)
 	dataReader := strings.NewReader(data)
 
-	mp, err := NewMessageParser(tmplReader, dataReader, &JSONParser{})
+	mp, err := NewMessageParser(tmplReader, dataReader, &file_readers.JSONParser{})
 	if err != nil {
 		t.Fatalf("NewMessageParser() unexpected error: %v", err)
 	}
@@ -474,7 +476,7 @@ func TestMessageParser_MixedCRLFAndLF(t *testing.T) {
 	tmplReader := strings.NewReader(template)
 	dataReader := strings.NewReader(data)
 
-	mp, err := NewMessageParser(tmplReader, dataReader, &JSONParser{})
+	mp, err := NewMessageParser(tmplReader, dataReader, &file_readers.JSONParser{})
 	if err != nil {
 		t.Fatalf("NewMessageParser() unexpected error: %v", err)
 	}

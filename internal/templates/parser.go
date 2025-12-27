@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"text/template"
 
+	"github.com/pzsp-teams/cli/internal/file_readers"
 	"github.com/pzsp-teams/cli/internal/initializers"
 )
 
@@ -15,12 +16,12 @@ var htmlTagRegex = regexp.MustCompile(`</?[ibp]>|<br>|<a\s+href="[^"]*">|</a>`)
 // TemplateParser handles parsing different messages from supplied template and data
 type TemplateParser struct {
 	template   *template.Template
-	recipients map[string]TemplateData
+	recipients map[string]file_readers.TemplateData
 }
 
 // NewMessageParser returns a MessageParser with given config.
 // It parses the template and data immediately, storing the parsed objects.
-func NewMessageParser(templateReader, dataReader io.Reader, dataParser Parser) (*TemplateParser, error) {
+func NewMessageParser(templateReader, dataReader io.Reader, dataParser file_readers.Parser) (*TemplateParser, error) {
 	tmpl, err := readTemplate(templateReader)
 	if err != nil {
 		// readTemplate already logs and wraps the error
