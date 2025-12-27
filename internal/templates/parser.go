@@ -27,7 +27,7 @@ func NewMessageParser(templateReader, dataReader io.Reader, dataParser file_read
 		// readTemplate already logs and wraps the error
 		return nil, err
 	}
-	
+
 	recipients := make(map[string]file_readers.TemplateData)
 	err = dataParser(dataReader, &recipients)
 	if err != nil {
