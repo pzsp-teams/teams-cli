@@ -9,7 +9,7 @@ var (
 	errTemplateRenderFailed = errors.New("failed to render template")
 
 	// Data parsing errors
-	errDataParseFailed  = errors.New("failed to parse message data")
+	errDataParseFailed = errors.New("failed to parse message data")
 
 	// Registry errors
 	errNoParserRegistered = errors.New("no parser registered for extension")
