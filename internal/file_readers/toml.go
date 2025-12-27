@@ -1,4 +1,4 @@
-package templates
+package file_readers
 
 import (
 	"fmt"

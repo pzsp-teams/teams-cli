@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/pzsp-teams/cli/internal/file_readers"
 )
 
 func closeFile(t *testing.T, file *os.File) {
@@ -243,7 +245,7 @@ func TestRegistry_CustomParser(t *testing.T) {
 
 	registry := NewParserRegistry()
 
-	customParser := &JSONParser{}
+	customParser := &file_readers.JSONParser{}
 	registry.Register("custom", customParser)
 
 	parser, err := registry.GetParser(filePath)
