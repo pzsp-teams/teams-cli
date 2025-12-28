@@ -14,7 +14,7 @@ type TeamsClient struct {
 
 // NewTeamsClient creates a new TeamsClient by constructing the underlying library client
 func NewTeamsClient(ctx context.Context, authConfig *lib.AuthConfig, senderConfig *lib.SenderConfig) (*TeamsClient, error) {
-	libClient, err := lib.NewClient(ctx, authConfig, senderConfig)
+	libClient, err := lib.NewClient(ctx, authConfig, senderConfig, true, nil)
 	if err != nil {
 		return nil, err
 	}
