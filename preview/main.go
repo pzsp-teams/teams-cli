@@ -44,7 +44,7 @@ func init() {
 }
 
 func main() {
-	bulkMessageDemo()
+	// bulkMessageDemo()
 	createChannelsDemo()
 	// charmDemo()
 }
@@ -149,9 +149,9 @@ func createChannelsDemo() {
 		log.Error("Error creating Teams client", "error", err)
 		os.Exit(1)
 	}
-	dataFile, err := os.Open("preview/channels.json")
+	dataFile, err := os.Open("preview/channels.yaml")
 	if err != nil {
-		log.Error("Failed to open channels.json", "error", err)
+		log.Error("Failed to open channels.yaml", "error", err)
 		os.Exit(1)
 	}
 	defer dataFile.Close()
