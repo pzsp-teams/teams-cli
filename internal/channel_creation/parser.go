@@ -8,6 +8,7 @@ import (
 	"github.com/pzsp-teams/cli/internal/initializers"
 )
 
+// ParseChannelsData parses channel creation data from the provided reader
 func ParseChannelsData(r io.Reader, decodeFunc file_readers.DecodeFunc) ([]map[string]string, error) {
 	channelsData := make([]map[string]string, 0)
 	err := decodeFunc(r, &channelsData)

@@ -44,9 +44,9 @@ func init() {
 }
 
 func main() {
-	// bulkMessageDemo()
+	bulkMessageDemo()
 	createChannelsDemo()
-	// charmDemo()
+	charmDemo()
 }
 
 func mapExtensionToDecodeFunc(extension string) (file_readers.DecodeFunc, error) {
@@ -81,7 +81,7 @@ func bulkMessageDemo() {
 		os.Exit(1)
 	}
 
-	extension := filepath.Ext(dataFile.Name())[1:] 
+	extension := filepath.Ext(dataFile.Name())[1:]
 
 	parser, err := mapExtensionToDecodeFunc(extension)
 	if err != nil {
@@ -154,37 +154,22 @@ func createChannelsDemo() {
 		log.Error("Failed to open channels.yaml", "error", err)
 		os.Exit(1)
 	}
-	defer dataFile.Close()
-		extension := filepath.Ext(dataFile.Name())[1:] 
+	extension := filepath.Ext(dataFile.Name())[1:]
 
 	parser, err := mapExtensionToDecodeFunc(extension)
 	if err != nil {
 		log.Error("Failed to get decode function", "error", err)
+		_ = dataFile.Close()
 		os.Exit(1)
 	}
 	channelData, err := channelcreation.ParseChannelsData(dataFile, parser)
 	if err != nil {
 		log.Error("Failed to parse channels data", "error", err)
+		_ = dataFile.Close()
 		os.Exit(1)
 	}
+	_ = dataFile.Close()
 	_ = teamsClient.ChannelCreator.CreateChannels(ctx, channelData, false)
-	// successCount := 0
-	// for _, result := range results {
-	// 	if result.Error == nil {
-	// 		successCount++
-	// 		log.Info("Channel created successfully",
-	// 			"channel", result.ChannelName,
-	// 			"channel_id", result.ChannelID)
-	// 	} else {
-	// 		log.Error("Failed to create channel",
-	// 			"channel", result.ChannelName,
-	// 			"error", result.Error)
-	// 	}
-	// }
-	// log.Info("Channel creation demo completed",
-	// 	"total", len(results),
-	// 	"successful", successCount,
-	// 	"failed", len(results)-successCount)
 }
 
 func charmDemo() {
