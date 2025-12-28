@@ -149,9 +149,9 @@ func createChannelsDemo() {
 		log.Error("Error creating Teams client", "error", err)
 		os.Exit(1)
 	}
-	dataFile, err := os.Open("preview/channels.csv")
+	dataFile, err := os.Open("preview/channels.json")
 	if err != nil {
-		log.Error("Failed to open channels.csv", "error", err)
+		log.Error("Failed to open channels.json", "error", err)
 		os.Exit(1)
 	}
 	defer dataFile.Close()
