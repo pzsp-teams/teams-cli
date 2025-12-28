@@ -14,17 +14,21 @@ type CreateResult struct {
 	ChannelID   string
 	Error 	 	error
 }
-type ChannelCreator struct {
+type channelCreator struct {
 	channels channels.Service
 }
 
-func NewChannelCreator(channels channels.Service) *ChannelCreator {
-	return &ChannelCreator{
+type ChannelCreator interface {
+	CreateChannels(ctx context.Context, request []map[string]string) []CreateResult
+}
+
+func NewChannelCreator(channels channels.Service) *channelCreator {
+	return &channelCreator{
 		channels: channels,
 	}
 }
 
-func (cc *ChannelCreator) CreateChannelsFromReader(request []map[string]string, ctx context.Context) []CreateResult {
+func (cc *channelCreator) CreateChannels(ctx context.Context, request []map[string]string) []CreateResult {
 	results := make([]CreateResult, 0)
 	logger := initializers.Logger
 	logger.Info("Starting channels creation")
@@ -54,14 +58,19 @@ func (cc *ChannelCreator) CreateChannelsFromReader(request []map[string]string, 
 			if err != nil {
 				logger.Error("Failed to create channel", "channel", channelRef, "team", teamRef, "error", err)
 				err = fmt.Errorf("failed to create channel %s in team %s: %w", channelRef, teamRef, err)
+				results = append(results, CreateResult{
+					ChannelName: channelRef,
+					ChannelID:   "",
+					Error:       err,
+				})
 			} else {
-				logger.Info("Successfully created channel", "channel", channelRef, "team", teamRef, "channel_id", channel.ID)
-			}
-			results = append(results, CreateResult{
-				ChannelName: channelRef,
-				ChannelID:   channel.ID,
-				Error:       err,
-			})
+					logger.Info("Successfully created channel", "channel", channelRef, "team", teamRef, "channel_id", channel.ID)
+				results = append(results, CreateResult{
+					ChannelName: channelRef,
+					ChannelID:   channel.ID,
+					Error:       nil,
+				})
+			}	
 		}
 	}
 	successCount := 0
