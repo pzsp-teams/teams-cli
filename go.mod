@@ -6,11 +6,12 @@ require (
 	github.com/BurntSushi/toml v1.5.0
 	github.com/charmbracelet/log v0.4.2
 	github.com/joho/godotenv v1.5.1
-	github.com/pzsp-teams/lib v0.0.0-20251206151455-cc5a85ac1d75
+	github.com/pzsp-teams/lib v0.0.0-20251221085535-14bc0a0e980a
 	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
+	al.essio.dev/pkg/shellescape v1.5.1 // indirect
 	appliedgo.net/what v0.2.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.19.1 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/internal v1.11.2 // indirect
@@ -22,10 +23,12 @@ require (
 	github.com/charmbracelet/x/ansi v0.8.0 // indirect
 	github.com/charmbracelet/x/cellbuf v0.0.13-0.20250311204145-2c3ea96c31dd // indirect
 	github.com/charmbracelet/x/term v0.2.1 // indirect
+	github.com/danieljoos/wincred v1.2.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-logfmt/logfmt v0.6.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
+	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/keybase/go-keychain v0.0.0-20230523030712-b5615109f100 // indirect
@@ -47,6 +50,7 @@ require (
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/std-uritemplate/std-uritemplate/go/v2 v2.0.3 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
+	github.com/zalando/go-keyring v0.2.6 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/otel v1.37.0 // indirect
 	go.opentelemetry.io/otel/metric v1.37.0 // indirect
