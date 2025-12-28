@@ -39,14 +39,14 @@ func DecodeCSV(r io.Reader, v any) error {
 	dst, ok := v.(*[]map[string]string)
 	if !ok {
 		return fmt.Errorf("DecodeCSV: expected *[]map[string]string, got %T", v)
-	}	
+	}
 	decoder := NewCSVDecoder(r)
 	for {
 		var record map[string]string
 		err := decoder.Decode(&record)
-		if err == io.EOF{
+		if err == io.EOF {
 			break
-		} 
+		}
 		if err != nil {
 			return fmt.Errorf(decodeFailedTemplate, CSV, err)
 		}
@@ -55,12 +55,14 @@ func DecodeCSV(r io.Reader, v any) error {
 	return nil
 }
 
+// CSVDecoder is a simple CSV decoder that reads records into map[string]string
 type CSVDecoder struct {
-	r *csv.Reader
-	header []string
+	r            *csv.Reader
+	header       []string
 	headerLoaded bool
 }
 
+// NewCSVDecoder creates a new CSVDecoder instance
 func NewCSVDecoder(r io.Reader) *CSVDecoder {
 	cr := csv.NewReader(r)
 	cr.TrimLeadingSpace = true
@@ -69,6 +71,7 @@ func NewCSVDecoder(r io.Reader) *CSVDecoder {
 	}
 }
 
+// Decode reads the next CSV record and decodes it into the provided map
 func (d *CSVDecoder) Decode(v any) error {
 	dst, ok := v.(*map[string]string)
 	if !ok {
@@ -94,17 +97,18 @@ func (d *CSVDecoder) Decode(v any) error {
 	}
 	record := make(map[string]string, len(d.header))
 	n := min(len(d.header), len(row))
-	
+
 	for ind := range n {
 		record[d.header[ind]] = row[ind]
 	}
 	for ind := n; ind < len(d.header); ind++ {
 		record[d.header[ind]] = ""
-	} 
+	}
 	*dst = record
 	return nil
 }
 
+// GroupBy groups items in a slice by a key function
 func GroupBy[T any, K comparable](items []T, keyFunc func(T) K) map[K][]T {
 	result := make(map[K][]T, len(items))
 	for _, item := range items {

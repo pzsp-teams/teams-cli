@@ -20,5 +20,3 @@ const (
 
 // DecodeFunc defines a function type for decoding data from an io.Reader into a provided structure
 type DecodeFunc func(r io.Reader, v any) error
-
-

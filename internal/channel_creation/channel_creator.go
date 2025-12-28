@@ -10,25 +10,29 @@ import (
 	"github.com/pzsp-teams/lib/channels"
 )
 
+// CreateResult includes the result of a channel creation attempt
 type CreateResult struct {
 	ChannelName string
 	ChannelID   string
-	Error 	 	error
+	Error       error
 }
 type channelCreator struct {
 	channels channels.Service
 }
 
+// ChannelCreator defines the interface for creating channels
 type ChannelCreator interface {
 	CreateChannels(ctx context.Context, request []map[string]string, ensureMembers bool) []CreateResult
 }
 
-func NewChannelCreator(channels channels.Service) *channelCreator {
+// NewChannelCreator creates a new instance of ChannelCreator
+func NewChannelCreator(chans channels.Service) *channelCreator {
 	return &channelCreator{
-		channels: channels,
+		channels: chans,
 	}
 }
 
+// CreateChannels creates channels based on the provided request data
 func (cc *channelCreator) CreateChannels(ctx context.Context, request []map[string]string, ensureMembers bool) []CreateResult {
 	results := make([]CreateResult, 0)
 	logger := initializers.Logger
@@ -56,7 +60,7 @@ func (cc *channelCreator) CreateChannels(ctx context.Context, request []map[stri
 			if !ensureMembers {
 				continue
 			}
-			err = cc.ensureMembersInChannel(ctx, body)
+			err = cc.ensureMembersInChannel(ctx, &body)
 			if err != nil {
 				logger.Error("Failed to ensure members in existing channel", "channel", body.ChannelRef, "team", body.TeamRef, "error", err)
 				err = fmt.Errorf("failed to ensure members in existing channel %s in team %s: %w", body.ChannelRef, body.TeamRef, err)
@@ -65,7 +69,7 @@ func (cc *channelCreator) CreateChannels(ctx context.Context, request []map[stri
 					ChannelID:   "",
 					Error:       err,
 				})
-			}	
+			}
 			continue
 		}
 		channel, err := cc.channels.CreatePrivateChannel(ctx, body.TeamRef, body.ChannelRef, body.MemberRefs, body.OwnerRefs)
@@ -78,13 +82,13 @@ func (cc *channelCreator) CreateChannels(ctx context.Context, request []map[stri
 				Error:       err,
 			})
 		} else {
-				logger.Info("Successfully created channel", "channel", body.ChannelRef, "team", body.TeamRef, "channel_id", channel.ID)
+			logger.Info("Successfully created channel", "channel", body.ChannelRef, "team", body.TeamRef, "channel_id", channel.ID)
 			results = append(results, CreateResult{
 				ChannelName: body.ChannelRef,
 				ChannelID:   channel.ID,
 				Error:       nil,
 			})
-		}	
+		}
 	}
 	successCount := 0
 	for _, result := range results {
@@ -96,8 +100,8 @@ func (cc *channelCreator) CreateChannels(ctx context.Context, request []map[stri
 	return results
 }
 
-func (cc *channelCreator) transformRequestToCreateChannelBody(data []map[string]string) []CreateChannelBody {
-	out := make([]CreateChannelBody, 0)
+func (cc *channelCreator) transformRequestToCreateChannelBody(data []map[string]string) []createChannelBody {
+	out := make([]createChannelBody, 0)
 	channelsGroupedByTeamRef := file_readers.GroupBy(data, func(channels map[string]string) string {
 		return channels["team_ref"]
 	})
@@ -120,7 +124,7 @@ func (cc *channelCreator) transformRequestToCreateChannelBody(data []map[string]
 					}
 				}
 			}
-			out = append(out, CreateChannelBody{
+			out = append(out, createChannelBody{
 				TeamRef:    teamRef,
 				ChannelRef: channelRef,
 				MemberRefs: memberRefs,
@@ -142,7 +146,7 @@ func (cc *channelCreator) checkChannelExists(ctx context.Context, teamRef, chann
 	return true, nil
 }
 
-func (cc *channelCreator) ensureMembersInChannel(ctx context.Context, body CreateChannelBody) error {
+func (cc *channelCreator) ensureMembersInChannel(ctx context.Context, body *createChannelBody) error {
 	logger := initializers.Logger
 	for _, memberRef := range body.MemberRefs {
 		_, err := cc.channels.AddMember(ctx, body.TeamRef, body.ChannelRef, memberRef, false)

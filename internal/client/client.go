@@ -10,7 +10,7 @@ import (
 
 // TeamsClient aggregates service wrappers for the Teams API
 type TeamsClient struct {
-	ChannelSender messaging.Sender
+	ChannelSender  messaging.Sender
 	ChannelCreator channelcreation.ChannelCreator
 }
 
@@ -22,7 +22,7 @@ func NewTeamsClient(ctx context.Context, authConfig *lib.AuthConfig, senderConfi
 	}
 
 	return &TeamsClient{
-		ChannelSender: messaging.NewChannelSender(libClient.Channels),
+		ChannelSender:  messaging.NewChannelSender(libClient.Channels),
 		ChannelCreator: channelcreation.NewChannelCreator(libClient.Channels),
 	}, nil
 }

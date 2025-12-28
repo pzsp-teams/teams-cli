@@ -1,8 +1,8 @@
 package channelcreation
 
-type CreateChannelBody struct {
-	TeamRef string
+type createChannelBody struct {
+	TeamRef    string
 	ChannelRef string
 	MemberRefs []string
-	OwnerRefs []string
+	OwnerRefs  []string
 }
