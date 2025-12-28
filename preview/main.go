@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/pzsp-teams/cli/internal/client"
+	"github.com/pzsp-teams/cli/internal/file_readers"
 	"github.com/pzsp-teams/cli/internal/initializers"
 	"github.com/pzsp-teams/cli/internal/logger"
 	"github.com/pzsp-teams/cli/internal/templates"
@@ -44,24 +46,46 @@ func main() {
 	bulkMessageDemo()
 }
 
+func mapExtensionToDecodeFunc(extension string) (file_readers.DecodeFunc, error) {
+	switch extension {
+	case "json":
+		return file_readers.DecodeJSON, nil
+	case "yaml", "yml":
+		return file_readers.DecodeYAML, nil
+	case "toml":
+		return file_readers.DecodeTOML, nil
+	case "csv":
+		return file_readers.DecodeCSV, nil
+	default:
+		return nil, fmt.Errorf("unsupported file extension: %s", extension)
+	}
+}
+
 func bulkMessageDemo() {
 	log := initializers.Logger
 	ctx := context.TODO()
 
-	dataFile, err := os.Open("data.yaml")
+	dataFile, err := os.Open("preview/data.yaml")
 	if err != nil {
 		log.Error("Failed to open data.yaml", "error", err)
 		os.Exit(1)
 	}
 
-	templateFile, err := os.Open("message.txt")
+	templateFile, err := os.Open("preview/message.txt")
 	if err != nil {
 		_ = dataFile.Close()
 		log.Error("Failed to open message.txt", "error", err)
 		os.Exit(1)
 	}
 
-	parser := &templates.YAMLParser{}
+	extension := filepath.Ext(dataFile.Name())[1:] 
+
+	parser, err := mapExtensionToDecodeFunc(extension)
+	if err != nil {
+		log.Error("Failed to get decode function", "error", err)
+		os.Exit(1)
+	}
+
 	messageParser, err := templates.NewMessageParser(templateFile, dataFile, parser)
 	_ = templateFile.Close()
 	_ = dataFile.Close()
