@@ -1,19 +1,19 @@
 - team_ref: test
-  channel_ref: yaml9
+  channel_ref: yaml11
   role: owner
   user_ref: kmarszalek@teamspzsp.onmicrosoft.com
 
 - team_ref: test
-  channel_ref: yaml9
+  channel_ref: yaml11
   role: member
   user_ref: ddsouza@teamspzsp.onmicrosoft.com
 
 - team_ref: test
-  channel_ref: yaml10
+  channel_ref: yaml12
   role: owner
   user_ref: msuski@teamspzsp.onmicrosoft.com
 
 - team_ref: test
-  channel_ref: yaml10
+  channel_ref: yaml12
   role: owner
   user_ref: kmarszalek@teamspzsp.onmicrosoft.com

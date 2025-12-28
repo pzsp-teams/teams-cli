@@ -167,7 +167,7 @@ func createChannelsDemo() {
 		log.Error("Failed to parse channels data", "error", err)
 		os.Exit(1)
 	}
-	_ = teamsClient.ChannelCreator.CreateChannels(ctx, channelData)
+	_ = teamsClient.ChannelCreator.CreateChannels(ctx, channelData, false)
 	// successCount := 0
 	// for _, result := range results {
 	// 	if result.Error == nil {
