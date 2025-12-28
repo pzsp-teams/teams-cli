@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	channelcreation "github.com/pzsp-teams/cli/internal/channel_creation"
 	"github.com/pzsp-teams/cli/internal/client"
 	"github.com/pzsp-teams/cli/internal/file_readers"
 	"github.com/pzsp-teams/cli/internal/initializers"
@@ -44,6 +45,8 @@ func init() {
 
 func main() {
 	bulkMessageDemo()
+	createChannelsDemo()
+	// charmDemo()
 }
 
 func mapExtensionToDecodeFunc(extension string) (file_readers.DecodeFunc, error) {
@@ -133,6 +136,55 @@ func bulkMessageDemo() {
 		"total", len(results),
 		"successful", successCount,
 		"failed", len(results)-successCount)
+}
+
+func createChannelsDemo() {
+	log := initializers.Logger
+	ctx := context.TODO()
+
+	senderConfig := newSenderConfig()
+	authConfig := loadAuthConfig()
+	teamsClient, err := client.NewTeamsClient(ctx, authConfig, senderConfig)
+	if err != nil {
+		log.Error("Error creating Teams client", "error", err)
+		os.Exit(1)
+	}
+	dataFile, err := os.Open("preview/channels.csv")
+	if err != nil {
+		log.Error("Failed to open channels.csv", "error", err)
+		os.Exit(1)
+	}
+	defer dataFile.Close()
+		extension := filepath.Ext(dataFile.Name())[1:] 
+
+	parser, err := mapExtensionToDecodeFunc(extension)
+	if err != nil {
+		log.Error("Failed to get decode function", "error", err)
+		os.Exit(1)
+	}
+	channelData, err := channelcreation.ParseChannelsData(dataFile, parser)
+	if err != nil {
+		log.Error("Failed to parse channels data", "error", err)
+		os.Exit(1)
+	}
+	_ = teamsClient.ChannelCreator.CreateChannels(ctx, channelData)
+	// successCount := 0
+	// for _, result := range results {
+	// 	if result.Error == nil {
+	// 		successCount++
+	// 		log.Info("Channel created successfully",
+	// 			"channel", result.ChannelName,
+	// 			"channel_id", result.ChannelID)
+	// 	} else {
+	// 		log.Error("Failed to create channel",
+	// 			"channel", result.ChannelName,
+	// 			"error", result.Error)
+	// 	}
+	// }
+	// log.Info("Channel creation demo completed",
+	// 	"total", len(results),
+	// 	"successful", successCount,
+	// 	"failed", len(results)-successCount)
 }
 
 func charmDemo() {

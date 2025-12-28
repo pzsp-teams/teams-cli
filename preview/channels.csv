@@ -1,0 +1,5 @@
+team_ref,channel_ref,role,user_ref
+test,test-general2,owner,kmarszalek@teamspzsp.onmicrosoft.com
+test,test-general2,member,ddsouza@teamspzsp.onmicrosoft.com
+test,test-random,owner,msuski@teamspzsp.onmicrosoft.com
+test,test-random,owner,kmarszalek@teamspzsp.onmicrosoft.com
