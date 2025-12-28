@@ -6,12 +6,13 @@ import (
 
 	"github.com/pzsp-teams/cli/internal/initializers"
 	"github.com/pzsp-teams/lib/channels"
+	"github.com/pzsp-teams/lib/models"
 )
 
 // SendResult represents the result of sending a message to a channel
 type SendResult struct {
 	ChannelRef string
-	Message    *channels.Message
+	Message    *models.Message
 	Error      error
 }
 
@@ -22,11 +23,11 @@ type Sender interface {
 
 // ChannelSender wraps the channels service from the library
 type ChannelSender struct {
-	channelService *channels.Service
+	channelService channels.Service
 }
 
 // NewChannelSender creates a new ChannelSender with the provided channels service
-func NewChannelSender(channelService *channels.Service) *ChannelSender {
+func NewChannelSender(channelService channels.Service) *ChannelSender {
 	return &ChannelSender{
 		channelService: channelService,
 	}
@@ -50,9 +51,9 @@ func (s *ChannelSender) SendToChannels(ctx context.Context, teamRef string, mess
 			ChannelRef: channelRef,
 		}
 
-		messageBody := channels.MessageBody{
+		messageBody := models.MessageBody{
 			Content:     content,
-			ContentType: channels.MessageContentTypeHTML,
+			ContentType: models.MessageContentTypeHTML,
 		}
 
 		logger.Debug("Sending message to channel",
