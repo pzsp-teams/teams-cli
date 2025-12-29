@@ -70,7 +70,7 @@ func (cc *channelCreator) planActions(ctx context.Context, bodies []createChanne
 			actions = append(actions, action{
 				createChannelBody: body,
 				run: func(ctx context.Context, body createChannelBody) *CreateResult {
-					err :=fmt.Errorf("failed to check if channel %s in team %s exists: %w", body.ChannelRef, body.TeamRef, errToShow)
+					err := errToShow
 					return &CreateResult{
 						ChannelName: body.ChannelRef,
 						ChannelID:   "",
