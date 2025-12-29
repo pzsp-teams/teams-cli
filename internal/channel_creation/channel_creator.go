@@ -10,12 +10,6 @@ import (
 	"github.com/pzsp-teams/lib/channels"
 )
 
-// CreateResult includes the result of a channel creation attempt
-type CreateResult struct {
-	ChannelName string
-	ChannelID   string
-	Error       error
-}
 type channelCreator struct {
 	channels channels.Service
 }
@@ -47,19 +41,22 @@ func (cc *channelCreator) CreateChannels(ctx context.Context, request []map[stri
 				ChannelName: body.ChannelRef,
 				ChannelID:   "",
 				Error:       err,
+				Status: StatusFailed,
 			})
 			continue
 		}
 		if exists {
 			logger.Info("Channel already exists, skipping creation", "channel", body.ChannelRef, "team", body.TeamRef)
-			results = append(results, CreateResult{
-				ChannelName: body.ChannelRef,
-				ChannelID:   "",
-				Error:       nil,
-			})
 			if !ensureMembers {
+				results = append(results, CreateResult{
+					ChannelName: body.ChannelRef,
+					ChannelID:   "",
+					Error:       nil,
+					Status: StatusAlreadyExists,
+				})
 				continue
 			}
+			logger.Info("Ensuring members in existing channel", "channel", body.ChannelRef, "team", body.TeamRef)
 			err = cc.ensureMembersInChannel(ctx, &body)
 			if err != nil {
 				logger.Error("Failed to ensure members in existing channel", "channel", body.ChannelRef, "team", body.TeamRef, "error", err)
@@ -68,8 +65,17 @@ func (cc *channelCreator) CreateChannels(ctx context.Context, request []map[stri
 					ChannelName: body.ChannelRef,
 					ChannelID:   "",
 					Error:       err,
+					Status: StatusFailed,
 				})
 			}
+			results = append(results, CreateResult{
+				ChannelName: body.ChannelRef,
+				ChannelID:   "",
+				Error:       nil,
+				Status: StatusMembersEnsured,
+				MemberRefs:  body.MemberRefs,
+				OwnerRefs:   body.OwnerRefs,
+			})
 			continue
 		}
 		channel, err := cc.channels.CreatePrivateChannel(ctx, body.TeamRef, body.ChannelRef, body.MemberRefs, body.OwnerRefs)
@@ -80,13 +86,17 @@ func (cc *channelCreator) CreateChannels(ctx context.Context, request []map[stri
 				ChannelName: body.ChannelRef,
 				ChannelID:   "",
 				Error:       err,
+				Status:      StatusFailed,
 			})
 		} else {
-			logger.Info("Successfully created channel", "channel", body.ChannelRef, "team", body.TeamRef, "channel_id", channel.ID)
+			logger.Info("Successfully created channel", "channel", body.ChannelRef, "team", body.TeamRef, "channel_id", channel.ID, "members_ref", body.MemberRefs, "owners_ref", body.OwnerRefs)
 			results = append(results, CreateResult{
 				ChannelName: body.ChannelRef,
 				ChannelID:   channel.ID,
 				Error:       nil,
+				Status:      StatusCreated,
+				MemberRefs:  body.MemberRefs,
+				OwnerRefs:   body.OwnerRefs,
 			})
 		}
 	}
@@ -98,6 +108,35 @@ func (cc *channelCreator) CreateChannels(ctx context.Context, request []map[stri
 	}
 	logger.Info("Channels creation process completed", "success_count", successCount, "total", len(results))
 	return results
+}
+
+func (cc *channelCreator) planActions(ctx context.Context, bodies []createChannelBody, ensureMembers bool) []action {
+	actions := make([]action, 0)
+	for _, body := range bodies {
+		exists, err := cc.checkChannelExists(ctx, body.TeamRef, body.ChannelRef)
+		if err != nil {
+			continue
+		}
+		if exists {
+			if ensureMembers {
+				actions = append(actions, action{
+					createChannelBody: body,
+					run: func(ctx context.Context, body createChannelBody) error {
+						return cc.ensureMembersInChannel(ctx, &body)
+					},
+				})
+			}
+			continue
+		}
+		actions = append(actions, action{
+			createChannelBody: body,
+			run: func(ctx context.Context, body createChannelBody) error {
+				_, err := cc.channels.CreatePrivateChannel(ctx, body.TeamRef, body.ChannelRef, body.MemberRefs, body.OwnerRefs)
+				return err
+			},
+		})
+	}
+	return actions
 }
 
 func (cc *channelCreator) transformRequestToCreateChannelBody(data []map[string]string) []createChannelBody {
