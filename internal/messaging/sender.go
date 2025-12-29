@@ -11,7 +11,7 @@ import (
 
 // Sender defines the interface for sending messages to channels
 type Sender interface {
-	SendToChannels(ctx context.Context, teamRef string, messages map[string]string, dryRyn bool) []SendResult
+	SendToChannels(ctx context.Context, teamRef string, messages map[string]string, dryRyn, ignoreError bool) []SendResult
 }
 
 // ChannelSender wraps the channels service from the library
@@ -31,8 +31,8 @@ func NewChannelSender(channelService channels.Service) *ChannelSender {
 // teamRef: team name or ID
 // messages: map of channel reference (name or ID) to message content
 // Returns a slice of SendResult containing the outcome for each channel
-func (s *ChannelSender) SendToChannels(ctx context.Context, teamRef string, messages map[string]string, dryRun bool) []SendResult {
-	logger := initializers.Logger.With("dryRun", dryRun, "team", teamRef, "total", len(messages))
+func (s *ChannelSender) SendToChannels(ctx context.Context, teamRef string, messages map[string]string, dryRun, ignoreError bool) []SendResult {
+	logger := initializers.Logger.With("team", teamRef, "dryRun", dryRun, "ignoreError", ignoreError, "total", len(messages))
 
 	actions := s.planActions(teamRef, messages)
 	var results []SendResult
@@ -42,7 +42,7 @@ func (s *ChannelSender) SendToChannels(ctx context.Context, teamRef string, mess
 	if dryRun {
 		results = s.dryRunActions(actions)
 	} else {
-		results = s.executeActions(ctx, actions)
+		results = s.executeActions(ctx, actions, ignoreError)
 	}
 
 	successCount := 0
@@ -64,6 +64,7 @@ func (s *ChannelSender) planActions(teamRef string, messages map[string]string) 
 	for channelRef, content := range messages {
 		result := SendResult{
 			ChannelRef: channelRef,
+			Message:    content,
 		}
 
 		messageBody := models.MessageBody{
@@ -95,22 +96,41 @@ func (s *ChannelSender) planActions(teamRef string, messages map[string]string) 
 	return actions
 }
 
-func (s *ChannelSender) executeActions(ctx context.Context, actions []*action) []SendResult {
+func (s *ChannelSender) executeActions(ctx context.Context, actions []*action, ignoreError bool) []SendResult {
 	logger := initializers.Logger
 	results := make([]SendResult, 0, len(actions))
+	skipRemaining := false
+
 	for _, action := range actions {
-		logger.Debug("Sending message to channel",
-			"team", action.teamRef,
-			"channel", action.channelRef)
+		var result *SendResult
 
-		result := action.run(ctx, action.sendMessageData)
-
-		if result.Error != nil {
-			logger.Error("Failed to send message",
-				"team", action.teamRef, "channel", action.channelRef, "error", result.Error)
-		} else {
-			logger.Info("Message sent successfully", "team", action.teamRef,
+		if skipRemaining {
+			logger.Debug("Skipping Message",
+				"team", action.teamRef,
 				"channel", action.channelRef)
+
+			result = &SendResult{
+				ChannelRef: action.channelRef,
+				Message:    action.body.Content,
+				Error:      ErrMessageSkipped,
+			}
+		} else {
+			logger.Debug("Sending message to channel",
+				"team", action.teamRef,
+				"channel", action.channelRef)
+
+			result = action.run(ctx, action.sendMessageData)
+
+			if result.Error != nil {
+				logger.Error("Failed to send message",
+					"team", action.teamRef, "channel", action.channelRef, "error", result.Error)
+				if !ignoreError {
+					skipRemaining = true
+				}
+			} else {
+				logger.Info("Message sent successfully", "team", action.teamRef,
+					"channel", action.channelRef)
+			}
 		}
 
 		results = append(results, *result)

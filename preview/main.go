@@ -57,6 +57,7 @@ func bulkMessageDemo() {
 	log := initializers.Logger
 	ctx := context.TODO()
 	dryRun := true
+	ignoreError := true
 
 	dataFile, err := os.Open("preview/data.yaml")
 	if err != nil {
@@ -107,7 +108,7 @@ func bulkMessageDemo() {
 	}
 
 	teamName := "pzsp2"
-	results := teamsClient.ChannelSender.SendToChannels(ctx, teamName, messages, dryRun)
+	results := teamsClient.ChannelSender.SendToChannels(ctx, teamName, messages, dryRun, ignoreError)
 
 	if dryRun {
 		for _, res := range results {
