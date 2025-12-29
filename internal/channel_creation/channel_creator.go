@@ -43,7 +43,6 @@ func (cc *channelCreator) CreateChannels(ctx context.Context, request []map[stri
 	return results
 }
 
-
 func (cc *channelCreator) executeActions(ctx context.Context, actions []*action) []CreateResult {
 	logger := initializers.Logger
 	results := make([]CreateResult, 0, len(actions))
@@ -280,9 +279,9 @@ func (cc *channelCreator) checkChannelExists(ctx context.Context, teamRef, chann
 	return true, nil
 }
 
-func (cc *channelCreator) ensureMembersInChannel(ctx context.Context, body *createChannelBody) *EnsureMembersResult {
+func (cc *channelCreator) ensureMembersInChannel(ctx context.Context, body *createChannelBody) *ensureMembersResult {
 	logger := initializers.Logger
-	var out EnsureMembersResult
+	var out ensureMembersResult
 	for _, memberRef := range body.MemberRefs {
 		_, err := cc.channels.AddMember(ctx, body.TeamRef, body.ChannelRef, memberRef, false)
 		if err != nil {
