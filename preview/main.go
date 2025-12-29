@@ -170,10 +170,10 @@ func createChannelsDemo() {
 	}
 	_ = dataFile.Close()
 	successCount := 0
-	results := teamsClient.ChannelCreator.CreateChannels(ctx, channelData, false, false)
+	results := teamsClient.ChannelCreator.CreateChannels(ctx, channelData, true, false)
 	for _, result := range results {
 		if result.Error == nil {
-			log.Info("Channel created successfully",
+			log.Info("Channel operation successful",
 				"channel", result.ChannelName,
 				"channel_id", result.ChannelID,
 				"status", result.Status,
@@ -181,7 +181,7 @@ func createChannelsDemo() {
 				"owners", result.OwnerRefs)
 			successCount++
 		} else {
-			log.Error("Failed to create channel",
+			log.Error("Failed to perform channel operation",
 				"channel", result.ChannelName,
 				"error", result.Error,
 				"status", result.Status)
