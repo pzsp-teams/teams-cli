@@ -1,3 +1,5 @@
+// TODO: Add ensure members to team when creating channels
+
 package channelcreation
 
 import (
