@@ -32,7 +32,7 @@ func (cc *channelCreator) CreateChannels(ctx context.Context, request []map[stri
 	logger.Info("Starting channels creation")
 	createChannelBodies := cc.transformRequestToCreateChannelBody(request)
 	actions := cc.planActions(ctx, createChannelBodies, ensureMembers)
-	results := make([]CreateResult, 0, len(actions))
+	var results []CreateResult
 	if dryRun {
 		logger.Info("Dry run enabled - no channels will be created")
 		results = cc.dryRunActions(actions)
@@ -84,7 +84,7 @@ func (cc *channelCreator) dryRunActions(actions []*action) []CreateResult {
 }
 
 func (cc *channelCreator) planActions(ctx context.Context, bodies []createChannelBody, ensureMembers bool) []*action {
-	actions := make([]*action, 0)
+	actions := make([]*action, 0, len(bodies))
 	for i := range bodies {
 		act := cc.planActionForBody(ctx, &bodies[i], ensureMembers)
 		actions = append(actions, act)
