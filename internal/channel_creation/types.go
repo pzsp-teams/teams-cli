@@ -13,9 +13,12 @@ type createChannelBody struct {
 type Status string
 const (
 	StatusCreated  Status = "Created"
+	StatusWouldCreate Status = "WouldCreate"
 	StatusAlreadyExists Status = "AlreadyExists"
 	StatusMembersEnsured Status = "MembersEnsured"
+	StatusWouldEnsureMembers Status = "WouldEnsureMembers"
 	StatusFailed   Status = "Failed"
+	StatusPartiallyEnsured Status = "PartiallyEnsured"
 )
 
 // CreateResult includes the result of a channel creation attempt
@@ -37,5 +40,6 @@ type EnsureMembersResult struct {
 
 type action struct {
 	createChannelBody
-	run func(ctx context.Context, body createChannelBody) error
+	run func(ctx context.Context, body createChannelBody) *CreateResult
+	result *CreateResult
 }
