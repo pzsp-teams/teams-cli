@@ -28,11 +28,11 @@ func NewChannelCreator(chans channels.Service) *channelCreator {
 
 // CreateChannels creates channels based on the provided request data
 func (cc *channelCreator) CreateChannels(ctx context.Context, request []map[string]string, ensureMembers, dryRun bool) []CreateResult {
-	results := make([]CreateResult, 0)
 	logger := initializers.Logger
 	logger.Info("Starting channels creation")
 	createChannelBodies := cc.transformRequestToCreateChannelBody(request)
 	actions := cc.planActions(ctx, createChannelBodies, ensureMembers)
+	results := make([]CreateResult, 0, len(actions))
 	if dryRun {
 		logger.Info("Dry run enabled - no channels will be created")
 		results = cc.dryRunActions(actions)
@@ -44,9 +44,9 @@ func (cc *channelCreator) CreateChannels(ctx context.Context, request []map[stri
 }
 
 
-func (cc *channelCreator) executeActions(ctx context.Context, actions []action) []CreateResult {
+func (cc *channelCreator) executeActions(ctx context.Context, actions []*action) []CreateResult {
 	logger := initializers.Logger
-	results := make([]CreateResult, 0)
+	results := make([]CreateResult, 0, len(actions))
 	for _, act := range actions {
 		result := act.run(ctx, act.createChannelBody)
 		if result == nil {
@@ -58,149 +58,180 @@ func (cc *channelCreator) executeActions(ctx context.Context, actions []action) 
 				Status:      StatusFailed,
 			}
 		}
-		switch result.Status {
-		case StatusCreated:
-			logger.Info("Channel created successfully", "channel", result.ChannelName, "channel_id", result.ChannelID, "team", act.TeamRef, "status", result.Status, "members_refs", result.MemberRefs, "owner_refs", result.OwnerRefs)
-		case StatusAlreadyExists:
-			logger.Info("Channel already exists", "channel", result.ChannelName, "team", act.TeamRef, "status", result.Status)
-		case StatusMembersEnsured:
-			logger.Info("Members ensured in existing channel", "channel", result.ChannelName, "team", act.TeamRef, "status", result.Status, "members_refs", result.MemberRefs, "owner_refs", result.OwnerRefs)
-		case StatusPartiallyEnsured:
-			logger.Warn("Members partially ensured in existing channel", "channel", result.ChannelName, "team", act.TeamRef, "status", result.Status, "members_refs", result.MemberRefs, "owner_refs", result.OwnerRefs)
-		case StatusFailed:
-			logger.Error("Channel operation failed", "channel", result.ChannelName, "team", act.TeamRef, "error", result.Error, "status", result.Status)
-		}
+		logExecutionResult(result, act.TeamRef)
 		results = append(results, *result)
 	}
 	return results
 }
 
-func (cc *channelCreator) dryRunActions(actions []action) []CreateResult {
-	logger := initializers.Logger
-	results := make([]CreateResult, 0)
+func (cc *channelCreator) dryRunActions(actions []*action) []CreateResult {
+	results := make([]CreateResult, 0, len(actions))
 	for _, act := range actions {
-		results = append(results, *act.result)
-		switch act.result.Status {
-		case StatusWouldCreate:
-			logger.Info("Dry run: Channel would be created", "channel", act.result.ChannelName, "team", act.TeamRef, "members_refs", act.result.MemberRefs, "owner_refs", act.result.OwnerRefs)
-		case StatusWouldEnsureMembers:
-			logger.Info("Dry run: Members would be ensured in existing channel", "channel", act.result.ChannelName, "team", act.TeamRef, "members_refs", act.result.MemberRefs, "owner_refs", act.result.OwnerRefs)
-		case StatusAlreadyExists:
-			logger.Info("Dry run: Channel already exists", "channel", act.result.ChannelName, "team", act.TeamRef)
-		case StatusFailed:
-			logger.Error("Dry run: Channel creation would fail", "channel", act.result.ChannelName, "team", act.TeamRef, "error", act.result.Error)
+		res := act.result
+		if res == nil {
+			initializers.Logger.Error("Action has nil result in dry run", "channel", act.ChannelRef, "team", act.TeamRef)
+			res = &CreateResult{
+				ChannelName: act.ChannelRef,
+				ChannelID:   "",
+				Error:       fmt.Errorf("action has nil result in dry run"),
+				Status:      StatusFailed,
+			}
 		}
+		results = append(results, *res)
+		logDryRunResult(res, act.TeamRef)
 	}
 	return results
 }
 
-func (cc *channelCreator) planActions(ctx context.Context, bodies []createChannelBody, ensureMembers bool) []action {
-	actions := make([]action, 0)
-	for _, body := range bodies {
-		exists, err := cc.checkChannelExists(ctx, body.TeamRef, body.ChannelRef)
-		if err != nil {
-			errToShow := fmt.Errorf("failed to check if channel %s in team %s exists: %w", body.ChannelRef, body.TeamRef, err)
-			res := &CreateResult{
-					ChannelName: body.ChannelRef,
-					ChannelID:   "",
-					Error:       errToShow,
-					Status:      StatusFailed,
-			}
-			resLocal := res
-			actions = append(actions, action{
-				createChannelBody: body,
-				result: resLocal,
-				run: func(ctx context.Context, body createChannelBody) *CreateResult {
-					return resLocal
-				},
-			
-			} )
-			continue
-		}
-		if exists {
-			if ensureMembers {
-				actions = append(actions, action{
-					createChannelBody: body,
-					run: func(ctx context.Context, body createChannelBody) *CreateResult {
-						ensureMembersResult := cc.ensureMembersInChannel(ctx, &body)
-						if len(ensureMembersResult.MembersRefsFailed) > 0 || len(ensureMembersResult.OwnerRefsFailed) > 0 {
-							return &CreateResult{
-								ChannelName: body.ChannelRef,
-								ChannelID:   "",
-								Error:       errMembersPartiallyEnsured,
-								Status:      StatusPartiallyEnsured,
-								MemberRefs:  ensureMembersResult.MembersRefsEnsured,
-								OwnerRefs:   ensureMembersResult.OwnerRefsEnsured,
-							}
-						}
-						return &CreateResult{
-							ChannelName: body.ChannelRef,
-							ChannelID:   "",
-							Error:       nil,
-							Status:      StatusMembersEnsured,
-							MemberRefs:  ensureMembersResult.MembersRefsEnsured,
-							OwnerRefs:   ensureMembersResult.OwnerRefsEnsured,
-						}
-					},
-					result: &CreateResult{
-						ChannelName: body.ChannelRef,
-						ChannelID:   "",
-						Error:       nil,
-						Status:      StatusWouldEnsureMembers,
-						MemberRefs:  body.MemberRefs,
-						OwnerRefs:   body.OwnerRefs,
-					},	
-				})
-				continue
-			}
-			res := &CreateResult{
-				ChannelName: body.ChannelRef,
-				ChannelID:   "",
-				Error:       nil,
-				Status:      StatusAlreadyExists,
-			}
-			actions = append(actions, action{
-				createChannelBody: body,
-				run: func(ctx context.Context, body createChannelBody) *CreateResult {
-					return res
-				},
-				result: res,
-			})
-			continue
-		}
-		actions = append(actions, action{
-			createChannelBody: body,
-			run: func(ctx context.Context, body createChannelBody) *CreateResult {
-				channel, err := cc.channels.CreatePrivateChannel(ctx, body.TeamRef, body.ChannelRef, body.MemberRefs, body.OwnerRefs)
-				if err != nil {
-					err = fmt.Errorf("failed to create channel %s in team %s: %w", body.ChannelRef, body.TeamRef, err)
-					return &CreateResult{
-						ChannelName: body.ChannelRef,
-						ChannelID:   "",
-						Error:       err,
-						Status:      StatusFailed,
-					}
-				}
-				return &CreateResult{
-					ChannelName: body.ChannelRef,
-					ChannelID:   channel.ID,
-					Error:       nil,
-					Status:      StatusCreated,
-					MemberRefs:  body.MemberRefs,
-					OwnerRefs:   body.OwnerRefs,
-				}
-			},
-			result: &CreateResult{
-				ChannelName: body.ChannelRef,
-				ChannelID:   "",
-				Error:       nil,
-				Status:      StatusWouldCreate,
-				MemberRefs:  body.MemberRefs,
-				OwnerRefs:   body.OwnerRefs,
-			},
-		})
+func (cc *channelCreator) planActions(ctx context.Context, bodies []createChannelBody, ensureMembers bool) []*action {
+	actions := make([]*action, 0)
+	for i := range bodies {
+		act := cc.planActionForBody(ctx, &bodies[i], ensureMembers)
+		actions = append(actions, act)
 	}
 	return actions
+}
+
+func (cc *channelCreator) planActionForBody(ctx context.Context, body *createChannelBody, ensureMembers bool) *action {
+	exists, err := cc.checkChannelExists(ctx, body.TeamRef, body.ChannelRef)
+	if err != nil {
+		errToShow := fmt.Errorf("failed to check existence of channel %s in team %s: %w", body.ChannelRef, body.TeamRef, err)
+		return staticAction(body, failedResult(errToShow, body))
+	}
+	if exists {
+		if ensureMembers {
+			return cc.ensureMembersAction(body)
+		}
+		return staticAction(body, alreadyExistsResult(body))
+	}
+	return cc.createChannelAction(body)
+}
+
+func (cc *channelCreator) createChannelAction(body *createChannelBody) *action {
+	return &action{
+		createChannelBody: *body,
+		run: func(ctx context.Context, body createChannelBody) *CreateResult {
+			channel, err := cc.channels.CreatePrivateChannel(ctx, body.TeamRef, body.ChannelRef, body.MemberRefs, body.OwnerRefs)
+			if err != nil {
+				err = fmt.Errorf("failed to create channel %s in team %s: %w", body.ChannelRef, body.TeamRef, err)
+				return &CreateResult{
+					ChannelName: body.ChannelRef,
+					ChannelID:   "",
+					Error:       err,
+					Status:      StatusFailed,
+				}
+			}
+			return &CreateResult{
+				ChannelName: body.ChannelRef,
+				ChannelID:   channel.ID,
+				Error:       nil,
+				Status:      StatusCreated,
+				MemberRefs:  body.MemberRefs,
+				OwnerRefs:   body.OwnerRefs,
+			}
+		},
+		result: &CreateResult{
+			ChannelName: body.ChannelRef,
+			ChannelID:   "",
+			Error:       nil,
+			Status:      StatusWouldCreate,
+			MemberRefs:  body.MemberRefs,
+			OwnerRefs:   body.OwnerRefs,
+		},
+	}
+}
+
+func (cc *channelCreator) ensureMembersAction(body *createChannelBody) *action {
+	return &action{
+		createChannelBody: *body,
+		run: func(ctx context.Context, body createChannelBody) *CreateResult {
+			ensureMembersResult := cc.ensureMembersInChannel(ctx, &body)
+			if len(ensureMembersResult.MembersRefsFailed) > 0 || len(ensureMembersResult.OwnerRefsFailed) > 0 {
+				return &CreateResult{
+					ChannelName: body.ChannelRef,
+					ChannelID:   "",
+					Error:       errMembersPartiallyEnsured,
+					Status:      StatusPartiallyEnsured,
+					MemberRefs:  ensureMembersResult.MembersRefsEnsured,
+					OwnerRefs:   ensureMembersResult.OwnerRefsEnsured,
+				}
+			}
+			return &CreateResult{
+				ChannelName: body.ChannelRef,
+				ChannelID:   "",
+				Error:       nil,
+				Status:      StatusMembersEnsured,
+				MemberRefs:  ensureMembersResult.MembersRefsEnsured,
+				OwnerRefs:   ensureMembersResult.OwnerRefsEnsured,
+			}
+		},
+		result: &CreateResult{
+			ChannelName: body.ChannelRef,
+			ChannelID:   "",
+			Error:       nil,
+			Status:      StatusWouldEnsureMembers,
+			MemberRefs:  body.MemberRefs,
+			OwnerRefs:   body.OwnerRefs,
+		},
+	}
+}
+
+func logExecutionResult(result *CreateResult, teamRef string) {
+	logger := initializers.Logger
+	switch result.Status {
+	case StatusCreated:
+		logger.Info("Channel created successfully", "channel", result.ChannelName, "channel_id", result.ChannelID, "team", teamRef, "status", result.Status, "members_refs", result.MemberRefs, "owner_refs", result.OwnerRefs)
+	case StatusAlreadyExists:
+		logger.Info("Channel already exists", "channel", result.ChannelName, "team", teamRef, "status", result.Status)
+	case StatusMembersEnsured:
+		logger.Info("Members ensured in existing channel", "channel", result.ChannelName, "team", teamRef, "status", result.Status, "members_refs", result.MemberRefs, "owner_refs", result.OwnerRefs)
+	case StatusPartiallyEnsured:
+		logger.Warn("Members partially ensured in existing channel", "channel", result.ChannelName, "team", teamRef, "status", result.Status, "members_refs_ensured", result.MemberRefs, "owner_refs_ensured", result.OwnerRefs)
+	case StatusFailed:
+		logger.Error("Channel operation failed", "channel", result.ChannelName, "team", teamRef, "error", result.Error, "status", result.Status)
+	}
+}
+
+func logDryRunResult(result *CreateResult, teamRef string) {
+	logger := initializers.Logger
+	switch result.Status {
+	case StatusWouldCreate:
+		logger.Info("Dry run: Channel would be created", "channel", result.ChannelName, "team", teamRef, "members_refs", result.MemberRefs, "owner_refs", result.OwnerRefs)
+	case StatusWouldEnsureMembers:
+		logger.Info("Dry run: Members would be ensured in existing channel", "channel", result.ChannelName, "team", teamRef, "members_refs", result.MemberRefs, "owner_refs", result.OwnerRefs)
+	case StatusAlreadyExists:
+		logger.Info("Dry run: Channel already exists", "channel", result.ChannelName, "team", teamRef)
+	case StatusFailed:
+		logger.Error("Dry run: Channel creation would fail", "channel", result.ChannelName, "team", teamRef, "error", result.Error)
+	}
+}
+
+func failedResult(err error, body *createChannelBody) *CreateResult {
+	return &CreateResult{
+		ChannelName: body.ChannelRef,
+		ChannelID:   "",
+		Error:       err,
+		Status:      StatusFailed,
+	}
+}
+
+func alreadyExistsResult(body *createChannelBody) *CreateResult {
+	return &CreateResult{
+		ChannelName: body.ChannelRef,
+		ChannelID:   "",
+		Error:       nil,
+		Status:      StatusAlreadyExists,
+	}
+}
+
+func staticAction(body *createChannelBody, result *CreateResult) *action {
+	return &action{
+		createChannelBody: *body,
+		result:            result,
+		run: func(ctx context.Context, body createChannelBody) *CreateResult {
+			return result
+		},
+	}
 }
 
 func (cc *channelCreator) transformRequestToCreateChannelBody(data []map[string]string) []createChannelBody {
