@@ -56,6 +56,7 @@ func mapExtensionToDecodeFunc(extension string) (file_readers.DecodeFunc, error)
 func bulkMessageDemo() {
 	log := initializers.Logger
 	ctx := context.TODO()
+	dryRun := true
 
 	dataFile, err := os.Open("preview/data.yaml")
 	if err != nil {
@@ -106,26 +107,13 @@ func bulkMessageDemo() {
 	}
 
 	teamName := "pzsp2"
-	results := teamsClient.ChannelSender.SendToChannels(ctx, teamName, messages)
+	results := teamsClient.ChannelSender.SendToChannels(ctx, teamName, messages, dryRun)
 
-	successCount := 0
-	for _, result := range results {
-		if result.Error == nil {
-			successCount++
-			log.Info("Message sent successfully",
-				"channel", result.ChannelRef,
-				"message_id", result.Message.ID)
-		} else {
-			log.Error("Failed to send message",
-				"channel", result.ChannelRef,
-				"error", result.Error)
+	if dryRun {
+		for _, res := range results {
+			log.Info("Would send", "message", res.Message, "channel", res.ChannelRef)
 		}
 	}
-
-	log.Info("Bulk message demo completed",
-		"total", len(results),
-		"successful", successCount,
-		"failed", len(results)-successCount)
 }
 
 func createChannelsDemo() {

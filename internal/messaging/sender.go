@@ -9,16 +9,9 @@ import (
 	"github.com/pzsp-teams/lib/models"
 )
 
-// SendResult represents the result of sending a message to a channel
-type SendResult struct {
-	ChannelRef string
-	Message    *models.Message
-	Error      error
-}
-
 // Sender defines the interface for sending messages to channels
 type Sender interface {
-	SendToChannels(ctx context.Context, teamRef string, messages map[string]string) []SendResult
+	SendToChannels(ctx context.Context, teamRef string, messages map[string]string, dryRyn bool) []SendResult
 }
 
 // ChannelSender wraps the channels service from the library
@@ -38,44 +31,18 @@ func NewChannelSender(channelService channels.Service) *ChannelSender {
 // teamRef: team name or ID
 // messages: map of channel reference (name or ID) to message content
 // Returns a slice of SendResult containing the outcome for each channel
-func (s *ChannelSender) SendToChannels(ctx context.Context, teamRef string, messages map[string]string) []SendResult {
-	results := make([]SendResult, 0, len(messages))
-	logger := initializers.Logger
+func (s *ChannelSender) SendToChannels(ctx context.Context, teamRef string, messages map[string]string, dryRun bool) []SendResult {
+	logger := initializers.Logger.With("dryRun", dryRun, "team", teamRef, "total", len(messages))
 
-	logger.Info("Starting bulk message send",
-		"team", teamRef,
-		"channel_count", len(messages))
+	actions := s.planActions(teamRef, messages)
+	var results []SendResult
 
-	for channelRef, content := range messages {
-		result := SendResult{
-			ChannelRef: channelRef,
-		}
+	logger.Info("Starting bulk message send")
 
-		messageBody := models.MessageBody{
-			Content:     content,
-			ContentType: models.MessageContentTypeHTML,
-		}
-
-		logger.Debug("Sending message to channel",
-			"team", teamRef,
-			"channel", channelRef)
-
-		msg, err := s.channelService.SendMessage(ctx, teamRef, channelRef, messageBody)
-		if err != nil {
-			logger.Error("Failed to send message",
-				"team", teamRef,
-				"channel", channelRef,
-				"error", err)
-			result.Error = fmt.Errorf("failed to send to channel %s: %w", channelRef, err)
-		} else {
-			logger.Info("Message sent successfully",
-				"team", teamRef,
-				"channel", channelRef,
-				"message_id", msg.ID)
-			result.Message = msg
-		}
-
-		results = append(results, result)
+	if dryRun {
+		results = s.dryRunActions(actions)
+	} else {
+		results = s.executeActions(ctx, actions)
 	}
 
 	successCount := 0
@@ -86,10 +53,78 @@ func (s *ChannelSender) SendToChannels(ctx context.Context, teamRef string, mess
 	}
 
 	logger.Info("Bulk message send completed",
-		"team", teamRef,
-		"total", len(messages),
 		"successful", successCount,
 		"failed", len(messages)-successCount)
+
+	return results
+}
+
+func (s *ChannelSender) planActions(teamRef string, messages map[string]string) []*action {
+	actions := make([]*action, 0, len(messages))
+	for channelRef, content := range messages {
+		result := SendResult{
+			ChannelRef: channelRef,
+		}
+
+		messageBody := models.MessageBody{
+			Content:     content,
+			ContentType: models.MessageContentTypeHTML,
+		}
+
+		messageData := sendMessageData{teamRef, channelRef, messageBody}
+
+		action := action{
+			sendMessageData: messageData,
+			run: func(ctx context.Context, messageData sendMessageData) *SendResult {
+				result = SendResult{}
+				msg, err := s.channelService.SendMessage(ctx, messageData.teamRef, messageData.channelRef, messageData.body)
+				if err != nil {
+					result.Error = fmt.Errorf("failed to send to channel %s: %w", channelRef, err)
+				} else {
+					result.Message = msg.Content
+				}
+
+				return &result
+			},
+			result: &result,
+		}
+
+		actions = append(actions, &action)
+	}
+
+	return actions
+}
+
+func (s *ChannelSender) executeActions(ctx context.Context, actions []*action) []SendResult {
+	logger := initializers.Logger
+	results := make([]SendResult, 0, len(actions))
+	for _, action := range actions {
+		logger.Debug("Sending message to channel",
+			"team", action.teamRef,
+			"channel", action.channelRef)
+
+		result := action.run(ctx, action.sendMessageData)
+
+		if result.Error != nil {
+			logger.Error("Failed to send message",
+				"team", action.teamRef, "channel", action.channelRef, "error", result.Error)
+		} else {
+			logger.Info("Message sent successfully", "team", action.teamRef,
+				"channel", action.channelRef)
+		}
+
+		results = append(results, *result)
+	}
+
+	return results
+}
+
+func (s *ChannelSender) dryRunActions(actions []*action) []SendResult {
+	results := make([]SendResult, 0, len(actions))
+	for _, act := range actions {
+		result := SendResult{ChannelRef: act.channelRef, Message: act.body.Content}
+		results = append(results, result)
+	}
 
 	return results
 }
