@@ -16,7 +16,7 @@ type channelCreator struct {
 
 // ChannelCreator defines the interface for creating channels
 type ChannelCreator interface {
-	CreateChannels(ctx context.Context, request []map[string]string, ensureMembers bool) []CreateResult
+	CreateChannels(ctx context.Context, request []map[string]string, ensureMembers, dryRun bool) []CreateResult
 }
 
 // NewChannelCreator creates a new instance of ChannelCreator
@@ -27,86 +27,37 @@ func NewChannelCreator(chans channels.Service) *channelCreator {
 }
 
 // CreateChannels creates channels based on the provided request data
-func (cc *channelCreator) CreateChannels(ctx context.Context, request []map[string]string, ensureMembers bool) []CreateResult {
+func (cc *channelCreator) CreateChannels(ctx context.Context, request []map[string]string, ensureMembers, dryRun bool) []CreateResult {
 	results := make([]CreateResult, 0)
 	logger := initializers.Logger
 	logger.Info("Starting channels creation")
 	createChannelBodies := cc.transformRequestToCreateChannelBody(request)
-	for _, body := range createChannelBodies {
-		exists, err := cc.checkChannelExists(ctx, body.TeamRef, body.ChannelRef)
-		if err != nil {
-			logger.Error("Failed to check if channel exists", "channel", body.ChannelRef, "team", body.TeamRef, "error", err)
-			err = fmt.Errorf("failed to check if channel %s in team %s exists: %w", body.ChannelRef, body.TeamRef, err)
-			results = append(results, CreateResult{
-				ChannelName: body.ChannelRef,
-				ChannelID:   "",
-				Error:       err,
-				Status: StatusFailed,
-			})
-			continue
-		}
-		if exists {
-			logger.Info("Channel already exists, skipping creation", "channel", body.ChannelRef, "team", body.TeamRef)
-			if !ensureMembers {
-				results = append(results, CreateResult{
-					ChannelName: body.ChannelRef,
-					ChannelID:   "",
-					Error:       nil,
-					Status: StatusAlreadyExists,
-				})
-				continue
-			}
-			logger.Info("Ensuring members in existing channel", "channel", body.ChannelRef, "team", body.TeamRef)
-			err = cc.ensureMembersInChannel(ctx, &body)
-			if err != nil {
-				logger.Error("Failed to ensure members in existing channel", "channel", body.ChannelRef, "team", body.TeamRef, "error", err)
-				err = fmt.Errorf("failed to ensure members in existing channel %s in team %s: %w", body.ChannelRef, body.TeamRef, err)
-				results = append(results, CreateResult{
-					ChannelName: body.ChannelRef,
-					ChannelID:   "",
-					Error:       err,
-					Status: StatusFailed,
-				})
-			}
-			results = append(results, CreateResult{
-				ChannelName: body.ChannelRef,
-				ChannelID:   "",
-				Error:       nil,
-				Status: StatusMembersEnsured,
-				MemberRefs:  body.MemberRefs,
-				OwnerRefs:   body.OwnerRefs,
-			})
-			continue
-		}
-		channel, err := cc.channels.CreatePrivateChannel(ctx, body.TeamRef, body.ChannelRef, body.MemberRefs, body.OwnerRefs)
-		if err != nil {
-			logger.Error("Failed to create channel", "channel", body.ChannelRef, "team", body.TeamRef, "error", err)
-			err = fmt.Errorf("failed to create channel %s in team %s: %w", body.ChannelRef, body.TeamRef, err)
-			results = append(results, CreateResult{
-				ChannelName: body.ChannelRef,
-				ChannelID:   "",
-				Error:       err,
-				Status:      StatusFailed,
-			})
-		} else {
-			logger.Info("Successfully created channel", "channel", body.ChannelRef, "team", body.TeamRef, "channel_id", channel.ID, "members_ref", body.MemberRefs, "owners_ref", body.OwnerRefs)
-			results = append(results, CreateResult{
-				ChannelName: body.ChannelRef,
-				ChannelID:   channel.ID,
-				Error:       nil,
-				Status:      StatusCreated,
-				MemberRefs:  body.MemberRefs,
-				OwnerRefs:   body.OwnerRefs,
-			})
-		}
+	actions := cc.planActions(ctx, createChannelBodies, ensureMembers)
+	if dryRun {
+		logger.Info("Dry run enabled - no channels will be created")
+		results = cc.dryRunActions(ctx, actions)
+	} else {
+		results = cc.executeActions(ctx, actions)
 	}
-	successCount := 0
-	for _, result := range results {
-		if result.Error == nil {
-			successCount++
-		}
+	logger.Info("Channels creation process completed")
+	return results
+}
+
+
+func (cc *channelCreator) executeActions(ctx context.Context, actions []action) []CreateResult {
+	results := make([]CreateResult, 0)
+	for _, act := range actions {
+		result := act.run(ctx, act.createChannelBody)
+		results = append(results, *result)
 	}
-	logger.Info("Channels creation process completed", "success_count", successCount, "total", len(results))
+	return results
+}
+
+func (cc *channelCreator) dryRunActions(ctx context.Context, actions []action) []CreateResult {
+	results := make([]CreateResult, 0)
+	for _, act := range actions {
+		results = append(results, *act.result)
+	}
 	return results
 }
 
@@ -115,24 +66,111 @@ func (cc *channelCreator) planActions(ctx context.Context, bodies []createChanne
 	for _, body := range bodies {
 		exists, err := cc.checkChannelExists(ctx, body.TeamRef, body.ChannelRef)
 		if err != nil {
+			errToShow := fmt.Errorf("failed to check if channel %s in team %s exists: %w", body.ChannelRef, body.TeamRef, err)
+			actions = append(actions, action{
+				createChannelBody: body,
+				run: func(ctx context.Context, body createChannelBody) *CreateResult {
+					err :=fmt.Errorf("failed to check if channel %s in team %s exists: %w", body.ChannelRef, body.TeamRef, errToShow)
+					return &CreateResult{
+						ChannelName: body.ChannelRef,
+						ChannelID:   "",
+						Error:       err,
+						Status:      StatusFailed,
+					}
+				},
+				result: &CreateResult{
+					ChannelName: body.ChannelRef,
+					ChannelID:   "",
+					Error:       errToShow,
+					Status:      StatusFailed,
+				},
+			} )
 			continue
 		}
 		if exists {
 			if ensureMembers {
 				actions = append(actions, action{
 					createChannelBody: body,
-					run: func(ctx context.Context, body createChannelBody) error {
-						return cc.ensureMembersInChannel(ctx, &body)
+					run: func(ctx context.Context, body createChannelBody) *CreateResult {
+						ensureMembersResult := cc.ensureMembersInChannel(ctx, &body)
+						if len(ensureMembersResult.MembersRefsFailed) > 0 || len(ensureMembersResult.OwnerRefsFailed) > 0 {
+							return &CreateResult{
+								ChannelName: body.ChannelRef,
+								ChannelID:   "",
+								Error:       errMembersPartiallyEnsured,
+								Status:      StatusPartiallyEnsured,
+								MemberRefs:  ensureMembersResult.MembersRefsEnsured,
+								OwnerRefs:   ensureMembersResult.OwnerRefsEnsured,
+							}
+						}
+						return &CreateResult{
+							ChannelName: body.ChannelRef,
+							ChannelID:   "",
+							Error:       nil,
+							Status:      StatusMembersEnsured,
+							MemberRefs:  ensureMembersResult.MembersRefsEnsured,
+							OwnerRefs:   ensureMembersResult.OwnerRefsEnsured,
+						}
 					},
+					result: &CreateResult{
+						ChannelName: body.ChannelRef,
+						ChannelID:   "",
+						Error:       nil,
+						Status:      StatusWouldEnsureMembers,
+						MemberRefs:  body.MemberRefs,
+						OwnerRefs:   body.OwnerRefs,
+					},	
 				})
+				continue
 			}
+			actions = append(actions, action{
+				createChannelBody: body,
+				run: func(ctx context.Context, body createChannelBody) *CreateResult {
+					return &CreateResult{
+						ChannelName: body.ChannelRef,
+						ChannelID:   "",
+						Error:       nil,
+						Status:      StatusAlreadyExists,
+					}
+				},
+				result: &CreateResult{
+					ChannelName: body.ChannelRef,
+					ChannelID:   "",
+					Error:       nil,
+					Status:      StatusAlreadyExists,
+				},
+			})
 			continue
 		}
 		actions = append(actions, action{
 			createChannelBody: body,
-			run: func(ctx context.Context, body createChannelBody) error {
-				_, err := cc.channels.CreatePrivateChannel(ctx, body.TeamRef, body.ChannelRef, body.MemberRefs, body.OwnerRefs)
-				return err
+			run: func(ctx context.Context, body createChannelBody) *CreateResult {
+				channel, err := cc.channels.CreatePrivateChannel(ctx, body.TeamRef, body.ChannelRef, body.MemberRefs, body.OwnerRefs)
+				if err != nil {
+					err = fmt.Errorf("failed to create channel %s in team %s: %w", body.ChannelRef, body.TeamRef, err)
+					return &CreateResult{
+						ChannelName: body.ChannelRef,
+						ChannelID:   "",
+						Error:       err,
+						Status:      StatusFailed,
+					}
+				}
+				return &CreateResult{
+					ChannelName: body.ChannelRef,
+					ChannelID:   channel.ID,
+					Error:       nil,
+					Status:      StatusCreated,
+					MemberRefs:  body.MemberRefs,
+					OwnerRefs:   body.OwnerRefs,
+				}
+			},
+			result: &CreateResult{
+				ChannelName: body.ChannelRef,
+				ChannelID:   "",
+				Error:       nil,
+				Status:      StatusWouldCreate,
+				MemberRefs:  body.MemberRefs,
+				OwnerRefs:   body.OwnerRefs,
 			},
 		})
 	}
@@ -185,23 +223,28 @@ func (cc *channelCreator) checkChannelExists(ctx context.Context, teamRef, chann
 	return true, nil
 }
 
-func (cc *channelCreator) ensureMembersInChannel(ctx context.Context, body *createChannelBody) error {
+func (cc *channelCreator) ensureMembersInChannel(ctx context.Context, body *createChannelBody) *EnsureMembersResult {
 	logger := initializers.Logger
+	var out EnsureMembersResult
 	for _, memberRef := range body.MemberRefs {
 		_, err := cc.channels.AddMember(ctx, body.TeamRef, body.ChannelRef, memberRef, false)
 		if err != nil {
 			logger.Error("Failed to add member to existing channel", "channel", body.ChannelRef, "team", body.TeamRef, "member", memberRef, "error", err)
+			out.MembersRefsFailed = append(out.MembersRefsFailed, memberRef)
 		} else {
 			logger.Info("Successfully added member to existing channel", "channel", body.ChannelRef, "team", body.TeamRef, "member", memberRef)
+			out.MembersRefsEnsured = append(out.MembersRefsEnsured, memberRef)
 		}
 	}
 	for _, ownerRef := range body.OwnerRefs {
 		_, err := cc.channels.AddMember(ctx, body.TeamRef, body.ChannelRef, ownerRef, true)
 		if err != nil {
 			logger.Error("Failed to add owner to existing channel", "channel", body.ChannelRef, "team", body.TeamRef, "owner", ownerRef, "error", err)
+			out.OwnerRefsFailed = append(out.OwnerRefsFailed, ownerRef)
 		} else {
 			logger.Info("Successfully added owner to existing channel", "channel", body.ChannelRef, "team", body.TeamRef, "owner", ownerRef)
+			out.OwnerRefsEnsured = append(out.OwnerRefsEnsured, ownerRef)
 		}
 	}
-	return nil
+	return &out
 }
