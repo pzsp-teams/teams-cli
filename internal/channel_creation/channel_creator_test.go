@@ -6,31 +6,11 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/pzsp-teams/cli/internal/initializers"
-	"github.com/pzsp-teams/cli/internal/logger"
 	"github.com/pzsp-teams/lib/channels"
 	"github.com/pzsp-teams/lib/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-type noopLogger struct{}
-
-func (noopLogger) With(args ...any) logger.Logger {
-	return noopLogger{}
-}
-
-func (noopLogger) Debug(msg string, args ...any) {}
-func (noopLogger) Info(msg string, args ...any)  {}
-func (noopLogger) Warn(msg string, args ...any)  {}
-func (noopLogger) Error(msg string, args ...any) {}
-
-var _ logger.Logger = noopLogger{}
-
-func TestMain(m *testing.M) {
-	initializers.Logger = noopLogger{}
-	m.Run()
-}
 
 func row(teamRef, channelRef, role, userRef string) map[string]string {
 	return map[string]string{
