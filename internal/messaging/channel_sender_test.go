@@ -15,7 +15,6 @@ func TestMain(m *testing.M) {
 	m.Run()
 }
 
-// channelServiceStub is a stub implementation of channels.Service for testing
 type channelServiceStub struct {
 	channels.Service
 
