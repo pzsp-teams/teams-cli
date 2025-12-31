@@ -1,0 +1,353 @@
+package messaging
+
+import (
+	"context"
+	"errors"
+	"testing"
+
+	"github.com/pzsp-teams/lib/chats"
+	"github.com/pzsp-teams/lib/models"
+)
+
+type chatServiceStub struct {
+	chats.Service
+
+	getMentionsFunc func(ctx context.Context, chatRef chats.ChatRef, rawMentions []string) ([]models.Mention, error)
+	sendMessageFunc func(ctx context.Context, chatRef chats.ChatRef, body models.MessageBody) (*models.Message, error)
+}
+
+func (m *chatServiceStub) GetMentions(ctx context.Context, chatRef chats.ChatRef, rawMentions []string) ([]models.Mention, error) {
+	if m.getMentionsFunc != nil {
+		return m.getMentionsFunc(ctx, chatRef, rawMentions)
+	}
+	return nil, nil
+}
+
+func (m *chatServiceStub) SendMessage(ctx context.Context, chatRef chats.ChatRef, body models.MessageBody) (*models.Message, error) {
+	if m.sendMessageFunc != nil {
+		return m.sendMessageFunc(ctx, chatRef, body)
+	}
+	return &models.Message{Content: body.Content}, nil
+}
+
+func TestSendToChats_SuccessfulSend(t *testing.T) {
+	stub := &chatServiceStub{
+		sendMessageFunc: func(ctx context.Context, chatRef chats.ChatRef, body models.MessageBody) (*models.Message, error) {
+			return &models.Message{Content: body.Content}, nil
+		},
+	}
+
+	sender := NewChatSender(stub)
+	messages := map[string]string{
+		"chat1": "Hello World",
+		"chat2": "Test Message",
+	}
+
+	results := sender.SendToChats(context.Background(), messages, false, false)
+
+	if len(results) != 2 {
+		t.Errorf("Expected 2 results, got %d", len(results))
+	}
+
+	for _, result := range results {
+		if result.Error != nil {
+			t.Errorf("Expected no error for %s, got %v", result.ChatRef, result.Error)
+		}
+	}
+}
+
+func TestSendToChats_DryRun(t *testing.T) {
+	stub := &chatServiceStub{
+		sendMessageFunc: func(ctx context.Context, chatRef chats.ChatRef, body models.MessageBody) (*models.Message, error) {
+			t.Error("SendMessage should not be called during dry run")
+			return nil, nil
+		},
+	}
+
+	sender := NewChatSender(stub)
+	messages := map[string]string{
+		"chat1": "Hello World",
+	}
+
+	results := sender.SendToChats(context.Background(), messages, true, false)
+
+	if len(results) != 1 {
+		t.Errorf("Expected 1 result, got %d", len(results))
+	}
+
+	if results[0].Error != nil {
+		t.Errorf("Expected no error in dry run, got %v", results[0].Error)
+	}
+
+	if results[0].Message != "Hello World" {
+		t.Errorf("Expected message 'Hello World', got %q", results[0].Message)
+	}
+}
+
+func TestSendToChats_WithMentions(t *testing.T) {
+	stub := &chatServiceStub{
+		getMentionsFunc: func(ctx context.Context, chatRef chats.ChatRef, rawMentions []string) ([]models.Mention, error) {
+			if len(rawMentions) != 1 || rawMentions[0] != "alice" {
+				t.Errorf("Expected rawMentions [alice], got %v", rawMentions)
+			}
+			return []models.Mention{
+				{
+					Kind:     models.MentionUser,
+					AtID:     0,
+					Text:     "Alice Smith",
+					TargetID: "user123",
+				},
+			}, nil
+		},
+		sendMessageFunc: func(ctx context.Context, chatRef chats.ChatRef, body models.MessageBody) (*models.Message, error) {
+			expectedContent := `Hello <at id="0">Alice Smith</at>!`
+			if body.Content != expectedContent {
+				t.Errorf("Expected content %q, got %q", expectedContent, body.Content)
+			}
+			if len(body.Mentions) != 1 {
+				t.Errorf("Expected 1 mention, got %d", len(body.Mentions))
+			}
+			return &models.Message{Content: body.Content}, nil
+		},
+	}
+
+	sender := NewChatSender(stub)
+	messages := map[string]string{
+		"chat1": "Hello @@alice@@!",
+	}
+
+	results := sender.SendToChats(context.Background(), messages, false, false)
+
+	if len(results) != 1 {
+		t.Errorf("Expected 1 result, got %d", len(results))
+	}
+
+	if results[0].Error != nil {
+		t.Errorf("Expected no error, got %v", results[0].Error)
+	}
+}
+
+func TestSendToChats_MentionResolutionError(t *testing.T) {
+	mentionErr := errors.New("user not found")
+	stub := &chatServiceStub{
+		getMentionsFunc: func(ctx context.Context, chatRef chats.ChatRef, rawMentions []string) ([]models.Mention, error) {
+			return nil, mentionErr
+		},
+		sendMessageFunc: func(ctx context.Context, chatRef chats.ChatRef, body models.MessageBody) (*models.Message, error) {
+			t.Error("SendMessage should not be called when mention resolution fails")
+			return nil, nil
+		},
+	}
+
+	sender := NewChatSender(stub)
+	messages := map[string]string{
+		"chat1": "Hello @@alice@@!",
+	}
+
+	results := sender.SendToChats(context.Background(), messages, false, false)
+
+	if len(results) != 1 {
+		t.Errorf("Expected 1 result, got %d", len(results))
+	}
+
+	if results[0].Error == nil {
+		t.Error("Expected error for mention resolution failure")
+	}
+
+	if results[0].ChatRef != "chat1" {
+		t.Errorf("Expected ChatRef 'chat1', got %q", results[0].ChatRef)
+	}
+}
+
+func TestSendToChats_SendError(t *testing.T) {
+	sendErr := errors.New("network error")
+	stub := &chatServiceStub{
+		sendMessageFunc: func(ctx context.Context, chatRef chats.ChatRef, body models.MessageBody) (*models.Message, error) {
+			return nil, sendErr
+		},
+	}
+
+	sender := NewChatSender(stub)
+	messages := map[string]string{
+		"chat1": "Hello World",
+	}
+
+	results := sender.SendToChats(context.Background(), messages, false, false)
+
+	if len(results) != 1 {
+		t.Errorf("Expected 1 result, got %d", len(results))
+	}
+
+	if results[0].Error == nil {
+		t.Error("Expected error for send failure")
+	}
+}
+
+func TestSendToChats_StopOnError(t *testing.T) {
+	sendErr := errors.New("network error")
+	callCount := 0
+
+	stub := &chatServiceStub{
+		sendMessageFunc: func(ctx context.Context, chatRef chats.ChatRef, body models.MessageBody) (*models.Message, error) {
+			callCount++
+			if body.Content == "Message 1" {
+				return nil, sendErr
+			}
+			return &models.Message{Content: body.Content}, nil
+		},
+	}
+
+	sender := NewChatSender(stub)
+	messages := map[string]string{
+		"chat1": "Message 1",
+		"chat2": "Message 2",
+		"chat3": "Message 3",
+	}
+
+	results := sender.SendToChats(context.Background(), messages, false, false)
+
+	if len(results) != 3 {
+		t.Errorf("Expected 3 results, got %d", len(results))
+	}
+
+	if callCount != 1 {
+		t.Errorf("Expected SendMessage to be called 1 time, got %d", callCount)
+	}
+
+	errorCount := 0
+	skippedCount := 0
+	for _, result := range results {
+		if result.Error != nil {
+			if errors.Is(result.Error, ErrMessageSkipped) {
+				skippedCount++
+			} else {
+				errorCount++
+			}
+		}
+	}
+
+	if errorCount != 1 {
+		t.Errorf("Expected 1 error, got %d", errorCount)
+	}
+
+	if skippedCount != 2 {
+		t.Errorf("Expected 2 skipped messages, got %d", skippedCount)
+	}
+}
+
+func TestSendToChats_IgnoreErrors(t *testing.T) {
+	sendErr := errors.New("network error")
+	callCount := 0
+
+	stub := &chatServiceStub{
+		sendMessageFunc: func(ctx context.Context, chatRef chats.ChatRef, body models.MessageBody) (*models.Message, error) {
+			callCount++
+			if body.Content == "Message 1" {
+				return nil, sendErr
+			}
+			return &models.Message{Content: body.Content}, nil
+		},
+	}
+
+	sender := NewChatSender(stub)
+	messages := map[string]string{
+		"chat1": "Message 1",
+		"chat2": "Message 2",
+		"chat3": "Message 3",
+	}
+
+	results := sender.SendToChats(context.Background(), messages, false, true)
+
+	if len(results) != 3 {
+		t.Errorf("Expected 3 results, got %d", len(results))
+	}
+
+	if callCount != 3 {
+		t.Errorf("Expected SendMessage to be called 3 times, got %d", callCount)
+	}
+
+	successCount := 0
+	errorCount := 0
+	for _, result := range results {
+		if result.Error != nil {
+			errorCount++
+		} else {
+			successCount++
+		}
+	}
+
+	if errorCount != 1 {
+		t.Errorf("Expected 1 error, got %d", errorCount)
+	}
+
+	if successCount != 2 {
+		t.Errorf("Expected 2 successful sends, got %d", successCount)
+	}
+}
+
+func TestSendToChats_DuplicateMentions(t *testing.T) {
+	stub := &chatServiceStub{
+		getMentionsFunc: func(ctx context.Context, chatRef chats.ChatRef, rawMentions []string) ([]models.Mention, error) {
+			if len(rawMentions) != 2 {
+				t.Errorf("Expected 2 raw mentions (including duplicate), got %d", len(rawMentions))
+			}
+			if rawMentions[0] != "alice" || rawMentions[1] != "alice" {
+				t.Errorf("Expected [alice, alice], got %v", rawMentions)
+			}
+
+			return []models.Mention{
+				{Kind: models.MentionUser, AtID: 0, Text: "Alice Smith", TargetID: "user123"},
+				{Kind: models.MentionUser, AtID: 1, Text: "Alice Smith", TargetID: "user123"},
+			}, nil
+		},
+		sendMessageFunc: func(ctx context.Context, chatRef chats.ChatRef, body models.MessageBody) (*models.Message, error) {
+			expectedContent := `Hello <at id="0">Alice Smith</at>, this is for <at id="1">Alice Smith</at> again`
+			if body.Content != expectedContent {
+				t.Errorf("Expected content %q, got %q", expectedContent, body.Content)
+			}
+			if len(body.Mentions) != 2 {
+				t.Errorf("Expected 2 mentions, got %d", len(body.Mentions))
+			}
+			return &models.Message{Content: body.Content}, nil
+		},
+	}
+
+	sender := NewChatSender(stub)
+	messages := map[string]string{
+		"chat1": "Hello @@alice@@, this is for @@alice@@ again",
+	}
+
+	results := sender.SendToChats(context.Background(), messages, false, false)
+
+	if len(results) != 1 {
+		t.Errorf("Expected 1 result, got %d", len(results))
+	}
+
+	if results[0].Error != nil {
+		t.Errorf("Expected no error, got %v", results[0].Error)
+	}
+}
+
+func TestSendToChats_DryRunWithMentionError(t *testing.T) {
+	mentionErr := errors.New("user not found")
+	stub := &chatServiceStub{
+		getMentionsFunc: func(ctx context.Context, chatRef chats.ChatRef, rawMentions []string) ([]models.Mention, error) {
+			return nil, mentionErr
+		},
+	}
+
+	sender := NewChatSender(stub)
+	messages := map[string]string{
+		"chat1": "Hello @@alice@@!",
+	}
+
+	results := sender.SendToChats(context.Background(), messages, true, false)
+
+	if len(results) != 1 {
+		t.Errorf("Expected 1 result, got %d", len(results))
+	}
+
+	if results[0].Error == nil {
+		t.Error("Expected error for mention resolution failure in dry run")
+	}
+}
