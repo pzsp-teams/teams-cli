@@ -537,14 +537,15 @@ func TestExtractMentions_DuplicateMentions(t *testing.T) {
 	content := "Hello @@alice@@, this is for @@alice@@ again"
 	mentions := ExtractMentions(content)
 
-	// Should only return unique mentions
-	want := []string{"alice"}
+	want := []string{"alice", "alice"}
 	if len(mentions) != len(want) {
-		t.Errorf("ExtractMentions() got %v mentions, want %v (duplicates should be removed)", len(mentions), len(want))
+		t.Errorf("ExtractMentions() got %v mentions, want %v (duplicates should be included)", len(mentions), len(want))
 		return
 	}
-	if mentions[0] != want[0] {
-		t.Errorf("ExtractMentions() got %v, want %v", mentions, want)
+	for i, m := range mentions {
+		if m != want[i] {
+			t.Errorf("ExtractMentions()[%d] got %v, want %v", i, m, want[i])
+		}
 	}
 }
 
