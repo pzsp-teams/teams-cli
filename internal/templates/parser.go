@@ -81,16 +81,12 @@ func ExtractMentions(content string) []string {
 		return nil
 	}
 
-	seen := make(map[string]bool)
-	rawMentions := []string{}
+	rawMentions := make([]string, 0, len(matches))
 
 	for _, match := range matches {
 		if len(match) > 1 {
 			raw := strings.TrimSpace(match[1])
-			if raw != "" && !seen[raw] {
-				rawMentions = append(rawMentions, raw)
-				seen[raw] = true
-			}
+			rawMentions = append(rawMentions, raw)
 		}
 	}
 
