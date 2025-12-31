@@ -1,5 +1,8 @@
 Hello {{.name}}!
-This is a mention @@channel@@
+This is a channel mention @@channel@@
+This is a personal mention {{.mention}}
+This is a duplicate channel mention @@channel@@
+This is a team mention @@team@@
 
 Your order #{{.order}} is ready.
 Thank you!
