@@ -1,4 +1,5 @@
 Hello {{.name}}!
+This is a mention @@channel@@
 
 Your order #{{.order}} is ready.
 Thank you!

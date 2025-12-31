@@ -56,7 +56,7 @@ func mapExtensionToDecodeFunc(extension string) (file_readers.DecodeFunc, error)
 func bulkMessageDemo() {
 	log := initializers.Logger
 	ctx := context.TODO()
-	dryRun := true
+	dryRun := false
 	ignoreError := true
 
 	dataFile, err := os.Open("preview/data.yaml")
@@ -107,7 +107,7 @@ func bulkMessageDemo() {
 		os.Exit(1)
 	}
 
-	teamName := "pzsp2"
+	teamName := "pzsp2z1teams"
 	results := teamsClient.ChannelSender.SendToChannels(ctx, teamName, messages, dryRun, ignoreError)
 
 	if dryRun {
