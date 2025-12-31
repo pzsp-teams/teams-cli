@@ -58,7 +58,6 @@ func mapExtensionToDecodeFunc(extension string) (file_readers.DecodeFunc, error)
 func bulkMessageDemo(targetType, messageFileName, dataFileName, teamName string, dryRun, ignoreError bool) {
 	log := initializers.Logger
 	ctx := context.TODO()
-	dryRun := true
 
 	dataFile, err := os.Open(dataFileName)
 	if err != nil {
