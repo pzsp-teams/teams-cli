@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/pzsp-teams/cli/internal/file_readers"
+	"github.com/pzsp-teams/lib/models"
 )
 
 func TestMessageParser_JSONFormatMultipleRecipients(t *testing.T) {
@@ -490,5 +491,188 @@ func TestMessageParser_MixedCRLFAndLF(t *testing.T) {
 
 	if gotMsg != wantMsg {
 		t.Errorf("MessageParser.Parse() for mixed CRLF and LF:\ngot:\n%q\nwant:\n%q", gotMsg, wantMsg)
+	}
+}
+
+func TestExtractMentions_NoMentions(t *testing.T) {
+	content := "Hello world! This is a regular message."
+	mentions := ExtractMentions(content)
+
+	if mentions != nil {
+		t.Errorf("ExtractMentions() got %v, want nil", mentions)
+	}
+}
+
+func TestExtractMentions_SingleMention(t *testing.T) {
+	content := "Hello @@alice@@ how are you?"
+	mentions := ExtractMentions(content)
+
+	want := []string{"alice"}
+	if len(mentions) != len(want) {
+		t.Errorf("ExtractMentions() got %v, want %v", mentions, want)
+		return
+	}
+	if mentions[0] != want[0] {
+		t.Errorf("ExtractMentions() got %v, want %v", mentions, want)
+	}
+}
+
+func TestExtractMentions_MultipleMentions(t *testing.T) {
+	content := "Hello @@alice@@ and @@bob@@, welcome!"
+	mentions := ExtractMentions(content)
+
+	want := []string{"alice", "bob"}
+	if len(mentions) != len(want) {
+		t.Errorf("ExtractMentions() got %v, want %v", mentions, want)
+		return
+	}
+	for i, m := range mentions {
+		if m != want[i] {
+			t.Errorf("ExtractMentions()[%d] got %v, want %v", i, m, want[i])
+		}
+	}
+}
+
+func TestExtractMentions_DuplicateMentions(t *testing.T) {
+	content := "Hello @@alice@@, this is for @@alice@@ again"
+	mentions := ExtractMentions(content)
+
+	// Should only return unique mentions
+	want := []string{"alice"}
+	if len(mentions) != len(want) {
+		t.Errorf("ExtractMentions() got %v mentions, want %v (duplicates should be removed)", len(mentions), len(want))
+		return
+	}
+	if mentions[0] != want[0] {
+		t.Errorf("ExtractMentions() got %v, want %v", mentions, want)
+	}
+}
+
+func TestExtractMentions_WithWhitespace(t *testing.T) {
+	content := "Hello @@   alice  @@ how are you?"
+	mentions := ExtractMentions(content)
+
+	want := []string{"alice"}
+	if len(mentions) != len(want) {
+		t.Errorf("ExtractMentions() got %v, want %v", mentions, want)
+		return
+	}
+	if mentions[0] != want[0] {
+		t.Errorf("ExtractMentions() got %v, want %v", mentions, want)
+	}
+}
+
+func TestExtractMentions_EmailFormat(t *testing.T) {
+	content := "Please contact @@alice@example.com@@ for details"
+	mentions := ExtractMentions(content)
+
+	want := []string{"alice@example.com"}
+	if len(mentions) != len(want) {
+		t.Errorf("ExtractMentions() got %v, want %v", mentions, want)
+		return
+	}
+	if mentions[0] != want[0] {
+		t.Errorf("ExtractMentions() got %v, want %v", mentions, want)
+	}
+}
+
+func TestReplaceMentions_NoMentions(t *testing.T) {
+	content := "Hello world!"
+	mentions := []models.Mention{}
+	result := ReplaceMentions(content, mentions)
+
+	if result != content {
+		t.Errorf("ReplaceMentions() got %q, want %q", result, content)
+	}
+}
+
+func TestReplaceMentions_NilMentions(t *testing.T) {
+	content := "Hello world!"
+	result := ReplaceMentions(content, nil)
+
+	if result != content {
+		t.Errorf("ReplaceMentions() got %q, want %q", result, content)
+	}
+}
+
+func TestReplaceMentions_SingleMention(t *testing.T) {
+	content := "Hello @@ @alice@@!"
+	mentions := []models.Mention{
+		{
+			Kind:     models.MentionUser,
+			AtID:     0,
+			Text:     "Alice Smith",
+			TargetID: "user123",
+		},
+	}
+
+	result := ReplaceMentions(content, mentions)
+	want := `Hello <at id="0">Alice Smith</at>!`
+
+	if result != want {
+		t.Errorf("ReplaceMentions() got %q, want %q", result, want)
+	}
+}
+
+func TestReplaceMentions_MultipleMentions(t *testing.T) {
+	content := "Hello @@alice@@ and @@bob@@!"
+	mentions := []models.Mention{
+		{
+			Kind:     models.MentionUser,
+			AtID:     0,
+			Text:     "Alice Smith",
+			TargetID: "user123",
+		},
+		{
+			Kind:     models.MentionUser,
+			AtID:     1,
+			Text:     "Bob Jones",
+			TargetID: "user456",
+		},
+	}
+
+	result := ReplaceMentions(content, mentions)
+	want := `Hello <at id="0">Alice Smith</at> and <at id="1">Bob Jones</at>!`
+
+	if result != want {
+		t.Errorf("ReplaceMentions() got %q, want %q", result, want)
+	}
+}
+
+func TestReplaceMentions_WithWhitespace(t *testing.T) {
+	content := "Hello @@    alice  @@!"
+	mentions := []models.Mention{
+		{
+			Kind:     models.MentionUser,
+			AtID:     0,
+			Text:     "Alice Smith",
+			TargetID: "user123",
+		},
+	}
+
+	result := ReplaceMentions(content, mentions)
+	want := `Hello <at id="0">Alice Smith</at>!`
+
+	if result != want {
+		t.Errorf("ReplaceMentions() got %q, want %q", result, want)
+	}
+}
+
+func TestReplaceMentions_LessMentionsThanPatterns(t *testing.T) {
+	content := "Hello @@alice@@ and @@bob@@!"
+	mentions := []models.Mention{
+		{
+			Kind:     models.MentionUser,
+			AtID:     0,
+			Text:     "Alice Smith",
+			TargetID: "user123",
+		},
+	}
+
+	result := ReplaceMentions(content, mentions)
+	want := `Hello <at id="0">Alice Smith</at> and @@bob@@!`
+
+	if result != want {
+		t.Errorf("ReplaceMentions() got %q, want %q", result, want)
 	}
 }
