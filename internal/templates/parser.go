@@ -11,7 +11,10 @@ import (
 	"github.com/pzsp-teams/cli/internal/initializers"
 )
 
-var htmlTagRegex = regexp.MustCompile(`</?[ibp]>|<br>|<a\s+href="[^"]*">|</a>`)
+var (
+	htmlTagRegex = regexp.MustCompile(`</?[ibp]>|<br>|<a\s+href="[^"]*">|</a>`)
+	mentionRegex = regexp.MustCompile(`@@[\s]*@[\s]*([^\s]+)[\s]*@@`)
+)
 
 // TemplateParser handles parsing different messages from supplied template and data
 type TemplateParser struct {
