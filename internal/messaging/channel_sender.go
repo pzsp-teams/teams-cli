@@ -65,7 +65,7 @@ func (s *channelSender) planActions(ctx context.Context, teamRef string, message
 	for channelRef, content := range messages {
 		processedContent, mentions, err := s.processMentions(ctx, teamRef, channelRef, content)
 		if err != nil {
-			actions = append(actions, newErrorAction(teamRef, channelRef, content, err))
+			actions = append(actions, newChannelErrorAction(teamRef, channelRef, content, err))
 			continue
 		}
 
@@ -99,7 +99,7 @@ func (s *channelSender) processMentions(ctx context.Context, teamRef, channelRef
 	return templates.ReplaceMentions(content, mentions), mentions, nil
 }
 
-func newErrorAction(teamRef, channelRef, content string, err error) *channelAction {
+func newChannelErrorAction(teamRef, channelRef, content string, err error) *channelAction {
 	return &channelAction{
 		channelMessageData: &channelMessageData{
 			teamRef:    teamRef,
