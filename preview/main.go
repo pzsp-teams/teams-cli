@@ -11,6 +11,7 @@ import (
 	"github.com/pzsp-teams/cli/internal/file_readers"
 	"github.com/pzsp-teams/cli/internal/initializers"
 	"github.com/pzsp-teams/cli/internal/logger"
+	"github.com/pzsp-teams/cli/internal/messaging"
 	"github.com/pzsp-teams/cli/internal/templates"
 )
 
@@ -44,36 +45,35 @@ func init() {
 }
 
 func main() {
-	bulkMessageDemo()
-	// createChannelsDemo()
-	// charmDemo()
+	bulkMessageDemo("channels", "preview/channel_message.txt", "preview/channel_message_data.yaml", "pzsp2z1teams", false, true)
+	bulkMessageDemo("chats", "preview/chat_message.txt", "preview/chat_message_data.yaml", "", false, true)
+	bulkMessageDemo("chats", "preview/group_chat_message.txt", "preview/group_chat_message_data.yaml", "", false, true)
+	createChannelsDemo()
+	charmDemo()
 }
 
 func mapExtensionToDecodeFunc(extension string) (file_readers.DecodeFunc, error) {
 	return file_readers.GetDecoderByExtension(extension)
 }
 
-func bulkMessageDemo() {
+func bulkMessageDemo(targetType, messageFileName, dataFileName, teamName string, dryRun, ignoreError bool) {
 	log := initializers.Logger
 	ctx := context.TODO()
-	dryRun := false
-	ignoreError := true
 
-	dataFile, err := os.Open("preview/data.yaml")
+	dataFile, err := os.Open(dataFileName)
 	if err != nil {
-		log.Error("Failed to open data.yaml", "error", err)
+		log.Error("Failed to open data file", "file", dataFileName, "error", err)
 		os.Exit(1)
 	}
 
-	templateFile, err := os.Open("preview/message.txt")
+	templateFile, err := os.Open(messageFileName)
 	if err != nil {
 		_ = dataFile.Close()
-		log.Error("Failed to open message.txt", "error", err)
+		log.Error("Failed to open message file", "file", messageFileName, "error", err)
 		os.Exit(1)
 	}
 
 	extension := filepath.Ext(dataFile.Name())[1:]
-
 	parser, err := mapExtensionToDecodeFunc(extension)
 	if err != nil {
 		log.Error("Failed to get decode function", "error", err)
@@ -107,12 +107,55 @@ func bulkMessageDemo() {
 		os.Exit(1)
 	}
 
-	teamName := "pzsp2z1teams"
-	results := teamsClient.ChannelSender.SendToChannels(ctx, teamName, messages, dryRun, ignoreError)
+	switch targetType {
+	case "channels":
+		if teamName == "" {
+			log.Error("Team name is required for sending to channels")
+			os.Exit(1)
+		}
+		log.Info("Sending messages to channels", "team", teamName, "count", len(messages), "dryRun", dryRun)
+		results := teamsClient.ChannelSender.SendToChannels(ctx, teamName, messages, dryRun, ignoreError)
+		printChannelResults(results, dryRun)
 
+	case "chats":
+		log.Info("Sending messages to chats", "count", len(messages), "dryRun", dryRun)
+		results := teamsClient.ChatSender.SendToChats(ctx, messages, dryRun, ignoreError)
+		printChatResults(results, dryRun)
+
+	default:
+		log.Error("Invalid target type", "targetType", targetType, "validTypes", "channels, chats")
+		os.Exit(1)
+	}
+}
+
+func printChannelResults(results []messaging.ChannelSendResult, dryRun bool) {
+	log := initializers.Logger
 	if dryRun {
 		for _, res := range results {
-			log.Info("Would send", "message", res.Message, "channel", res.ChannelRef)
+			if res.Error != nil {
+				log.Warn("Would fail", "channel", res.ChannelRef, "error", res.Error)
+			} else {
+				log.Info("Would send", "channel", res.ChannelRef, "message", res.Message)
+			}
+		}
+	} else {
+		for _, res := range results {
+			if res.Error != nil {
+				log.Error("Failed", "channel", res.ChannelRef, "error", res.Error)
+			}
+		}
+	}
+}
+
+func printChatResults(results []messaging.ChatSendResult, dryRun bool) {
+	log := initializers.Logger
+	if dryRun {
+		for _, res := range results {
+			if res.Error != nil {
+				log.Warn("Would fail", "chat", res.ChatRef, "error", res.Error)
+			} else {
+				log.Info("Would send", "chat", res.ChatRef, "message", res.Message)
+			}
 		}
 	}
 }
