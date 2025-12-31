@@ -9,19 +9,18 @@ import (
 	"github.com/pzsp-teams/lib/models"
 )
 
-// Sender defines the interface for sending messages to channels
-type Sender interface {
-	SendToChannels(ctx context.Context, teamRef string, messages map[string]string, dryRyn, ignoreError bool) []SendResult
-}
-
-// ChannelSender wraps the channels service from the library
-type ChannelSender struct {
+type channelSender struct {
 	channelService channels.Service
 }
 
+// ChannelSender defines the interface for sending messages to channels
+type ChannelSender interface {
+	SendToChannels(ctx context.Context, teamRef string, messages map[string]string, dryRyn, ignoreError bool) []SendResult
+}
+
 // NewChannelSender creates a new ChannelSender with the provided channels service
-func NewChannelSender(channelService channels.Service) *ChannelSender {
-	return &ChannelSender{
+func NewChannelSender(channelService channels.Service) *channelSender {
+	return &channelSender{
 		channelService: channelService,
 	}
 }
@@ -31,7 +30,7 @@ func NewChannelSender(channelService channels.Service) *ChannelSender {
 // teamRef: team name or ID
 // messages: map of channel reference (name or ID) to message content
 // Returns a slice of SendResult containing the outcome for each channel
-func (s *ChannelSender) SendToChannels(ctx context.Context, teamRef string, messages map[string]string, dryRun, ignoreError bool) []SendResult {
+func (s *channelSender) SendToChannels(ctx context.Context, teamRef string, messages map[string]string, dryRun, ignoreError bool) []SendResult {
 	logger := initializers.Logger.With("team", teamRef, "dryRun", dryRun, "ignoreError", ignoreError, "total", len(messages))
 
 	actions := s.planActions(teamRef, messages)
@@ -59,7 +58,7 @@ func (s *ChannelSender) SendToChannels(ctx context.Context, teamRef string, mess
 	return results
 }
 
-func (s *ChannelSender) planActions(teamRef string, messages map[string]string) []*action {
+func (s *channelSender) planActions(teamRef string, messages map[string]string) []*action {
 	actions := make([]*action, 0, len(messages))
 	for channelRef, content := range messages {
 		result := SendResult{
@@ -96,7 +95,7 @@ func (s *ChannelSender) planActions(teamRef string, messages map[string]string) 
 	return actions
 }
 
-func (s *ChannelSender) executeActions(ctx context.Context, actions []*action, ignoreError bool) []SendResult {
+func (s *channelSender) executeActions(ctx context.Context, actions []*action, ignoreError bool) []SendResult {
 	logger := initializers.Logger
 	results := make([]SendResult, 0, len(actions))
 	skipRemaining := false
@@ -139,7 +138,7 @@ func (s *ChannelSender) executeActions(ctx context.Context, actions []*action, i
 	return results
 }
 
-func (s *ChannelSender) dryRunActions(actions []*action) []SendResult {
+func (s *channelSender) dryRunActions(actions []*action) []SendResult {
 	results := make([]SendResult, 0, len(actions))
 	for _, act := range actions {
 		result := SendResult{ChannelRef: act.channelRef, Message: act.body.Content}

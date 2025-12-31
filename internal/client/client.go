@@ -11,7 +11,7 @@ import (
 
 // TeamsClient aggregates service wrappers for the Teams API
 type TeamsClient struct {
-	ChannelSender  messaging.Sender
+	ChannelSender  messaging.ChannelSender
 	ChannelCreator channelcreation.ChannelCreator
 }
 
