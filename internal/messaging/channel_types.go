@@ -6,21 +6,21 @@ import (
 	"github.com/pzsp-teams/lib/models"
 )
 
-// SendResult represents the result of sending a message to a channel
-type SendResult struct {
+// ChannelSendResult represents the result of sending a message to a channel
+type ChannelSendResult struct {
 	ChannelRef string
 	Message    string
 	Error      error
 }
 
-type sendMessageData struct {
+type channelMessageData struct {
 	teamRef    string
 	channelRef string
 	body       models.MessageBody
 }
 
-type action struct {
-	*sendMessageData
-	run    func(ctx context.Context, message *sendMessageData) *SendResult
-	result *SendResult
+type channelAction struct {
+	*channelMessageData
+	run    func(ctx context.Context, message *channelMessageData) *ChannelSendResult
+	result *ChannelSendResult
 }

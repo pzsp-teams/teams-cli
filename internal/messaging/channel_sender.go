@@ -16,7 +16,7 @@ type channelSender struct {
 
 // ChannelSender defines the interface for sending messages to channels
 type ChannelSender interface {
-	SendToChannels(ctx context.Context, teamRef string, messages map[string]string, dryRyn, ignoreError bool) []SendResult
+	SendToChannels(ctx context.Context, teamRef string, messages map[string]string, dryRyn, ignoreError bool) []ChannelSendResult
 }
 
 // NewChannelSender creates a new ChannelSender with the provided channels service
@@ -31,11 +31,11 @@ func NewChannelSender(channelService channels.Service) *channelSender {
 // teamRef: team name or ID
 // messages: map of channel reference (name or ID) to message content
 // Returns a slice of SendResult containing the outcome for each channel
-func (s *channelSender) SendToChannels(ctx context.Context, teamRef string, messages map[string]string, dryRun, ignoreError bool) []SendResult {
+func (s *channelSender) SendToChannels(ctx context.Context, teamRef string, messages map[string]string, dryRun, ignoreError bool) []ChannelSendResult {
 	logger := initializers.Logger.With("team", teamRef, "dryRun", dryRun, "ignoreError", ignoreError, "total", len(messages))
 
 	actions := s.planActions(ctx, teamRef, messages)
-	var results []SendResult
+	var results []ChannelSendResult
 
 	logger.Info("Starting bulk message send")
 
@@ -59,8 +59,8 @@ func (s *channelSender) SendToChannels(ctx context.Context, teamRef string, mess
 	return results
 }
 
-func (s *channelSender) planActions(ctx context.Context, teamRef string, messages map[string]string) []*action {
-	actions := make([]*action, 0, len(messages))
+func (s *channelSender) planActions(ctx context.Context, teamRef string, messages map[string]string) []*channelAction {
+	actions := make([]*channelAction, 0, len(messages))
 
 	for channelRef, content := range messages {
 		processedContent, mentions, err := s.processMentions(ctx, teamRef, channelRef, content)
@@ -69,7 +69,7 @@ func (s *channelSender) planActions(ctx context.Context, teamRef string, message
 			continue
 		}
 
-		messageData := sendMessageData{
+		messageData := channelMessageData{
 			teamRef:    teamRef,
 			channelRef: channelRef,
 			body: models.MessageBody{
@@ -99,9 +99,9 @@ func (s *channelSender) processMentions(ctx context.Context, teamRef, channelRef
 	return templates.ReplaceMentions(content, mentions), mentions, nil
 }
 
-func newErrorAction(teamRef, channelRef, content string, err error) *action {
-	return &action{
-		sendMessageData: sendMessageData{
+func newErrorAction(teamRef, channelRef, content string, err error) *channelAction {
+	return &channelAction{
+		channelMessageData: &channelMessageData{
 			teamRef:    teamRef,
 			channelRef: channelRef,
 			body: models.MessageBody{
@@ -109,63 +109,64 @@ func newErrorAction(teamRef, channelRef, content string, err error) *action {
 			},
 		},
 		run:    nil,
-		result: &SendResult{ChannelRef: channelRef, Message: content, Error: err},
+		result: &ChannelSendResult{ChannelRef: channelRef, Message: content, Error: err},
 	}
 }
 
-func (s *channelSender) newSendAction(data *sendMessageData) *action {
-	return &action{
-		sendMessageData: *data,
-		run:             s.sendMessage,
-		result:          nil,
+func (s *channelSender) newSendAction(data *channelMessageData) *channelAction {
+	return &channelAction{
+		channelMessageData: data,
+		run:                s.sendMessage,
+		result:             nil,
 	}
 }
 
-func (s *channelSender) sendMessage(ctx context.Context, data sendMessageData) *SendResult {
+func (s *channelSender) sendMessage(ctx context.Context, data *channelMessageData) *ChannelSendResult {
 	msg, err := s.channelService.SendMessage(ctx, data.teamRef, data.channelRef, data.body)
 	if err != nil {
-		return &SendResult{
+		return &ChannelSendResult{
 			ChannelRef: data.channelRef,
 			Error:      fmt.Errorf("failed to send to channel %s: %w", data.channelRef, err),
 		}
 	}
-	return &SendResult{
+	return &ChannelSendResult{
 		ChannelRef: data.channelRef,
 		Message:    msg.Content,
 	}
 }
 
-func (s *channelSender) executeActions(ctx context.Context, actions []*action, ignoreError bool) []SendResult {
+func (s *channelSender) executeActions(ctx context.Context, actions []*channelAction, ignoreError bool) []ChannelSendResult {
 	logger := initializers.Logger
-	results := make([]SendResult, 0, len(actions))
+	results := make([]ChannelSendResult, 0, len(actions))
 	skipRemaining := false
 
 	for _, action := range actions {
-		var result *SendResult
+		var result *ChannelSendResult
 
-		if skipRemaining {
+		switch {
+		case skipRemaining:
 			logger.Debug("Skipping Message",
 				"team", action.teamRef,
 				"channel", action.channelRef)
 
-			result = &SendResult{
+			result = &ChannelSendResult{
 				ChannelRef: action.channelRef,
 				Message:    action.body.Content,
 				Error:      ErrMessageSkipped,
 			}
-		} else if action.run == nil {
+		case action.run == nil:
 			result = action.result
 			logger.Error("Failed during planning",
 				"team", action.teamRef, "channel", action.channelRef, "error", result.Error)
 			if !ignoreError {
 				skipRemaining = true
 			}
-		} else {
+		default:
 			logger.Debug("Sending message to channel",
 				"team", action.teamRef,
 				"channel", action.channelRef)
 
-			result = action.run(ctx, action.sendMessageData)
+			result = action.run(ctx, action.channelMessageData)
 
 			if result.Error != nil {
 				logger.Error("Failed to send message",
@@ -185,13 +186,13 @@ func (s *channelSender) executeActions(ctx context.Context, actions []*action, i
 	return results
 }
 
-func (s *channelSender) dryRunActions(actions []*action) []SendResult {
-	results := make([]SendResult, 0, len(actions))
+func (s *channelSender) dryRunActions(actions []*channelAction) []ChannelSendResult {
+	results := make([]ChannelSendResult, 0, len(actions))
 	for _, act := range actions {
 		if act.run == nil {
 			results = append(results, *act.result)
 		} else {
-			result := SendResult{ChannelRef: act.channelRef, Message: act.body.Content}
+			result := ChannelSendResult{ChannelRef: act.channelRef, Message: act.body.Content}
 			results = append(results, result)
 		}
 	}
