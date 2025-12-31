@@ -20,7 +20,7 @@ type sendMessageData struct {
 }
 
 type action struct {
-	sendMessageData
-	run    func(ctx context.Context, message sendMessageData) *SendResult
+	*sendMessageData
+	run    func(ctx context.Context, message *sendMessageData) *SendResult
 	result *SendResult
 }
