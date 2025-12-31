@@ -96,3 +96,25 @@ func ExtractMentions(content string) []string {
 
 	return rawMentions
 }
+
+// ReplaceMentions replaces user mention patterns with <at> tags using the provided mentions in order
+// Each occurrence gets a unique AtID, mentions list will contain duplicates for repeated mentions
+func ReplaceMentions(content string, mentions []models.Mention) string {
+	if len(mentions) == 0 {
+		return content
+	}
+
+	processed := content
+
+	for _, mention := range mentions {
+		match := mentionRegex.FindStringIndex(processed)
+		if match == nil {
+			break
+		}
+
+		atTag := fmt.Sprintf(`<at id="%d">%s</at>`, mention.AtID, mention.Text)
+		processed = processed[:match[0]] + atTag + processed[match[1]:]
+	}
+
+	return processed
+}
