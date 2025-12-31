@@ -1,0 +1,8 @@
+kmarsza@pzsp2z1teams.onmicrosoft.com:
+    name: Alice
+    order: "12345"
+    mention: "@@kmarsza@pzsp2z1teams.onmicrosoft.com@@"
+mszwejk@pzsp2z1teams.onmicrosoft.com:
+    name: Bob
+    order: "67890"
+    mention: "@@mszwejk@pzsp2z1teams.onmicrosoft.com@@"

@@ -1,0 +1,5 @@
+Hello {{.name}}!
+This is a personal mention {{.mention}}
+
+Your order #{{.order}} is ready.
+Thank you!
