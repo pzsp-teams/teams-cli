@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"strings"
 	"text/template"
 
 	"github.com/pzsp-teams/cli/internal/file_readers"
 	"github.com/pzsp-teams/cli/internal/initializers"
+	"github.com/pzsp-teams/lib/models"
 )
 
 var (
@@ -70,4 +72,27 @@ func processContent(data []byte) string {
 	// \r can be ignored, won't be rendered by html on teams anyway
 	replaced := bytes.ReplaceAll(data, []byte("\n"), []byte("<br>"))
 	return string(replaced)
+}
+
+// ExtractMentions extracts user mention patterns from content and returns raw mention strings
+func ExtractMentions(content string) []string {
+	matches := mentionRegex.FindAllStringSubmatch(content, -1)
+	if len(matches) == 0 {
+		return nil
+	}
+
+	seen := make(map[string]bool)
+	rawMentions := []string{}
+
+	for _, match := range matches {
+		if len(match) > 1 {
+			raw := strings.TrimSpace(match[1])
+			if raw != "" && !seen[raw] {
+				rawMentions = append(rawMentions, raw)
+				seen[raw] = true
+			}
+		}
+	}
+
+	return rawMentions
 }
