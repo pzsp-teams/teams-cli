@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/pzsp-teams/cli/internal/initializers"
+	"github.com/pzsp-teams/cli/internal/templates"
 	"github.com/pzsp-teams/lib/channels"
 	"github.com/pzsp-teams/lib/models"
 )
@@ -33,7 +34,7 @@ func NewChannelSender(channelService channels.Service) *channelSender {
 func (s *channelSender) SendToChannels(ctx context.Context, teamRef string, messages map[string]string, dryRun, ignoreError bool) []SendResult {
 	logger := initializers.Logger.With("team", teamRef, "dryRun", dryRun, "ignoreError", ignoreError, "total", len(messages))
 
-	actions := s.planActions(teamRef, messages)
+	actions := s.planActions(ctx, teamRef, messages)
 	var results []SendResult
 
 	logger.Info("Starting bulk message send")
@@ -58,41 +59,80 @@ func (s *channelSender) SendToChannels(ctx context.Context, teamRef string, mess
 	return results
 }
 
-func (s *channelSender) planActions(teamRef string, messages map[string]string) []*action {
+func (s *channelSender) planActions(ctx context.Context, teamRef string, messages map[string]string) []*action {
 	actions := make([]*action, 0, len(messages))
+
 	for channelRef, content := range messages {
-		result := SendResult{
-			ChannelRef: channelRef,
-			Message:    content,
+		processedContent, mentions, err := s.processMentions(ctx, teamRef, channelRef, content)
+		if err != nil {
+			actions = append(actions, newErrorAction(teamRef, channelRef, content, err))
+			continue
 		}
 
-		messageBody := models.MessageBody{
-			Content:     content,
-			ContentType: models.MessageContentTypeHTML,
-		}
-
-		messageData := sendMessageData{teamRef, channelRef, messageBody}
-
-		action := action{
-			sendMessageData: messageData,
-			run: func(ctx context.Context, messageData sendMessageData) *SendResult {
-				result = SendResult{}
-				msg, err := s.channelService.SendMessage(ctx, messageData.teamRef, messageData.channelRef, messageData.body)
-				if err != nil {
-					result.Error = fmt.Errorf("failed to send to channel %s: %w", channelRef, err)
-				} else {
-					result.Message = msg.Content
-				}
-
-				return &result
+		messageData := sendMessageData{
+			teamRef:    teamRef,
+			channelRef: channelRef,
+			body: models.MessageBody{
+				Content:     processedContent,
+				ContentType: models.MessageContentTypeHTML,
+				Mentions:    mentions,
 			},
-			result: &result,
 		}
 
-		actions = append(actions, &action)
+		actions = append(actions, s.newSendAction(&messageData))
 	}
 
 	return actions
+}
+
+func (s *channelSender) processMentions(ctx context.Context, teamRef, channelRef, content string) (string, []models.Mention, error) {
+	rawMentions := templates.ExtractMentions(content)
+	if len(rawMentions) == 0 {
+		return content, nil, nil
+	}
+
+	mentions, err := s.channelService.GetMentions(ctx, teamRef, channelRef, rawMentions)
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to resolve mentions for channel %s: %w", channelRef, err)
+	}
+
+	return templates.ReplaceMentions(content, mentions), mentions, nil
+}
+
+func newErrorAction(teamRef, channelRef, content string, err error) *action {
+	return &action{
+		sendMessageData: sendMessageData{
+			teamRef:    teamRef,
+			channelRef: channelRef,
+			body: models.MessageBody{
+				Content: content,
+			},
+		},
+		run:    nil,
+		result: &SendResult{ChannelRef: channelRef, Message: content, Error: err},
+	}
+}
+
+func (s *channelSender) newSendAction(data *sendMessageData) *action {
+	return &action{
+		sendMessageData: *data,
+		run:             s.sendMessage,
+		result:          nil,
+	}
+}
+
+func (s *channelSender) sendMessage(ctx context.Context, data sendMessageData) *SendResult {
+	msg, err := s.channelService.SendMessage(ctx, data.teamRef, data.channelRef, data.body)
+	if err != nil {
+		return &SendResult{
+			ChannelRef: data.channelRef,
+			Error:      fmt.Errorf("failed to send to channel %s: %w", data.channelRef, err),
+		}
+	}
+	return &SendResult{
+		ChannelRef: data.channelRef,
+		Message:    msg.Content,
+	}
 }
 
 func (s *channelSender) executeActions(ctx context.Context, actions []*action, ignoreError bool) []SendResult {
@@ -112,6 +152,13 @@ func (s *channelSender) executeActions(ctx context.Context, actions []*action, i
 				ChannelRef: action.channelRef,
 				Message:    action.body.Content,
 				Error:      ErrMessageSkipped,
+			}
+		} else if action.run == nil {
+			result = action.result
+			logger.Error("Failed during planning",
+				"team", action.teamRef, "channel", action.channelRef, "error", result.Error)
+			if !ignoreError {
+				skipRemaining = true
 			}
 		} else {
 			logger.Debug("Sending message to channel",
@@ -141,8 +188,12 @@ func (s *channelSender) executeActions(ctx context.Context, actions []*action, i
 func (s *channelSender) dryRunActions(actions []*action) []SendResult {
 	results := make([]SendResult, 0, len(actions))
 	for _, act := range actions {
-		result := SendResult{ChannelRef: act.channelRef, Message: act.body.Content}
-		results = append(results, result)
+		if act.run == nil {
+			results = append(results, *act.result)
+		} else {
+			result := SendResult{ChannelRef: act.channelRef, Message: act.body.Content}
+			results = append(results, result)
+		}
 	}
 
 	return results
