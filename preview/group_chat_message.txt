@@ -1,0 +1,7 @@
+Hello {{.name}}!
+This is a group chat mention @@everyone@@
+This is a personal mention {{.mention}}
+This is a duplicate group chat mention @@everyone@@
+
+Your order #{{.order}} is ready.
+Thank you!

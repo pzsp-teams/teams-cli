@@ -45,8 +45,8 @@ func init() {
 
 func main() {
 	bulkMessageDemo()
-	createChannelsDemo()
-	charmDemo()
+	// createChannelsDemo()
+	// charmDemo()
 }
 
 func mapExtensionToDecodeFunc(extension string) (file_readers.DecodeFunc, error) {
