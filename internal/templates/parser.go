@@ -15,7 +15,7 @@ import (
 
 var (
 	htmlTagRegex = regexp.MustCompile(`</?[ibp]>|<br>|<a\s+href="[^"]*">|</a>`)
-	mentionRegex = regexp.MustCompile(`@@[\s]*@[\s]*([^\s]+)[\s]*@@`)
+	mentionRegex = regexp.MustCompile(`@@\s*(\S+)\s*@@`)
 )
 
 // TemplateParser handles parsing different messages from supplied template and data
