@@ -12,12 +12,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func row(teamRef, channelRef, role, userRef string) map[string]string {
-	return map[string]string{
-		"team_ref":    teamRef,
-		"channel_ref": channelRef,
-		"role":        role,
-		"user_ref":    userRef,
+func channelData(members, owners []string) ChannelData {
+	return ChannelData{
+		"members": members,
+		"owners":  owners,
 	}
 }
 
@@ -54,35 +52,30 @@ func (s *channelsServiceStub) CreatePrivateChannel(
 func TestTransformRequestToCreateChannelBody_GroupsAndRoles(t *testing.T) {
 	cc := &channelCreator{}
 
-	in := []map[string]string{
-		row("t1", "c1", "member", "u1"),
-		row("t1", "c1", "owner", "u2"),
-		row("t1", "c1", "member", "u3"),
-		row("t1", "c2", "member", "u4"),
-		row("t2", "cx", "owner", "u9"),
+	in := map[string]ChannelData{
+		"c1": channelData([]string{"u1", "u3"}, []string{"u2"}),
+		"c2": channelData([]string{"u4"}, []string{}),
 	}
 
-	got := cc.transformRequestToCreateChannelBody(in)
-	require.Len(t, got, 3)
+	got := cc.transformRequestToCreateChannelBody("t1", in)
+	require.Len(t, got, 2)
 
 	byKey := map[string]createChannelBody{}
 	for _, b := range got {
-		byKey[b.TeamRef+"::"+b.ChannelRef] = b
+		byKey[b.ChannelRef] = b
 	}
 
-	b := byKey["t1::c1"]
+	b := byKey["c1"]
 	assert.Equal(t, "t1", b.TeamRef)
 	assert.Equal(t, "c1", b.ChannelRef)
 	assert.ElementsMatch(t, []string{"u1", "u3"}, b.MemberRefs)
 	assert.ElementsMatch(t, []string{"u2"}, b.OwnerRefs)
 
-	b = byKey["t1::c2"]
+	b = byKey["c2"]
+	assert.Equal(t, "t1", b.TeamRef)
+	assert.Equal(t, "c2", b.ChannelRef)
 	assert.ElementsMatch(t, []string{"u4"}, b.MemberRefs)
 	assert.Empty(t, b.OwnerRefs)
-
-	b = byKey["t2::cx"]
-	assert.Empty(t, b.MemberRefs)
-	assert.ElementsMatch(t, []string{"u9"}, b.OwnerRefs)
 }
 
 func TestCheckChannelExists_NotFound_ReturnsFalseNil(t *testing.T) {
@@ -123,12 +116,11 @@ func TestCreateChannels_DryRun_MissingChannel_ReturnsWouldCreate_AndDoesNotCreat
 	}
 
 	cc := NewChannelCreator(stub)
-	req := []map[string]string{
-		row("teamA", "chanA", "member", "u1"),
-		row("teamA", "chanA", "owner", "u2"),
+	req := map[string]ChannelData{
+		"chanA": channelData([]string{"u1"}, []string{"u2"}),
 	}
 
-	res := cc.CreateChannels(context.Background(), req, false, true)
+	res := cc.CreateChannels(context.Background(), "teamA", req, false, true)
 	require.Len(t, res, 1)
 
 	assert.Equal(t, "chanA", res[0].ChannelName)
@@ -156,12 +148,11 @@ func TestCreateChannels_Execute_MissingChannel_CreatesAndReturnsCreated(t *testi
 	}
 
 	cc := NewChannelCreator(stub)
-	req := []map[string]string{
-		row("teamA", "chanA", "member", "u1"),
-		row("teamA", "chanA", "owner", "u2"),
+	req := map[string]ChannelData{
+		"chanA": channelData([]string{"u1"}, []string{"u2"}),
 	}
 
-	res := cc.CreateChannels(context.Background(), req, false, false)
+	res := cc.CreateChannels(context.Background(), "teamA", req, false, false)
 	require.Len(t, res, 1)
 
 	assert.Equal(t, StatusCreated, res[0].Status)
@@ -186,11 +177,11 @@ func TestCreateChannels_DryRun_ChannelExists_EnsureMembersFalse_ReturnsAlreadyEx
 	}
 	cc := NewChannelCreator(stub)
 
-	req := []map[string]string{
-		row("teamA", "chanA", "member", "u1"),
+	req := map[string]ChannelData{
+		"chanA": channelData([]string{"u1"}, []string{}),
 	}
 
-	res := cc.CreateChannels(context.Background(), req, false, true)
+	res := cc.CreateChannels(context.Background(), "teamA", req, false, true)
 	require.Len(t, res, 1)
 
 	assert.Equal(t, StatusAlreadyExists, res[0].Status)
@@ -207,12 +198,11 @@ func TestCreateChannels_DryRun_ChannelExists_EnsureMembersTrue_ReturnsWouldEnsur
 	}
 	cc := NewChannelCreator(stub)
 
-	req := []map[string]string{
-		row("teamA", "chanA", "member", "u1"),
-		row("teamA", "chanA", "owner", "u2"),
+	req := map[string]ChannelData{
+		"chanA": channelData([]string{"u1"}, []string{"u2"}),
 	}
 
-	res := cc.CreateChannels(context.Background(), req, true, true)
+	res := cc.CreateChannels(context.Background(), "teamA", req, true, true)
 	require.Len(t, res, 1)
 
 	assert.Equal(t, StatusWouldEnsureMembers, res[0].Status)
