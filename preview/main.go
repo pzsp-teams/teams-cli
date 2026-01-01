@@ -49,7 +49,6 @@ func main() {
 	bulkMessageDemo("chats", "preview/chat_message.txt", "preview/chat_message_data.yaml", "", false, true)
 	bulkMessageDemo("chats", "preview/group_chat_message.txt", "preview/group_chat_message_data.yaml", "", false, true)
 	createChannelsDemo()
-	// charmDemo()
 }
 
 func mapExtensionToDecodeFunc(extension string) (file_readers.DecodeFunc, error) {
@@ -205,26 +204,4 @@ func createChannelsDemo() {
 		"total", len(results),
 		"successful", successCount,
 		"failed", len(results)-successCount)
-}
-
-func charmDemo() {
-	log := initializers.Logger
-	log.Debug("this is a debug message")
-	log.Info("application started successfully")
-	log.Warn("this is a warning", "code", "WARN001")
-	log.Error("this is an error", "error", "something went wrong")
-
-	log.Info("=== Logging with Context (With) ===")
-	userLogger := log.With("user_id", "12345", "role", "admin")
-	userLogger.Info("user logged in")
-	userLogger.Info("user accessed dashboard")
-
-	requestLogger := userLogger.With("request_id", "req-abc-123")
-	requestLogger.Info("processing request", "endpoint", "/api/users")
-	requestLogger.Warn("slow request detected", "duration_ms", 2500)
-
-	log.Debug("debug level message")
-	log.Info("info level message")
-	log.Warn("warning level message")
-	log.Error("error level message")
 }
