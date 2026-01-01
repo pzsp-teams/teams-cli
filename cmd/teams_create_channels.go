@@ -80,7 +80,7 @@ func runTeamsCreateChannels(cmd *cobra.Command, args []string) error {
 	}
 
 	log.Info("Creating channels", "count", len(channelData), "dryRun", createChannelsDryRun)
-	results := teamsClient.ChannelCreator.CreateChannels(ctx, channelData, createChannelsDryRun)
+	results := teamsClient.ChannelCreator.CreateChannels(ctx, channelData, true)
 
 	successCount := 0
 	for _, res := range results {
