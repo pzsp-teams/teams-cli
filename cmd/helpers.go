@@ -12,7 +12,7 @@ import (
 	"github.com/pzsp-teams/cli/internal/client"
 	"github.com/pzsp-teams/cli/internal/file_readers"
 	"github.com/pzsp-teams/cli/internal/templates"
-	teams "github.com/pzsp-teams/lib"
+	teams_config "github.com/pzsp-teams/lib/config"
 )
 
 var (
@@ -45,35 +45,44 @@ func GetOrCreateTeamsClient(ctx context.Context) (*client.TeamsClient, error) {
 
 	authConfig := loadAuthConfig()
 	senderConfig := newSenderConfig()
+	cacheConfig := newCacheConfig()
 
-	teamsClientInstance, clientInitError = client.NewTeamsClient(ctx, authConfig, senderConfig)
+	teamsClientInstance, clientInitError = client.NewTeamsClient(ctx, authConfig, senderConfig, cacheConfig)
 	return teamsClientInstance, clientInitError
 }
 
-func newSenderConfig() *teams.SenderConfig {
-	return &teams.SenderConfig{
+func newSenderConfig() *teams_config.SenderConfig {
+	return &teams_config.SenderConfig{
 		MaxRetries:     3,
 		NextRetryDelay: 2,
 		Timeout:        10,
 	}
 }
 
-func loadAuthConfig() *teams.AuthConfig {
-	_ = godotenv.Load() // Silently ignore if .env doesn't exist
+func newCacheConfig() *teams_config.CacheConfig {
+	return &teams_config.CacheConfig{
+		Mode:     teams_config.CacheAsync,
+		Provider: teams_config.CacheProviderJSONFile,
+		Path:     nil,
+	}
+}
 
-	cfg := &teams.AuthConfig{
+func loadAuthConfig() *teams_config.AuthConfig {
+	_ = godotenv.Load()
+
+	cfg := &teams_config.AuthConfig{
 		ClientID:   getEnv("CLIENT_ID", ""),
 		Tenant:     getEnv("TENANT_ID", ""),
 		Email:      getEnv("EMAIL", ""),
 		Scopes:     strings.Split(getEnv("SCOPES", "https://graph.microsoft.com/.default"), ","),
-		AuthMethod: getEnv("AUTH_METHOD", "DEVICE_CODE"),
+		AuthMethod: getAuthMethod(),
 	}
 
 	validateAuthConfig(cfg)
 	return cfg
 }
 
-func validateAuthConfig(cfg *teams.AuthConfig) {
+func validateAuthConfig(cfg *teams_config.AuthConfig) {
 	if cfg.ClientID == "" {
 		fmt.Fprintf(os.Stderr, "Error: Missing CLIENT_ID environment variable\n")
 		os.Exit(1)
@@ -89,6 +98,15 @@ func validateAuthConfig(cfg *teams.AuthConfig) {
 	if cfg.AuthMethod != "DEVICE_CODE" && cfg.AuthMethod != "INTERACTIVE" {
 		fmt.Fprintf(os.Stderr, "Error: AUTH_METHOD must be either DEVICE_CODE or INTERACTIVE\n")
 		os.Exit(1)
+	}
+}
+
+func getAuthMethod() teams_config.Method {
+	switch getEnv("AUTH_METHOD", "DEVICE_CODE") {
+	case "INTERACTIVE":
+		return teams_config.Interactive
+	default:
+		return teams_config.DeviceCode
 	}
 }
 
