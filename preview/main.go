@@ -140,20 +140,15 @@ func createChannelsDemo() {
 		log.Error("Error creating Teams client", "error", err)
 		os.Exit(1)
 	}
-	dataFile, err := os.Open("preview/channels.yaml")
+	dataFile, err := os.Open("preview/channels.csv")
 	if err != nil {
-		log.Error("Failed to open channels.yaml", "error", err)
+		log.Error("Failed to open channels file", "error", err)
 		os.Exit(1)
 	}
 	extension := filepath.Ext(dataFile.Name())[1:]
 
-	parser, err := mapExtensionToDecodeFunc(extension)
-	if err != nil {
-		log.Error("Failed to get decode function", "error", err)
-		_ = dataFile.Close()
-		os.Exit(1)
-	}
-	channelData, err := channelcreation.ParseChannelsData(dataFile, parser)
+	channelData, err := channelcreation.ParseChannelsDataByExtension(dataFile, extension)
+	teamRef := "pzsp2z1teams"
 	if err != nil {
 		log.Error("Failed to parse channels data", "error", err)
 		_ = dataFile.Close()
@@ -161,7 +156,7 @@ func createChannelsDemo() {
 	}
 	_ = dataFile.Close()
 	successCount := 0
-	results := teamsClient.ChannelCreator.CreateChannels(ctx, channelData, true, false)
+	results := teamsClient.ChannelCreator.CreateChannels(ctx, teamRef, channelData, true, true)
 	for _, result := range results {
 		if result.Error == nil {
 			log.Info("Channel operation successful",

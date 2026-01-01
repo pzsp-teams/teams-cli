@@ -9,8 +9,8 @@ import (
 )
 
 // ParseChannelsData parses channel creation data from the provided reader
-func ParseChannelsData(r io.Reader, decodeFunc file_readers.DecodeFunc) ([]map[string]string, error) {
-	channelsData := make([]map[string]string, 0)
+func ParseChannelsData(r io.Reader, decodeFunc file_readers.DecodeFunc) (map[string]ChannelData, error) {
+	channelsData := make(map[string]ChannelData, 0)
 	err := decodeFunc(r, &channelsData)
 	if err != nil {
 		initializers.Logger.Error(errDataParseFailed.Error(), "error", err)
@@ -18,6 +18,20 @@ func ParseChannelsData(r io.Reader, decodeFunc file_readers.DecodeFunc) ([]map[s
 	}
 	initializers.Logger.Info("Channels data parsed", "channel_count", len(channelsData))
 	return channelsData, nil
+}
+
+// ParseChannelsDataByExtension parses channel creation data based on file extension
+func ParseChannelsDataByExtension(r io.Reader, extension string) (map[string]ChannelData, error) {
+	if extension == "csv" {
+		return parseChannelsDataFromCSV(r)
+	}
+
+	decoder, err := file_readers.GetDecoderByExtension(extension)
+	if err != nil {
+		return nil, err
+	}
+
+	return ParseChannelsData(r, decoder)
 }
 
 func parseChannelsDataFromCSV(r io.Reader) (map[string]ChannelData, error) {
