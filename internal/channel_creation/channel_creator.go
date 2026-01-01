@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pzsp-teams/cli/internal/file_readers"
 	"github.com/pzsp-teams/cli/internal/initializers"
 	"github.com/pzsp-teams/lib/channels"
 )
@@ -18,7 +17,7 @@ type channelCreator struct {
 
 // ChannelCreator defines the interface for creating channels
 type ChannelCreator interface {
-	CreateChannels(ctx context.Context, request []map[string]string, ensureMembers, dryRun bool) []CreateResult
+	CreateChannels(ctx context.Context, teamRef string, request map[string]ChannelData, ensureMembers, dryRun bool) []CreateResult
 }
 
 // NewChannelCreator creates a new instance of ChannelCreator
@@ -29,10 +28,10 @@ func NewChannelCreator(chans channels.Service) *channelCreator {
 }
 
 // CreateChannels creates channels based on the provided request data
-func (cc *channelCreator) CreateChannels(ctx context.Context, request []map[string]string, ensureMembers, dryRun bool) []CreateResult {
+func (cc *channelCreator) CreateChannels(ctx context.Context, teamRef string, request map[string]ChannelData, ensureMembers, dryRun bool) []CreateResult {
 	logger := initializers.Logger
 	logger.Info("Starting channels creation")
-	createChannelBodies := cc.transformRequestToCreateChannelBody(request)
+	createChannelBodies := cc.transformRequestToCreateChannelBody(teamRef, request)
 	actions := cc.planActions(ctx, createChannelBodies, ensureMembers)
 	var results []CreateResult
 	if dryRun {
@@ -235,38 +234,20 @@ func staticAction(body *createChannelBody, result *CreateResult) *action {
 	}
 }
 
-func (cc *channelCreator) transformRequestToCreateChannelBody(data []map[string]string) []createChannelBody {
+func (cc *channelCreator) transformRequestToCreateChannelBody(teamRef string, data map[string]ChannelData) []createChannelBody {
 	out := make([]createChannelBody, 0)
-	channelsGroupedByTeamRef := file_readers.GroupBy(data, func(channels map[string]string) string {
-		return channels["team_ref"]
-	})
-	for teamRef, channelData := range channelsGroupedByTeamRef {
-		usersGroupedByChannelRef := file_readers.GroupBy(channelData, func(channel map[string]string) string {
-			return channel["channel_ref"]
-		})
-		for channelRef, usersData := range usersGroupedByChannelRef {
-			usersGroupedByRole := file_readers.GroupBy(usersData, func(user map[string]string) string {
-				return user["role"]
-			})
-			memberRefs := make([]string, 0)
-			ownerRefs := make([]string, 0)
-			for role, users := range usersGroupedByRole {
-				for _, user := range users {
-					if role == "owner" {
-						ownerRefs = append(ownerRefs, user["user_ref"])
-					} else {
-						memberRefs = append(memberRefs, user["user_ref"])
-					}
-				}
-			}
-			out = append(out, createChannelBody{
-				TeamRef:    teamRef,
-				ChannelRef: channelRef,
-				MemberRefs: memberRefs,
-				OwnerRefs:  ownerRefs,
-			})
+
+	for ref, channelData := range data {
+		body := createChannelBody{
+			TeamRef:    teamRef,
+			ChannelRef: ref,
+			MemberRefs: channelData["members"],
+			OwnerRefs:  channelData["owners"],
 		}
+
+		out = append(out, body)
 	}
+
 	return out
 }
 
