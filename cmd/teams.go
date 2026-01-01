@@ -13,4 +13,5 @@ var teamsCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(teamsCmd)
 	teamsCmd.AddCommand(teamsSendCmd)
+	teamsCmd.AddCommand(teamsCreateChannelsCmd)
 }
