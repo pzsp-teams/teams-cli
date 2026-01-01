@@ -6,7 +6,7 @@ require (
 	github.com/BurntSushi/toml v1.5.0
 	github.com/charmbracelet/log v0.4.2
 	github.com/joho/godotenv v1.5.1
-	github.com/pzsp-teams/lib v0.0.0-20251221085535-14bc0a0e980a
+	github.com/pzsp-teams/lib v0.0.0-20260101113908-bafa8ca37eae
 	github.com/stretchr/testify v1.11.1
 	gopkg.in/yaml.v3 v3.0.1
 )
