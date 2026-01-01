@@ -46,7 +46,7 @@ func TestRegistry_ParseJSONFile(t *testing.T) {
 		t.Fatalf("Failed to open test file: %v", err)
 	}
 	defer closeFile(t, file)
-	messages := make(map[string]file_readers.TemplateData)
+	messages := make(map[string]TemplateData)
 	messagesErr := parser(file, &messages)
 	if messagesErr != nil {
 		t.Fatalf("Parser.Parse() unexpected error: %v", messagesErr)
@@ -93,7 +93,7 @@ channel2:
 		t.Fatalf("Failed to open test file: %v", err)
 	}
 	defer closeFile(t, file)
-	messages := make(map[string]file_readers.TemplateData)
+	messages := make(map[string]TemplateData)
 	messagesErr := parser(file, messages)
 	if messagesErr != nil {
 		t.Fatalf("Parser.Parse() unexpected error: %v", messagesErr)
@@ -139,7 +139,7 @@ channel2:
 	}
 	defer closeFile(t, file)
 
-	messages := make(map[string]file_readers.TemplateData)
+	messages := make(map[string]TemplateData)
 	messagesErr := parser(file, messages)
 	if messagesErr != nil {
 		t.Fatalf("Parser.Parse() unexpected error: %v", messagesErr)
@@ -184,7 +184,7 @@ email = "bob@example.com"
 	}
 	defer closeFile(t, file)
 
-	messages := make(map[string]file_readers.TemplateData)
+	messages := make(map[string]TemplateData)
 	messagesErr := parser(file, &messages)
 	if messagesErr != nil {
 		t.Fatalf("Parser.Parse() unexpected error: %v", messagesErr)
