@@ -2,6 +2,8 @@ package channelcreation
 
 import "context"
 
+type ChannelData map[string][]string
+
 type createChannelBody struct {
 	TeamRef    string
 	ChannelRef string
