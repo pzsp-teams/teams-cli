@@ -45,9 +45,9 @@ func init() {
 }
 
 func main() {
-	// bulkMessageDemo("channels", "preview/channel_message.txt", "preview/channel_message_data.yaml", "pzsp2z1teams", false, true)
-	bulkMessageDemo("chats", "preview/chat_message.txt", "preview/chat_message_data.yaml", "", false, true)
-	bulkMessageDemo("chats", "preview/group_chat_message.txt", "preview/group_chat_message_data.yaml", "", false, true)
+	bulkMessageDemo("channels", "preview/channel_message.txt", "preview/channel_message_data.yaml", "pzsp2z1teams", true, true)
+	bulkMessageDemo("chats", "preview/chat_message.txt", "preview/chat_message_data.yaml", "", true, true)
+	bulkMessageDemo("chats", "preview/group_chat_message.txt", "preview/group_chat_message_data.yaml", "", true, true)
 	createChannelsDemo()
 }
 
