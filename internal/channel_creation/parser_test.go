@@ -7,11 +7,8 @@ import (
 	"testing"
 
 	"github.com/pzsp-teams/cli/internal/file_readers"
-	"github.com/pzsp-teams/cli/internal/logger"
 	"github.com/stretchr/testify/require"
 )
-
-var _ logger.Logger = noopLogger{}
 
 func TestParseChannelsData_WhenDecodeFails_ReturnsWrappedError(t *testing.T) {
 	origErr := errors.New("boom")
