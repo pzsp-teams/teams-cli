@@ -4,9 +4,6 @@ import (
 	"io"
 )
 
-// TemplateData represents placeholder values for a single message recipient
-type TemplateData map[string]string
-
 // Formats represents supported file formats for decoding
 type Formats string
 

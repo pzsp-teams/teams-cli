@@ -16,7 +16,7 @@ var htmlTagRegex = regexp.MustCompile(`</?[ibp]>|<br>|<a\s+href="[^"]*">|</a>`)
 // TemplateParser handles parsing different messages from supplied template and data
 type TemplateParser struct {
 	template   *template.Template
-	recipients map[string]file_readers.TemplateData
+	recipients map[string]TemplateData
 }
 
 // NewMessageParser returns a MessageParser with given config.
@@ -28,7 +28,7 @@ func NewMessageParser(templateReader, dataReader io.Reader, dataParser file_read
 		return nil, err
 	}
 
-	recipients := make(map[string]file_readers.TemplateData)
+	recipients := make(map[string]TemplateData)
 	err = dataParser(dataReader, &recipients)
 	if err != nil {
 		initializers.Logger.Error(errDataParseFailed.Error(), "error", err)
