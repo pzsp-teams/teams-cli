@@ -109,7 +109,8 @@ func bulkMessageDemo() {
 
 	senderConfig := newSenderConfig()
 	authConfig := loadAuthConfig()
-	teamsClient, err := client.NewTeamsClient(ctx, authConfig, senderConfig)
+	cacheConfig := newCacheConfig()
+	teamsClient, err := client.NewTeamsClient(ctx, authConfig, senderConfig, cacheConfig)
 	if err != nil {
 		log.Error("Error creating Teams client", "error", err)
 		os.Exit(1)
@@ -144,7 +145,8 @@ func createChannelsDemo() {
 
 	senderConfig := newSenderConfig()
 	authConfig := loadAuthConfig()
-	teamsClient, err := client.NewTeamsClient(ctx, authConfig, senderConfig)
+	cacheConfig := newCacheConfig()
+	teamsClient, err := client.NewTeamsClient(ctx, authConfig, senderConfig, cacheConfig)
 	if err != nil {
 		log.Error("Error creating Teams client", "error", err)
 		os.Exit(1)

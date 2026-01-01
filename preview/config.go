@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/joho/godotenv"
-	teams "github.com/pzsp-teams/lib"
+	teams "github.com/pzsp-teams/lib/config"
 )
 
 func newSenderConfig() *teams.SenderConfig {
@@ -17,6 +17,14 @@ func newSenderConfig() *teams.SenderConfig {
 	}
 }
 
+func newCacheConfig() *teams.CacheConfig {
+	return &teams.CacheConfig{
+		Mode:     teams.CacheAsync,
+		Provider: teams.CacheProviderJSONFile,
+		Path:     nil,
+	}
+}
+
 func loadAuthConfig() *teams.AuthConfig {
 	_ = godotenv.Load()
 	cfg := &teams.AuthConfig{
@@ -24,7 +32,7 @@ func loadAuthConfig() *teams.AuthConfig {
 		Tenant:     getEnv("TENANT_ID", ""),
 		Email:      getEnv("EMAIL", ""),
 		Scopes:     strings.Split(getEnv("SCOPES", "https://graph.microsoft.com/.default"), ","),
-		AuthMethod: getEnv("AUTH_METHOD", "DEVICE_CODE"),
+		AuthMethod: getAuthMethod(),
 	}
 	validate(cfg)
 	return cfg
@@ -35,6 +43,15 @@ func getEnv(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func getAuthMethod() teams.Method {
+	switch getEnv("AUTH_METHOD", "DEVICE_CODE") {
+	case "INTERACTIVE":
+		return teams.Interactive
+	default:
+		return teams.DeviceCode
+	}
 }
 
 func validate(cfg *teams.AuthConfig) {
