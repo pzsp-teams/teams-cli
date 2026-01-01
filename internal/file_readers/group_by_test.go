@@ -22,7 +22,7 @@ func TestGroupBy_GroupsByKeyAndPreservesOrderWithinGroup(t *testing.T) {
 		return "odd"
 	})
 
-	require.ElementsMatch(t, []string{"odd", "even"}, keys(got)) 
+	require.ElementsMatch(t, []string{"odd", "even"}, keys(got))
 
 	require.Equal(t, []int{1, 3, 5}, got["odd"])
 	require.Equal(t, []int{2, 4, 6}, got["even"])
@@ -39,7 +39,7 @@ func TestGroupBy_AllItemsSameKey(t *testing.T) {
 
 func TestGroupBy_DoesNotMutateInput(t *testing.T) {
 	orig := []int{1, 2, 3}
-	items := append([]int(nil), orig...) 
+	items := append([]int(nil), orig...)
 
 	_ = GroupBy(items, func(v int) int { return v % 2 })
 
