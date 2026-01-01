@@ -19,3 +19,43 @@ func ParseChannelsData(r io.Reader, decodeFunc file_readers.DecodeFunc) ([]map[s
 	initializers.Logger.Info("Channels data parsed", "channel_count", len(channelsData))
 	return channelsData, nil
 }
+
+func parseChannelsDataFromCSV(r io.Reader) (map[string]ChannelData, error) {
+	var rows []map[string]string
+	err := file_readers.DecodeCSV(r, &rows)
+	if err != nil {
+		initializers.Logger.Error(errDataParseFailed.Error(), "error", err)
+		return nil, fmt.Errorf("%w: %w", errDataParseFailed, err)
+	}
+
+	channelsData := transformCSVRowsToChannelData(rows)
+	initializers.Logger.Info("Channels data parsed from CSV", "channel_count", len(channelsData))
+	return channelsData, nil
+}
+
+func transformCSVRowsToChannelData(rows []map[string]string) map[string]ChannelData {
+	grouped := file_readers.GroupBy(rows, func(row map[string]string) string {
+		return row["channel_ref"]
+	})
+
+	result := make(map[string]ChannelData, len(grouped))
+	for channelRef, channelRows := range grouped {
+		channelData := ChannelData{
+			"members": []string{},
+			"owners":  []string{},
+		}
+		for _, row := range channelRows {
+			role := row["role"]
+			userRef := row["user_ref"]
+			switch role {
+			case "member":
+				channelData["members"] = append(channelData["members"], userRef)
+			case "owner":
+				channelData["owners"] = append(channelData["owners"], userRef)
+			}
+		}
+		result[channelRef] = channelData
+	}
+
+	return result
+}
