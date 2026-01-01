@@ -45,11 +45,11 @@ func init() {
 }
 
 func main() {
-	bulkMessageDemo("channels", "preview/channel_message.txt", "preview/channel_message_data.yaml", "pzsp2z1teams", false, true)
+	// bulkMessageDemo("channels", "preview/channel_message.txt", "preview/channel_message_data.yaml", "pzsp2z1teams", false, true)
 	bulkMessageDemo("chats", "preview/chat_message.txt", "preview/chat_message_data.yaml", "", false, true)
 	bulkMessageDemo("chats", "preview/group_chat_message.txt", "preview/group_chat_message_data.yaml", "", false, true)
 	createChannelsDemo()
-	charmDemo()
+	// charmDemo()
 }
 
 func mapExtensionToDecodeFunc(extension string) (file_readers.DecodeFunc, error) {
@@ -92,10 +92,6 @@ func bulkMessageDemo(targetType, messageFileName, dataFileName, teamName string,
 	if err != nil {
 		log.Error("Failed to render messages", "error", err)
 		os.Exit(1)
-	}
-
-	for recipient, message := range messages {
-		log.Debug("Rendered message", "recipient", recipient, "content", message)
 	}
 
 	senderConfig := newSenderConfig()
