@@ -50,18 +50,7 @@ func main() {
 }
 
 func mapExtensionToDecodeFunc(extension string) (file_readers.DecodeFunc, error) {
-	switch extension {
-	case "json":
-		return file_readers.DecodeJSON, nil
-	case "yaml", "yml":
-		return file_readers.DecodeYAML, nil
-	case "toml":
-		return file_readers.DecodeTOML, nil
-	case "csv":
-		return file_readers.DecodeCSV, nil
-	default:
-		return nil, fmt.Errorf("unsupported file extension: %s", extension)
-	}
+	return file_readers.GetDecoderByExtension(extension)
 }
 
 func bulkMessageDemo() {

@@ -68,23 +68,21 @@ func TestDecodeTOML_Error(t *testing.T) {
 
 func TestDecodeCSV_Success(t *testing.T) {
 	var dst []map[string]string
-	csv := "team_ref,channel_ref,role,user_ref\nteamA,chanA,member,u1\nteamA,chanA,owner,u2\n"
+	csv := "a,b,c\n1,2,3\n4,5,6\n"
 
 	err := DecodeCSV(strings.NewReader(csv), &dst)
 	require.NoError(t, err)
 
 	require.Len(t, dst, 2)
 	require.Equal(t, map[string]string{
-		"team_ref":    "teamA",
-		"channel_ref": "chanA",
-		"role":        "member",
-		"user_ref":    "u1",
+		"a": "1",
+		"b": "2",
+		"c": "3",
 	}, dst[0])
 	require.Equal(t, map[string]string{
-		"team_ref":    "teamA",
-		"channel_ref": "chanA",
-		"role":        "owner",
-		"user_ref":    "u2",
+		"a": "4",
+		"b": "5",
+		"c": "6",
 	}, dst[1])
 }
 
@@ -171,6 +169,39 @@ func TestDecodeCSV_ReturnsDecodeFailedTemplateWrappedOnDecoderError(t *testing.T
 	err := DecodeCSV(strings.NewReader("a,b,c\n1,2\n"), &dst)
 	require.Error(t, err)
 
-	require.True(t, errors.Is(err, io.EOF) == false) 
+	require.True(t, errors.Is(err, io.EOF) == false)
 	require.Contains(t, err.Error(), "wrong number of fields")
+}
+
+func TestGetDecoderByExtension_JSON(t *testing.T) {
+	decoder, err := GetDecoderByExtension("json")
+	require.NoError(t, err)
+	require.NotNil(t, decoder)
+}
+
+func TestGetDecoderByExtension_YAML(t *testing.T) {
+	decoder, err := GetDecoderByExtension("yaml")
+	require.NoError(t, err)
+	require.NotNil(t, decoder)
+
+	decoder, err = GetDecoderByExtension("yml")
+	require.NoError(t, err)
+	require.NotNil(t, decoder)
+}
+
+func TestGetDecoderByExtension_TOML(t *testing.T) {
+	decoder, err := GetDecoderByExtension("toml")
+	require.NoError(t, err)
+	require.NotNil(t, decoder)
+}
+
+func TestGetDecoderByExtension_Unsupported(t *testing.T) {
+	decoder, err := GetDecoderByExtension("csv")
+	require.Error(t, err)
+	require.Nil(t, decoder)
+	require.Contains(t, err.Error(), "unsupported file extension")
+
+	decoder, err = GetDecoderByExtension("xml")
+	require.Error(t, err)
+	require.Nil(t, decoder)
 }

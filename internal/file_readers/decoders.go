@@ -55,6 +55,20 @@ func DecodeCSV(r io.Reader, v any) error {
 	return nil
 }
 
+// GetDecoderByExtension returns the appropriate decoder function for the given file extension
+func GetDecoderByExtension(extension string) (DecodeFunc, error) {
+	switch extension {
+	case "json":
+		return DecodeJSON, nil
+	case "yaml", "yml":
+		return DecodeYAML, nil
+	case "toml":
+		return DecodeTOML, nil
+	default:
+		return nil, fmt.Errorf("unsupported file extension: %s", extension)
+	}
+}
+
 // CSVDecoder is a simple CSV decoder that reads records into map[string]string
 type CSVDecoder struct {
 	r            *csv.Reader
