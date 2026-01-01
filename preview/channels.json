@@ -1,26 +1,18 @@
-[
-    {
-        "team_ref": "test",
-        "channel_ref": "general2",
-        "role": "owner",
-        "user_ref": "kmarszalek@teamspzsp.onmicrosoft.com"
-    },
-    {
-        "team_ref": "test",
-        "channel_ref": "general2",
-        "role": "member",
-        "user_ref": "ddsouza@teamspzsp.onmicrosoft.com"
-    },
-    {
-        "team_ref": "test",
-        "channel_ref": "random",
-        "role": "owner",
-        "user_ref": "msuski@teamspzsp.onmicrosoft.com"
-    },
-    {
-        "team_ref": "test",
-        "channel_ref": "random",
-        "role": "owner",
-        "user_ref": "kmarszalek@teamspzsp.onmicrosoft.com"
-    }
-]
+{
+  "general2": {
+    "owners": [
+      "kmarszalek@teamspzsp.onmicrosoft.com"
+    ],
+    "members": [
+      "ddsouza@teamspzsp.onmicrosoft.com"
+    ]
+  },
+  "random": {
+    "owners": [
+      "msuski@teamspzsp.onmicrosoft.com"
+    ],
+    "members": [
+      "kmarszalek@teamspzsp.onmicrosoft.com"
+    ]
+  }
+}

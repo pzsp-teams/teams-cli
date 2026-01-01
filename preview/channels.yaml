@@ -1,19 +1,11 @@
-- team_ref: pzsp2
-  channel_ref: yaml3
-  role: owner
-  user_ref: kmarszalek@teamspzsp.onmicrosoft.com
+yaml3:
+  owners:
+    - kmarszalek@teamspzsp.onmicrosoft.com
+  members:
+    - ddsouza@teamspzsp.onmicrosoft.com
 
-- team_ref: pzsp2
-  channel_ref: yaml5
-  role: member
-  user_ref: ddsouza@teamspzsp.onmicrosoft.com
-
-- team_ref: pzsp2
-  channel_ref: yaml4
-  role: owner
-  user_ref: msuski@teamspzsp.onmicrosoft.com
-
-- team_ref: pzsp2
-  channel_ref: yaml4
-  role: owner
-  user_ref: kmarszalek@teamspzsp.onmicrosoft.com
+yaml4:
+  owners:
+    - msuski@teamspzsp.onmicrosoft.com
+    - kmarszalek@teamspzsp.onmicrosoft.com
+  members: []
