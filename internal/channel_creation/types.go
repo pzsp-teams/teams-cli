@@ -2,6 +2,7 @@ package channelcreation
 
 import "context"
 
+// ChannelData represents lists of members and owners for new channels
 type ChannelData map[string][]string
 
 type createChannelBody struct {

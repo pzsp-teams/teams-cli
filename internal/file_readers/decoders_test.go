@@ -43,7 +43,7 @@ func TestDecodeYAML_Success(t *testing.T) {
 
 func TestDecodeYAML_Error(t *testing.T) {
 	var got map[string]any
-	err := DecodeYAML(strings.NewReader("a: [1,2\n"), &got) 
+	err := DecodeYAML(strings.NewReader("a: [1,2\n"), &got)
 	require.Error(t, err)
 }
 
@@ -109,7 +109,7 @@ func TestCSVDecoder_Decode_HeaderReadError(t *testing.T) {
 }
 
 func TestCSVDecoder_Decode_InvalidFieldCount_Wrapped(t *testing.T) {
-	dec := NewCSVDecoder(strings.NewReader("a,b,c\n1,2\n")) 
+	dec := NewCSVDecoder(strings.NewReader("a,b,c\n1,2\n"))
 	var rec map[string]string
 	err := dec.Decode(&rec)
 	require.Error(t, err)
@@ -118,7 +118,7 @@ func TestCSVDecoder_Decode_InvalidFieldCount_Wrapped(t *testing.T) {
 
 func TestCSVDecoder_Decode_FewerColumns_FillsMissingWithEmpty_WhenVariableFieldsAllowed(t *testing.T) {
 	dec := NewCSVDecoder(strings.NewReader("a,b,c\n1,2\n"))
-	dec.r.FieldsPerRecord = -1 
+	dec.r.FieldsPerRecord = -1
 
 	var rec map[string]string
 	err := dec.Decode(&rec)
