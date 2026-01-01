@@ -1,5 +1,6 @@
 Hello {{.name}}!
-This is a personal mention {{.mention}}
+This is an invalid mention {{.mention}}
+This is a this mention @@this@@
 
 Your order #{{.order}} is ready.
 Thank you!
