@@ -9,13 +9,21 @@ import (
 	"github.com/pzsp-teams/lib/models"
 )
 
-type genericSender[Res any] struct {
-	adapter senderAdapter[Res]
+type genericSender[Res sendResult] struct {
+	adapter    senderAdapter
+	newResult  func(ref, message string, err error) Res
+	senderType senderType
 }
 
-func newGenericSender[Res any](adapter senderAdapter[Res]) *genericSender[Res] {
+func newGenericSender[Res sendResult](
+	adapter senderAdapter,
+	newResult func(ref, message string, err error) Res,
+	st senderType,
+) *genericSender[Res] {
 	return &genericSender[Res]{
-		adapter: adapter,
+		adapter:    adapter,
+		newResult:  newResult,
+		senderType: st,
 	}
 }
 
@@ -35,7 +43,7 @@ func (s *genericSender[Res]) send(ctx context.Context, messages map[string]strin
 
 	successCount := 0
 	for _, r := range results {
-		if s.adapter.getError(r) == nil {
+		if r.getError() == nil {
 			successCount++
 		}
 	}
@@ -96,31 +104,27 @@ func (s *genericSender[Res]) executeActions(ctx context.Context, actions []*acti
 
 		switch {
 		case skipRemaining:
-			logger.Debug("Skipping Message", s.getLogFields(act.data.ref)...)
-			result = s.adapter.newErrorResult(act.data.ref, act.data.body.Content, ErrMessageSkipped)
+			logger.Debug("Skipping Message", s.senderType.String(), act.data.ref)
+			result = s.newResult(act.data.ref, act.data.body.Content, ErrMessageSkipped)
 
 		case act.run == nil:
 			result = *act.result
-			logFields := s.getLogFields(act.data.ref)
-			logFields = append(logFields, "error", s.adapter.getError(result))
-			logger.Error("Failed during planning", logFields...)
+			logger.Error("Failed during planning", s.senderType.String(), act.data.ref, "error", result.getError())
 			if !ignoreError {
 				skipRemaining = true
 			}
 
 		default:
-			logger.Debug("Sending message", s.getLogFields(act.data.ref)...)
+			logger.Debug("Sending message", s.senderType.String(), act.data.ref)
 			result = act.run(ctx, act.data)
 
-			if err := s.adapter.getError(result); err != nil {
-				logFields := s.getLogFields(act.data.ref)
-				logFields = append(logFields, "error", err)
-				logger.Error("Failed to send message", logFields...)
+			if err := result.getError(); err != nil {
+				logger.Error("Failed to send message", s.senderType.String(), act.data.ref, "error", err)
 				if !ignoreError {
 					skipRemaining = true
 				}
 			} else {
-				logger.Info("Message sent successfully", s.getLogFields(act.data.ref)...)
+				logger.Info("Message sent successfully", s.senderType.String(), act.data.ref)
 			}
 		}
 
@@ -136,7 +140,7 @@ func (s *genericSender[Res]) dryRunActions(actions []*action[Res]) []Res {
 		if act.run == nil {
 			results = append(results, *act.result)
 		} else {
-			result := s.adapter.newSuccessResult(act.data.ref, act.data.body.Content)
+			result := s.newResult(act.data.ref, act.data.body.Content, nil)
 			results = append(results, result)
 		}
 	}
@@ -153,7 +157,7 @@ func (s *genericSender[Res]) newSendAction(data *messageData) *action[Res] {
 }
 
 func (s *genericSender[Res]) newErrorAction(ref, content string, err error) *action[Res] {
-	result := s.adapter.newErrorResult(ref, content, err)
+	result := s.newResult(ref, content, err)
 	return &action[Res]{
 		data: &messageData{
 			ref: ref,
@@ -169,16 +173,7 @@ func (s *genericSender[Res]) newErrorAction(ref, content string, err error) *act
 func (s *genericSender[Res]) sendMessage(ctx context.Context, data *messageData) Res {
 	msg, err := s.adapter.sendMessage(ctx, data.ref, data.body)
 	if err != nil {
-		return s.adapter.newErrorResult(data.ref, "", fmt.Errorf("%w to %s: %v", ErrMessageSendFailed, data.ref, err))
+		return s.newResult(data.ref, "", fmt.Errorf("%w to %s: %v", ErrMessageSendFailed, data.ref, err))
 	}
-	return s.adapter.newSuccessResult(data.ref, msg.Content)
-}
-
-func (s *genericSender[Res]) getLogFields(ref string) []any {
-	fieldMap := s.adapter.getLogFields(ref)
-	fields := make([]any, 0, len(fieldMap)*2)
-	for k, v := range fieldMap {
-		fields = append(fields, k, v)
-	}
-	return fields
+	return s.newResult(data.ref, msg.Content, nil)
 }

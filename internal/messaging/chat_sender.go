@@ -20,8 +20,11 @@ func NewChatSender(chatService chats.Service) *chatSender {
 	adapter := &chatAdapter{
 		chatService: chatService,
 	}
+	newResult := func(ref, message string, err error) ChatSendResult {
+		return ChatSendResult{ChatRef: ref, Message: message, Error: err}
+	}
 	return &chatSender{
-		generic: newGenericSender(adapter),
+		generic: newGenericSender(adapter, newResult, senderTypeChat),
 	}
 }
 

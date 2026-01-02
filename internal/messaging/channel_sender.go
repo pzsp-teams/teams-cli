@@ -7,6 +7,7 @@ import (
 )
 
 type channelSender struct {
+	adapter *channelAdapter
 	generic *genericSender[ChannelSendResult]
 }
 
@@ -20,8 +21,12 @@ func NewChannelSender(channelService channels.Service) *channelSender {
 	adapter := &channelAdapter{
 		channelService: channelService,
 	}
+	newResult := func(ref, message string, err error) ChannelSendResult {
+		return ChannelSendResult{ChannelRef: ref, Message: message, Error: err}
+	}
 	return &channelSender{
-		generic: newGenericSender(adapter),
+		adapter: adapter,
+		generic: newGenericSender(adapter, newResult, senderTypeChannel),
 	}
 }
 
@@ -31,6 +36,6 @@ func NewChannelSender(channelService channels.Service) *channelSender {
 // messages: map of channel reference (name or ID) to message content
 // Returns a slice of SendResult containing the outcome for each channel
 func (s *channelSender) Send(ctx context.Context, teamRef string, messages map[string]string, dryRun, ignoreError bool) []ChannelSendResult {
-	s.generic.adapter.(*channelAdapter).teamRef = teamRef
+	s.adapter.setTeamRef(teamRef)
 	return s.generic.send(ctx, messages, dryRun, ignoreError)
 }
