@@ -83,25 +83,29 @@ func runTeamsCreateChannels(cmd *cobra.Command, args []string) error {
 	log.Info("Creating channels", "count", len(channelData), "dryRun", createChannelsDryRun)
 	results := teamsClient.ChannelCreator.CreateChannels(ctx, teamRef, channelData, true, createChannelsDryRun)
 
+	printChannelCreationResults(results, createChannelsDryRun)
+
+	return nil
+}
+
+func printChannelCreationResults(results []channelcreation.CreateResult, dryRun bool) {
 	successCount := 0
 	for _, res := range results {
 		if res.Error != nil {
-			log.Error("Failed", "channel", res.ChannelName, "error", res.Error)
+			fmt.Printf("Failed - channel: %s, error: %v\n", res.ChannelName, res.Error)
 		} else {
 			successCount++
-			if createChannelsDryRun {
-				log.Info("Would create", "channel", res.ChannelName)
+			if dryRun {
+				fmt.Printf("Would create - channel: %s\n", res.ChannelName)
 			} else {
-				log.Info("Created", "channel", res.ChannelName, "id", res.ChannelID)
+				fmt.Printf("Created - channel: %s, id: %s\n", res.ChannelName, res.ChannelID)
 			}
 		}
 	}
 
-	if createChannelsDryRun {
-		log.Info("Dry run completed", "successful", successCount, "total", len(results))
+	if dryRun {
+		fmt.Printf("Dry run completed - successful: %d, total: %d\n", successCount, len(results))
 	} else {
-		log.Info("Channel creation completed", "successful", successCount, "total", len(results))
+		fmt.Printf("Channel creation completed - successful: %d, total: %d\n", successCount, len(results))
 	}
-
-	return nil
 }
