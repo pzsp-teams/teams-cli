@@ -6,3 +6,15 @@ type ChatSendResult struct {
 	Message string
 	Error   error
 }
+
+func (r ChatSendResult) getError() error {
+	return r.Error
+}
+
+func (r ChatSendResult) getRef() string {
+	return r.ChatRef
+}
+
+func (r ChatSendResult) getMessage() string {
+	return r.Message
+}
