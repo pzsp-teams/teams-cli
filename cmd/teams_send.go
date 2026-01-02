@@ -137,24 +137,23 @@ func processTeamsMessageFileMode() (map[string]string, error) {
 }
 
 func printChannelResults(results []messaging.ChannelSendResult, dryRun bool) {
-	log := initializers.Logger
 	if dryRun {
 		for _, res := range results {
 			if res.Error != nil {
-				log.Warn("Would fail", "channel", res.ChannelRef, "error", res.Error)
+				fmt.Printf("Would fail - channel: %s, error: %v\n", res.ChannelRef, res.Error)
 			} else {
-				log.Info("Would send", "channel", res.ChannelRef, "message", res.Message)
+				fmt.Printf("Would send - channel: %s, message: %s\n", res.ChannelRef, res.Message)
 			}
 		}
 	} else {
 		successCount := 0
 		for _, res := range results {
 			if res.Error != nil {
-				log.Error("Failed", "channel", res.ChannelRef, "error", res.Error)
+				fmt.Printf("Failed - channel: %s, error: %v\n", res.ChannelRef, res.Error)
 			} else {
 				successCount++
 			}
 		}
-		log.Info("Send complete", "successful", successCount, "total", len(results))
+		fmt.Printf("Send complete - successful: %d, total: %d\n", successCount, len(results))
 	}
 }

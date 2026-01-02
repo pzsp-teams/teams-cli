@@ -131,24 +131,23 @@ func processChatsMessageFileMode() (map[string]string, error) {
 }
 
 func printChatResults(results []messaging.ChatSendResult, dryRun bool) {
-	log := initializers.Logger
 	if dryRun {
 		for _, res := range results {
 			if res.Error != nil {
-				log.Warn("Would fail", "chat", res.ChatRef, "error", res.Error)
+				fmt.Printf("Would fail - chat: %s, error: %v\n", res.ChatRef, res.Error)
 			} else {
-				log.Info("Would send", "chat", res.ChatRef, "message", res.Message)
+				fmt.Printf("Would send - chat: %s, message: %s\n", res.ChatRef, res.Message)
 			}
 		}
 	} else {
 		successCount := 0
 		for _, res := range results {
 			if res.Error != nil {
-				log.Error("Failed", "chat", res.ChatRef, "error", res.Error)
+				fmt.Printf("Failed - chat: %s, error: %v\n", res.ChatRef, res.Error)
 			} else {
 				successCount++
 			}
 		}
-		log.Info("Send complete", "successful", successCount, "total", len(results))
+		fmt.Printf("Send complete - successful: %d, total: %d\n", successCount, len(results))
 	}
 }
