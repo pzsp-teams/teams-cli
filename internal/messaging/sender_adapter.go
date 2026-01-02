@@ -6,6 +6,24 @@ import (
 	"github.com/pzsp-teams/lib/models"
 )
 
+type senderType int
+
+const (
+	senderTypeChannel senderType = iota
+	senderTypeChat
+)
+
+func (t senderType) String() string {
+	switch t {
+	case senderTypeChannel:
+		return "channel"
+	case senderTypeChat:
+		return "chat"
+	default:
+		return "unknown"
+	}
+}
+
 // sendResult is implemented by ChannelSendResult and ChatSendResult
 type sendResult interface {
 	getError() error
