@@ -43,7 +43,7 @@ func TestSendToChats_SuccessfulSend(t *testing.T) {
 		"chat2": "Test Message",
 	}
 
-	results := sender.SendToChats(context.Background(), messages, false, false)
+	results := sender.Send(context.Background(), messages, false, false)
 
 	if len(results) != 2 {
 		t.Errorf("Expected 2 results, got %d", len(results))
@@ -69,7 +69,7 @@ func TestSendToChats_DryRun(t *testing.T) {
 		"chat1": "Hello World",
 	}
 
-	results := sender.SendToChats(context.Background(), messages, true, false)
+	results := sender.Send(context.Background(), messages, true, false)
 
 	if len(results) != 1 {
 		t.Errorf("Expected 1 result, got %d", len(results))
@@ -116,7 +116,7 @@ func TestSendToChats_WithMentions(t *testing.T) {
 		"chat1": "Hello @@alice@@!",
 	}
 
-	results := sender.SendToChats(context.Background(), messages, false, false)
+	results := sender.Send(context.Background(), messages, false, false)
 
 	if len(results) != 1 {
 		t.Errorf("Expected 1 result, got %d", len(results))
@@ -144,7 +144,7 @@ func TestSendToChats_MentionResolutionError(t *testing.T) {
 		"chat1": "Hello @@alice@@!",
 	}
 
-	results := sender.SendToChats(context.Background(), messages, false, false)
+	results := sender.Send(context.Background(), messages, false, false)
 
 	if len(results) != 1 {
 		t.Errorf("Expected 1 result, got %d", len(results))
@@ -172,7 +172,7 @@ func TestSendToChats_SendError(t *testing.T) {
 		"chat1": "Hello World",
 	}
 
-	results := sender.SendToChats(context.Background(), messages, false, false)
+	results := sender.Send(context.Background(), messages, false, false)
 
 	if len(results) != 1 {
 		t.Errorf("Expected 1 result, got %d", len(results))
@@ -204,7 +204,7 @@ func TestSendToChats_StopOnError(t *testing.T) {
 		"chat3": "Message 3",
 	}
 
-	results := sender.SendToChats(context.Background(), messages, false, false)
+	results := sender.Send(context.Background(), messages, false, false)
 
 	if len(results) != 3 {
 		t.Errorf("Expected 3 results, got %d", len(results))
@@ -256,7 +256,7 @@ func TestSendToChats_IgnoreErrors(t *testing.T) {
 		"chat3": "Message 3",
 	}
 
-	results := sender.SendToChats(context.Background(), messages, false, true)
+	results := sender.Send(context.Background(), messages, false, true)
 
 	if len(results) != 3 {
 		t.Errorf("Expected 3 results, got %d", len(results))
@@ -317,7 +317,7 @@ func TestSendToChats_DuplicateMentions(t *testing.T) {
 		"chat1": "Hello @@alice@@, this is for @@alice@@ again",
 	}
 
-	results := sender.SendToChats(context.Background(), messages, false, false)
+	results := sender.Send(context.Background(), messages, false, false)
 
 	if len(results) != 1 {
 		t.Errorf("Expected 1 result, got %d", len(results))
@@ -341,7 +341,7 @@ func TestSendToChats_DryRunWithMentionError(t *testing.T) {
 		"chat1": "Hello @@alice@@!",
 	}
 
-	results := sender.SendToChats(context.Background(), messages, true, false)
+	results := sender.Send(context.Background(), messages, true, false)
 
 	if len(results) != 1 {
 		t.Errorf("Expected 1 result, got %d", len(results))
