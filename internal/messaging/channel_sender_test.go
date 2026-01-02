@@ -5,15 +5,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/pzsp-teams/cli/internal/initializers"
 	"github.com/pzsp-teams/lib/channels"
 	"github.com/pzsp-teams/lib/models"
 )
-
-func TestMain(m *testing.M) {
-	initializers.SetupTestLogger()
-	m.Run()
-}
 
 type channelServiceStub struct {
 	channels.Service
@@ -49,7 +43,7 @@ func TestSendToChannels_SuccessfulSend(t *testing.T) {
 		"channel2": "Test Message",
 	}
 
-	results := sender.SendToChannels(context.Background(), "team1", messages, false, false)
+	results := sender.Send(context.Background(), "team1", messages, false, false)
 
 	if len(results) != 2 {
 		t.Errorf("Expected 2 results, got %d", len(results))
@@ -75,7 +69,7 @@ func TestSendToChannels_DryRun(t *testing.T) {
 		"channel1": "Hello World",
 	}
 
-	results := sender.SendToChannels(context.Background(), "team1", messages, true, false)
+	results := sender.Send(context.Background(), "team1", messages, true, false)
 
 	if len(results) != 1 {
 		t.Errorf("Expected 1 result, got %d", len(results))
@@ -122,7 +116,7 @@ func TestSendToChannels_WithMentions(t *testing.T) {
 		"channel1": "Hello @@alice@@!",
 	}
 
-	results := sender.SendToChannels(context.Background(), "team1", messages, false, false)
+	results := sender.Send(context.Background(), "team1", messages, false, false)
 
 	if len(results) != 1 {
 		t.Errorf("Expected 1 result, got %d", len(results))
@@ -150,7 +144,7 @@ func TestSendToChannels_MentionResolutionError(t *testing.T) {
 		"channel1": "Hello @@alice@@!",
 	}
 
-	results := sender.SendToChannels(context.Background(), "team1", messages, false, false)
+	results := sender.Send(context.Background(), "team1", messages, false, false)
 
 	if len(results) != 1 {
 		t.Errorf("Expected 1 result, got %d", len(results))
@@ -178,7 +172,7 @@ func TestSendToChannels_SendError(t *testing.T) {
 		"channel1": "Hello World",
 	}
 
-	results := sender.SendToChannels(context.Background(), "team1", messages, false, false)
+	results := sender.Send(context.Background(), "team1", messages, false, false)
 
 	if len(results) != 1 {
 		t.Errorf("Expected 1 result, got %d", len(results))
@@ -210,7 +204,7 @@ func TestSendToChannels_StopOnError(t *testing.T) {
 		"channel3": "Message 3",
 	}
 
-	results := sender.SendToChannels(context.Background(), "team1", messages, false, false)
+	results := sender.Send(context.Background(), "team1", messages, false, false)
 
 	if len(results) != 3 {
 		t.Errorf("Expected 3 results, got %d", len(results))
@@ -262,7 +256,7 @@ func TestSendToChannels_IgnoreErrors(t *testing.T) {
 		"channel3": "Message 3",
 	}
 
-	results := sender.SendToChannels(context.Background(), "team1", messages, false, true)
+	results := sender.Send(context.Background(), "team1", messages, false, true)
 
 	if len(results) != 3 {
 		t.Errorf("Expected 3 results, got %d", len(results))
@@ -323,7 +317,7 @@ func TestSendToChannels_DuplicateMentions(t *testing.T) {
 		"channel1": "Hello @@alice@@, this is for @@alice@@ again",
 	}
 
-	results := sender.SendToChannels(context.Background(), "team1", messages, false, false)
+	results := sender.Send(context.Background(), "team1", messages, false, false)
 
 	if len(results) != 1 {
 		t.Errorf("Expected 1 result, got %d", len(results))
@@ -347,7 +341,7 @@ func TestSendToChannels_DryRunWithMentionError(t *testing.T) {
 		"channel1": "Hello @@alice@@!",
 	}
 
-	results := sender.SendToChannels(context.Background(), "team1", messages, true, false)
+	results := sender.Send(context.Background(), "team1", messages, true, false)
 
 	if len(results) != 1 {
 		t.Errorf("Expected 1 result, got %d", len(results))
