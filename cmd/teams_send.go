@@ -77,7 +77,7 @@ func runTeamsSend(cmd *cobra.Command, args []string) error {
 	}
 
 	log.Info("Sending messages to channels", "team", teamsTeam, "count", len(messages), "dryRun", teamsDryRun)
-	results := teamsClient.ChannelSender.SendToChannels(ctx, teamsTeam, messages, teamsDryRun, teamsIgnoreErrors)
+	results := teamsClient.ChannelSender.Send(ctx, teamsTeam, messages, teamsDryRun, teamsIgnoreErrors)
 
 	printChannelResults(results, teamsDryRun)
 

@@ -71,7 +71,7 @@ func runChatsSend(cmd *cobra.Command, args []string) error {
 	}
 
 	log.Info("Sending messages to chats", "count", len(messages), "dryRun", chatsDryRun)
-	results := teamsClient.ChatSender.SendToChats(ctx, messages, chatsDryRun, chatsIgnoreErrors)
+	results := teamsClient.ChatSender.Send(ctx, messages, chatsDryRun, chatsIgnoreErrors)
 
 	printChatResults(results, chatsDryRun)
 
