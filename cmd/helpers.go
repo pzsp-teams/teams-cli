@@ -21,18 +21,7 @@ var (
 )
 
 func getDecodeFunc(extension string) (file_readers.DecodeFunc, error) {
-	switch extension {
-	case "json":
-		return file_readers.DecodeJSON, nil
-	case "yaml", "yml":
-		return file_readers.DecodeYAML, nil
-	case "toml":
-		return file_readers.DecodeTOML, nil
-	case "csv":
-		return file_readers.DecodeCSV, nil
-	default:
-		return nil, fmt.Errorf("unsupported file extension: %s (supported: json, yaml, yml, toml, csv)", extension)
-	}
+	return file_readers.GetDecoderByExtension(extension)
 }
 
 func GetOrCreateTeamsClient(ctx context.Context) (*client.TeamsClient, error) {

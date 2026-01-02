@@ -33,16 +33,21 @@ Examples:
 }
 
 var (
+	teamRef              string
 	createChannelsData   string
 	createChannelsDryRun bool
 )
 
 func init() {
+	teamsCreateChannelsCmd.Flags().StringVar(&teamRef, "team", "", "Name of the team in which to create channels")
 	teamsCreateChannelsCmd.Flags().StringVar(&createChannelsData, "data", "", "Path to channels data file (YAML/JSON/TOML/CSV)")
 	teamsCreateChannelsCmd.Flags().BoolVar(&createChannelsDryRun, "dry-run", false, "Preview without creating channels")
 
 	if err := teamsCreateChannelsCmd.MarkFlagRequired("data"); err != nil {
 		panic(fmt.Sprintf("failed to mark data flag as required: %v", err))
+	}
+	if err := teamsCreateChannelsCmd.MarkFlagRequired("team"); err != nil {
+		panic(fmt.Sprintf("failed to mark team flag as required: %v", err))
 	}
 }
 
@@ -57,13 +62,9 @@ func runTeamsCreateChannels(cmd *cobra.Command, args []string) error {
 	}
 
 	extension := strings.TrimPrefix(filepath.Ext(createChannelsData), ".")
-	parser, err := getDecodeFunc(extension)
-	if err != nil {
-		return err
-	}
 
 	log.Debug("Parsing channels data", "file", createChannelsData)
-	channelData, err := channelcreation.ParseChannelsData(dataFile, parser)
+	channelData, err := channelcreation.ParseChannelsDataByExtension(dataFile, extension)
 	if err != nil {
 		log.Error("Failed to parse channels data", "error", err)
 		return fmt.Errorf("failed to parse channels data: %w", err)
@@ -80,7 +81,7 @@ func runTeamsCreateChannels(cmd *cobra.Command, args []string) error {
 	}
 
 	log.Info("Creating channels", "count", len(channelData), "dryRun", createChannelsDryRun)
-	results := teamsClient.ChannelCreator.CreateChannels(ctx, channelData, true)
+	results := teamsClient.ChannelCreator.CreateChannels(ctx, teamRef, channelData, true, createChannelsDryRun)
 
 	successCount := 0
 	for _, res := range results {
