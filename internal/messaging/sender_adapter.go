@@ -6,6 +6,13 @@ import (
 	"github.com/pzsp-teams/lib/models"
 )
 
+// sendResult is implemented by ChannelSendResult and ChatSendResult
+type sendResult interface {
+	getError() error
+	getRef() string
+	getMessage() string
+}
+
 // senderAdapter abstracts type-specific operations for channel and chat senders.
 // Res: Result type
 type senderAdapter[Res any] interface {
