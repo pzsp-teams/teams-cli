@@ -14,6 +14,18 @@ type mockResult struct {
 	Err     error
 }
 
+func (m mockResult) getError() error {
+	return m.Err
+}
+
+func (m mockResult) getRef() string {
+	return m.Ref
+}
+
+func (m mockResult) getMessage() string {
+	return m.Message
+}
+
 type mockAdapter struct {
 	getMentionsFn func(ctx context.Context, ref string, rawMentions []string) ([]models.Mention, error)
 	sendMessageFn func(ctx context.Context, ref string, body models.MessageBody) (*models.Message, error)
@@ -33,20 +45,8 @@ func (m *mockAdapter) sendMessage(ctx context.Context, ref string, body models.M
 	return &models.Message{Content: body.Content}, nil
 }
 
-func (m *mockAdapter) newErrorResult(ref, content string, err error) mockResult {
-	return mockResult{Ref: ref, Message: content, Err: err}
-}
-
-func (m *mockAdapter) newSuccessResult(ref, message string) mockResult {
-	return mockResult{Ref: ref, Message: message, Err: nil}
-}
-
-func (m *mockAdapter) getError(result mockResult) error {
-	return result.Err
-}
-
-func (m *mockAdapter) getLogFields(ref string) map[string]any {
-	return map[string]any{"ref": ref}
+func newMockResult(ref, message string, err error) mockResult {
+	return mockResult{Ref: ref, Message: message, Err: err}
 }
 
 func TestGenericSender_Send_Success(t *testing.T) {
@@ -56,7 +56,7 @@ func TestGenericSender_Send_Success(t *testing.T) {
 		},
 	}
 
-	sender := newGenericSender(adapter)
+	sender := newGenericSender(adapter, newMockResult, senderTypeChannel)
 
 	messages := map[string]string{
 		"ref1": "message1",
@@ -85,7 +85,7 @@ func TestGenericSender_Send_DryRun(t *testing.T) {
 		},
 	}
 
-	sender := newGenericSender(adapter)
+	sender := newGenericSender(adapter, newMockResult, senderTypeChannel)
 
 	messages := map[string]string{
 		"ref1": "message1",
@@ -114,7 +114,7 @@ func TestGenericSender_Send_MentionError(t *testing.T) {
 		},
 	}
 
-	sender := newGenericSender(adapter)
+	sender := newGenericSender(adapter, newMockResult, senderTypeChannel)
 
 	messages := map[string]string{
 		"ref1": "message with @@mention@@",
@@ -143,7 +143,7 @@ func TestGenericSender_Send_SendError(t *testing.T) {
 		},
 	}
 
-	sender := newGenericSender(adapter)
+	sender := newGenericSender(adapter, newMockResult, senderTypeChannel)
 
 	messages := map[string]string{
 		"ref1": "message1",
@@ -178,7 +178,7 @@ func TestGenericSender_Send_StopOnError(t *testing.T) {
 		},
 	}
 
-	sender := newGenericSender(adapter)
+	sender := newGenericSender(adapter, newMockResult, senderTypeChannel)
 
 	messages := map[string]string{
 		"ref1": "message1",
@@ -192,8 +192,8 @@ func TestGenericSender_Send_StopOnError(t *testing.T) {
 		t.Fatalf("expected 3 results, got %d", len(results))
 	}
 
-	if callCount > 1 {
-		t.Errorf("expected only 1 send call before stopping, got %d", callCount)
+	if callCount != 1 {
+		t.Errorf("expected exactly 1 send call before stopping, got %d", callCount)
 	}
 
 	errorCount := 0
@@ -208,10 +208,17 @@ func TestGenericSender_Send_StopOnError(t *testing.T) {
 	}
 
 	skippedCount := 0
+	failedCount := 0
 	for _, result := range results {
 		if errors.Is(result.Err, ErrMessageSkipped) {
 			skippedCount++
+		} else if result.getRef() == failedRef {
+			failedCount++
 		}
+	}
+
+	if failedCount != 1 {
+		t.Errorf("expected 1 failed message, got %d", failedCount)
 	}
 
 	if skippedCount != 2 {
@@ -231,7 +238,7 @@ func TestGenericSender_Send_IgnoreErrors(t *testing.T) {
 		},
 	}
 
-	sender := newGenericSender(adapter)
+	sender := newGenericSender(adapter, newMockResult, senderTypeChannel)
 
 	messages := map[string]string{
 		"ref1": "message1",
@@ -263,7 +270,7 @@ func TestGenericSender_Send_IgnoreErrors(t *testing.T) {
 
 func TestGenericSender_ProcessMentions_NoMentions(t *testing.T) {
 	adapter := &mockAdapter{}
-	sender := newGenericSender(adapter)
+	sender := newGenericSender(adapter, newMockResult, senderTypeChannel)
 
 	content, mentions, err := sender.processMentions(context.Background(), "ref1", "message without mentions")
 	if err != nil {
@@ -291,7 +298,7 @@ func TestGenericSender_ProcessMentions_WithMentions(t *testing.T) {
 		},
 	}
 
-	sender := newGenericSender(adapter)
+	sender := newGenericSender(adapter, newMockResult, senderTypeChannel)
 
 	content, mentions, err := sender.processMentions(context.Background(), "ref1", "Hello @@user@@")
 	if err != nil {

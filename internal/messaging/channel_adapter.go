@@ -12,6 +12,10 @@ type channelAdapter struct {
 	teamRef        string
 }
 
+func (a *channelAdapter) setTeamRef(teamRef string) {
+	a.teamRef = teamRef
+}
+
 func (a *channelAdapter) getMentions(ctx context.Context, ref string, rawMentions []string) ([]models.Mention, error) {
 	return a.channelService.GetMentions(ctx, a.teamRef, ref, rawMentions)
 }
