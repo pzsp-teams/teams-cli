@@ -135,11 +135,15 @@ func (s *genericSender[Res]) executeActions(ctx context.Context, actions []*acti
 }
 
 func (s *genericSender[Res]) dryRunActions(actions []*action[Res]) []Res {
+	logger := initializers.Logger
 	results := make([]Res, 0, len(actions))
 	for _, act := range actions {
 		if act.run == nil {
-			results = append(results, *act.result)
+			result := *act.result
+			results = append(results, result)
+			logger.Debug("Dry run: failed during planning", s.senderType.String(), act.data.ref, "error", result.getError())
 		} else {
+			logger.Debug("Dry run: would send message", s.senderType.String(), act.data.ref)
 			result := s.newResult(act.data.ref, act.data.body.Content, nil)
 			results = append(results, result)
 		}
