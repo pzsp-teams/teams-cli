@@ -186,11 +186,13 @@ func TestSendToChannels_SendError(t *testing.T) {
 func TestSendToChannels_StopOnError(t *testing.T) {
 	sendErr := errors.New("network error")
 	callCount := 0
+	failedRef := ""
 
 	stub := &channelServiceStub{
 		sendMessageFunc: func(ctx context.Context, teamRef, channelRef string, body models.MessageBody) (*models.Message, error) {
 			callCount++
-			if channelRef == "channel1" {
+			if callCount == 1 {
+				failedRef = channelRef
 				return nil, sendErr
 			}
 			return &models.Message{Content: body.Content}, nil
@@ -216,18 +218,26 @@ func TestSendToChannels_StopOnError(t *testing.T) {
 
 	errorCount := 0
 	skippedCount := 0
+	failedCount := 0
 	for _, result := range results {
 		if result.Error != nil {
-			if errors.Is(result.Error, ErrMessageSkipped) {
+			switch {
+			case errors.Is(result.Error, ErrMessageSkipped):
 				skippedCount++
-			} else {
+			case result.ChannelRef == failedRef:
+				failedCount++
+			default:
 				errorCount++
 			}
 		}
 	}
 
-	if errorCount != 1 {
-		t.Errorf("Expected 1 error, got %d", errorCount)
+	if failedCount != 1 {
+		t.Errorf("Expected 1 failed message, got %d", failedCount)
+	}
+
+	if errorCount != 0 {
+		t.Errorf("Expected 0 other errors, got %d", errorCount)
 	}
 
 	if skippedCount != 2 {

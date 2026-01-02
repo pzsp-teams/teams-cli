@@ -166,10 +166,12 @@ func TestGenericSender_Send_SendError(t *testing.T) {
 
 func TestGenericSender_Send_StopOnError(t *testing.T) {
 	callCount := 0
+	failedRef := ""
 	adapter := &mockAdapter{
 		sendMessageFn: func(ctx context.Context, ref string, body models.MessageBody) (*models.Message, error) {
 			callCount++
-			if ref == "ref1" {
+			if callCount == 1 {
+				failedRef = ref
 				return nil, errors.New("send error")
 			}
 			return &models.Message{Content: body.Content}, nil
