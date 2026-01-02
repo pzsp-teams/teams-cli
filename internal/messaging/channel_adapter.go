@@ -23,30 +23,3 @@ func (a *channelAdapter) getMentions(ctx context.Context, ref string, rawMention
 func (a *channelAdapter) sendMessage(ctx context.Context, ref string, body models.MessageBody) (*models.Message, error) {
 	return a.channelService.SendMessage(ctx, a.teamRef, ref, body)
 }
-
-func (a *channelAdapter) newErrorResult(ref, content string, err error) ChannelSendResult {
-	return ChannelSendResult{
-		ChannelRef: ref,
-		Message:    content,
-		Error:      err,
-	}
-}
-
-func (a *channelAdapter) newSuccessResult(ref, message string) ChannelSendResult {
-	return ChannelSendResult{
-		ChannelRef: ref,
-		Message:    message,
-		Error:      nil,
-	}
-}
-
-func (a *channelAdapter) getError(result ChannelSendResult) error {
-	return result.Error
-}
-
-func (a *channelAdapter) getLogFields(ref string) map[string]any {
-	return map[string]any{
-		"team":    a.teamRef,
-		"channel": ref,
-	}
-}

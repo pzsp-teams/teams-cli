@@ -32,14 +32,9 @@ type sendResult interface {
 }
 
 // senderAdapter abstracts type-specific operations for channel and chat senders.
-// Res: Result type
-type senderAdapter[Res any] interface {
+type senderAdapter interface {
 	getMentions(ctx context.Context, ref string, rawMentions []string) ([]models.Mention, error)
 	sendMessage(ctx context.Context, ref string, body models.MessageBody) (*models.Message, error)
-	newErrorResult(ref string, content string, err error) Res
-	newSuccessResult(ref string, message string) Res
-	getError(result Res) error
-	getLogFields(ref string) map[string]any
 }
 
 type messageData struct {
