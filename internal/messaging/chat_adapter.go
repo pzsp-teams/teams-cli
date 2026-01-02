@@ -21,29 +21,3 @@ func (a *chatAdapter) sendMessage(ctx context.Context, ref string, body models.M
 	chatRef := utils.GetChatRef(ref)
 	return a.chatService.SendMessage(ctx, chatRef, body)
 }
-
-func (a *chatAdapter) newErrorResult(ref, content string, err error) ChatSendResult {
-	return ChatSendResult{
-		ChatRef: ref,
-		Message: content,
-		Error:   err,
-	}
-}
-
-func (a *chatAdapter) newSuccessResult(ref, message string) ChatSendResult {
-	return ChatSendResult{
-		ChatRef: ref,
-		Message: message,
-		Error:   nil,
-	}
-}
-
-func (a *chatAdapter) getError(result ChatSendResult) error {
-	return result.Error
-}
-
-func (a *chatAdapter) getLogFields(ref string) map[string]any {
-	return map[string]any{
-		"chat": ref,
-	}
-}
