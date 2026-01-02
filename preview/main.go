@@ -109,12 +109,12 @@ func bulkMessageDemo(targetType, messageFileName, dataFileName, teamName string,
 			os.Exit(1)
 		}
 		log.Info("Sending messages to channels", "team", teamName, "count", len(messages), "dryRun", dryRun)
-		results := teamsClient.ChannelSender.SendToChannels(ctx, teamName, messages, dryRun, ignoreError)
+		results := teamsClient.ChannelSender.Send(ctx, teamName, messages, dryRun, ignoreError)
 		printChannelResults(results, dryRun)
 
 	case "chats":
 		log.Info("Sending messages to chats", "count", len(messages), "dryRun", dryRun)
-		results := teamsClient.ChatSender.SendToChats(ctx, messages, dryRun, ignoreError)
+		results := teamsClient.ChatSender.Send(ctx, messages, dryRun, ignoreError)
 		printChatResults(results, dryRun)
 
 	default:
