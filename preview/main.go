@@ -183,7 +183,7 @@ func createChannelsDemo() {
 	}
 	_ = dataFile.Close()
 	successCount := 0
-	results := teamsClient.ChannelCreator.CreateChannels(ctx, teamRef, channelData, true, true)
+	results := teamsClient.ChannelCreator.CreateChannels(ctx, teamRef, channelData, true, true, true)
 	for _, result := range results {
 		if result.Error == nil {
 			log.Info("Channel operation successful",

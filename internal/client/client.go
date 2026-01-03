@@ -26,6 +26,6 @@ func NewTeamsClient(ctx context.Context, authConfig *lib_config.AuthConfig, send
 	return &TeamsClient{
 		ChannelSender:  messaging.NewChannelSender(libClient.Channels),
 		ChatSender:     messaging.NewChatSender(libClient.Chats),
-		ChannelCreator: channelcreation.NewChannelCreator(libClient.Channels),
+		ChannelCreator: channelcreation.NewChannelCreator(libClient.Channels, libClient.Teams),
 	}, nil
 }
