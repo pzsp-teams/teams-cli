@@ -7,11 +7,9 @@ import (
 	"testing"
 
 	"github.com/pzsp-teams/cli/internal/testutil"
-
 	"github.com/pzsp-teams/lib/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	"go.uber.org/mock/gomock"
 )
 
@@ -23,6 +21,13 @@ func newMocks(t *testing.T) (*gomock.Controller, *testutil.MockChannelsService, 
 	ts := testutil.NewMockTeamsService(ctrl)
 
 	return ctrl, ch, ts
+}
+
+func newMocksNoTeams(t *testing.T) (*gomock.Controller, *testutil.MockChannelsService) {
+	t.Helper()
+	ctrl := gomock.NewController(t)
+	ch := testutil.NewMockChannelsService(ctrl)
+	return ctrl, ch
 }
 
 func resultsByName(results []CreateResult) map[string]CreateResult {
@@ -45,300 +50,301 @@ func sortedKeys(m map[string]CreateResult) []string {
 var errNotFound = errors.New("[CODE: 404] not found")
 var errBoom = errors.New("boom")
 
-func TestChannelCreator_CreateChannels_TableDriven(t *testing.T) {
+type wantResult struct {
+	status      Status
+	channelID   string
+	errNil      bool
+	errIs       error
+	errContains string
+	members     []string
+	owners      []string
+}
+
+func assertResult(t *testing.T, gotMap map[string]CreateResult, name string, w *wantResult) {
+	t.Helper()
+
+	r, ok := gotMap[name]
+	require.True(t, ok, "missing result for channel %q; got keys=%v", name, sortedKeys(gotMap))
+
+	assert.Equal(t, w.status, r.Status)
+	assert.Equal(t, w.channelID, r.ChannelID)
+
+	if w.errNil {
+		assert.NoError(t, r.Error)
+	} else {
+		assert.Error(t, r.Error)
+		if w.errIs != nil {
+			assert.ErrorIs(t, r.Error, w.errIs)
+		}
+		if w.errContains != "" {
+			assert.Contains(t, r.Error.Error(), w.errContains)
+		}
+	}
+
+	if w.members != nil {
+		assert.Equal(t, w.members, r.MemberRefs)
+	}
+	if w.owners != nil {
+		assert.Equal(t, w.owners, r.OwnerRefs)
+	}
+}
+
+func TestChannelCreator_CreateChannels_requiresTeamsServiceWhenEnsureMembersInTeam(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
 	const teamRef = "TeamA"
 
-	type wantResult struct {
-		status      Status
-		channelID   string
-		errNil      bool
-		errIs       error
-		errContains string
-		members     []string
-		owners      []string
+	ctrl, ch := newMocksNoTeams(t)
+	defer ctrl.Finish()
+
+	sut := NewChannelCreator(ch, nil)
+
+	req := map[string]ChannelData{
+		"Chan1": {"members": []string{"u1"}, "owners": []string{"o1"}},
+		"Chan2": {"members": []string{"u2"}, "owners": []string{}},
 	}
 
-	type tc struct {
-		name string
+	got := sut.CreateChannels(ctx, teamRef, req, false, true, false)
 
-		request map[string]ChannelData
+	require.Len(t, got, len(req))
+	gotMap := resultsByName(got)
 
-		ensureMembersInChannel bool
-		ensureMembersInTeam    bool
-		dryRun                 bool
-		nilTeamsService        bool
+	assertResult(t, gotMap, "Chan1", &wantResult{status: StatusFailed, errNil: false, errContains: "requires teams service"})
+	assertResult(t, gotMap, "Chan2", &wantResult{status: StatusFailed, errNil: false, errContains: "requires teams service"})
+}
 
-		setupMocks func(t *testing.T, ch *testutil.MockChannelsService, ts *testutil.MockTeamsService)
+func TestChannelCreator_CreateChannels_dryRun_channelMissing_wouldCreate(t *testing.T) {
+	t.Parallel()
 
-		want map[string]wantResult
-	}
+	ctx := context.Background()
+	const teamRef = "TeamA"
 
-	tests := []tc{
+	ctrl, ch, ts := newMocks(t)
+	defer ctrl.Finish()
+	_ = ts
+
+	ch.EXPECT().
+		Get(gomock.Any(), teamRef, "ChanA").
+		Return(nil, errNotFound).
+		Times(1)
+
+	sut := NewChannelCreator(ch, ts)
+	got := sut.CreateChannels(ctx, teamRef, map[string]ChannelData{
+		"ChanA": {"members": []string{"u1"}, "owners": []string{"o1"}},
+	}, false, false, true)
+
+	require.Len(t, got, 1)
+	gotMap := resultsByName(got)
+	assertResult(t, gotMap, "ChanA", &wantResult{
+		status:  StatusWouldCreate,
+		errNil:  true,
+		members: []string{"u1"},
+		owners:  []string{"o1"},
+	})
+}
+
+func TestChannelCreator_CreateChannels_dryRun_ensureMembersInTeam_doesNotCallTeamsAddMember(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	const teamRef = "TeamA"
+
+	ctrl, ch, ts := newMocks(t)
+	defer ctrl.Finish()
+
+	ch.EXPECT().
+		Get(gomock.Any(), teamRef, "ChanA").
+		Return(nil, errNotFound).
+		Times(1)
+
+	sut := NewChannelCreator(ch, ts)
+	got := sut.CreateChannels(ctx, teamRef, map[string]ChannelData{
+		"ChanA": {"members": []string{"u1"}, "owners": []string{"o1"}},
+	}, false, true, true)
+
+	require.Len(t, got, 1)
+	gotMap := resultsByName(got)
+	assertResult(t, gotMap, "ChanA", &wantResult{status: StatusWouldCreate, errNil: true})
+}
+
+func TestChannelCreator_CreateChannels_channelMissing_createsChannel(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	const teamRef = "TeamA"
+
+	ctrl, ch, ts := newMocks(t)
+	defer ctrl.Finish()
+	_ = ts
+
+	ch.EXPECT().
+		Get(gomock.Any(), teamRef, "ChanA").
+		Return(nil, errNotFound).
+		Times(1)
+
+	ch.EXPECT().
+		CreatePrivateChannel(gomock.Any(), teamRef, "ChanA", []string{"u1"}, []string{"o1"}).
+		Return(&models.Channel{ID: "chan-id"}, nil).
+		Times(1)
+
+	sut := NewChannelCreator(ch, ts)
+	got := sut.CreateChannels(ctx, teamRef, map[string]ChannelData{
+		"ChanA": {"members": []string{"u1"}, "owners": []string{"o1"}},
+	}, false, false, false)
+
+	require.Len(t, got, 1)
+	gotMap := resultsByName(got)
+	assertResult(t, gotMap, "ChanA", &wantResult{
+		status:    StatusCreated,
+		channelID: "chan-id",
+		errNil:    true,
+		members:   []string{"u1"},
+		owners:    []string{"o1"},
+	})
+}
+
+func TestChannelCreator_CreateChannels_channelMissing_createFails(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	const teamRef = "TeamA"
+
+	ctrl, ch, ts := newMocks(t)
+	defer ctrl.Finish()
+	_ = ts
+
+	ch.EXPECT().
+		Get(gomock.Any(), teamRef, "ChanA").
+		Return(nil, errNotFound).
+		Times(1)
+
+	ch.EXPECT().
+		CreatePrivateChannel(gomock.Any(), teamRef, "ChanA", []string{"u1"}, []string{"o1"}).
+		Return(nil, errBoom).
+		Times(1)
+
+	sut := NewChannelCreator(ch, ts)
+	got := sut.CreateChannels(ctx, teamRef, map[string]ChannelData{
+		"ChanA": {"members": []string{"u1"}, "owners": []string{"o1"}},
+	}, false, false, false)
+
+	require.Len(t, got, 1)
+	gotMap := resultsByName(got)
+	assertResult(t, gotMap, "ChanA", &wantResult{
+		status:      StatusFailed,
+		errNil:      false,
+		errContains: "failed to create channel ChanA in team TeamA",
+	})
+}
+
+func TestChannelCreator_CreateChannels_channelExists_alreadyExistsWhenEnsureMembersFalse(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	const teamRef = "TeamA"
+
+	ctrl, ch, ts := newMocks(t)
+	defer ctrl.Finish()
+	_ = ts
+
+	ch.EXPECT().
+		Get(gomock.Any(), teamRef, "ChanA").
+		Return(&models.Channel{ID: "existing"}, nil).
+		Times(1)
+
+	sut := NewChannelCreator(ch, ts)
+	got := sut.CreateChannels(ctx, teamRef, map[string]ChannelData{
+		"ChanA": {"members": []string{"u1"}, "owners": []string{"o1"}},
+	}, false, false, false)
+
+	require.Len(t, got, 1)
+	gotMap := resultsByName(got)
+	assertResult(t, gotMap, "ChanA", &wantResult{status: StatusAlreadyExists, errNil: true})
+}
+
+func TestChannelCreator_CreateChannels_channelExists_ensureMembers_success(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	const teamRef = "TeamA"
+
+	ctrl, ch, ts := newMocks(t)
+	defer ctrl.Finish()
+	_ = ts
+
+	ch.EXPECT().
+		Get(gomock.Any(), teamRef, "ChanA").
+		Return(&models.Channel{ID: "existing"}, nil).
+		Times(1)
+
+	ch.EXPECT().AddMember(gomock.Any(), teamRef, "ChanA", "u1", false).Return(nil, nil).Times(1)
+	ch.EXPECT().AddMember(gomock.Any(), teamRef, "ChanA", "u2", false).Return(nil, nil).Times(1)
+	ch.EXPECT().AddMember(gomock.Any(), teamRef, "ChanA", "o1", true).Return(nil, nil).Times(1)
+
+	sut := NewChannelCreator(ch, ts)
+	got := sut.CreateChannels(ctx, teamRef, map[string]ChannelData{
+		"ChanA": {"members": []string{"u1", "u2"}, "owners": []string{"o1"}},
+	}, true, false, false)
+
+	require.Len(t, got, 1)
+	gotMap := resultsByName(got)
+	assertResult(t, gotMap, "ChanA", &wantResult{
+		status:  StatusMembersEnsured,
+		errNil:  true,
+		members: []string{"u1", "u2"},
+		owners:  []string{"o1"},
+	})
+}
+
+func TestChannelCreator_CreateChannels_channelExists_ensureMembers_partialCases(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	const teamRef = "TeamA"
+
+	tests := []struct {
+		name       string
+		req        map[string]ChannelData
+		setupMocks func(ch *testutil.MockChannelsService)
+		want       wantResult
+	}{
 		{
-			name: "ensureMembersInTeam=true but teams service is nil -> all failed and early return",
-			request: map[string]ChannelData{
-				"Chan1": {"members": []string{"u1"}, "owners": []string{"o1"}},
-				"Chan2": {"members": []string{"u2"}, "owners": []string{}},
-			},
-			ensureMembersInTeam: true,
-			nilTeamsService:     true,
-			setupMocks:          func(t *testing.T, ch *testutil.MockChannelsService, ts *testutil.MockTeamsService) {},
-			want: map[string]wantResult{
-				"Chan1": {status: StatusFailed, errNil: false, errContains: "requires teams service"},
-				"Chan2": {status: StatusFailed, errNil: false, errContains: "requires teams service"},
-			},
-		},
-
-		{
-			name: "dryRun + channel does not exist -> would create, no CreatePrivateChannel and no team AddMember in dry-run snapshot",
-			request: map[string]ChannelData{
-				"ChanA": {"members": []string{"u1"}, "owners": []string{"o1"}},
-			},
-			ensureMembersInTeam: true,
-			dryRun:              true,
-			setupMocks: func(t *testing.T, ch *testutil.MockChannelsService, ts *testutil.MockTeamsService) {
-				ch.EXPECT().
-					Get(gomock.Any(), teamRef, "ChanA").
-					Return(nil, errNotFound).
-					Times(1)
-			},
-			want: map[string]wantResult{
-				"ChanA": {status: StatusWouldCreate, errNil: true, members: []string{"u1"}, owners: []string{"o1"}},
-			},
-		},
-
-		{
-			name: "channel does not exist -> create succeeds",
-			request: map[string]ChannelData{
-				"ChanA": {"members": []string{"u1"}, "owners": []string{"o1"}},
-			},
-			setupMocks: func(t *testing.T, ch *testutil.MockChannelsService, ts *testutil.MockTeamsService) {
-				ch.EXPECT().
-					Get(gomock.Any(), teamRef, "ChanA").
-					Return(nil, errNotFound).
-					Times(1)
-
-				ch.EXPECT().
-					CreatePrivateChannel(gomock.Any(), teamRef, "ChanA", []string{"u1"}, []string{"o1"}).
-					Return(&models.Channel{ID: "chan-id"}, nil).
-					Times(1)
-			},
-			want: map[string]wantResult{
-				"ChanA": {status: StatusCreated, channelID: "chan-id", errNil: true, members: []string{"u1"}, owners: []string{"o1"}},
-			},
-		},
-
-		{
-			name: "channel does not exist -> create fails (CreatePrivateChannel returns error)",
-			request: map[string]ChannelData{
-				"ChanA": {"members": []string{"u1"}, "owners": []string{"o1"}},
-			},
-			setupMocks: func(t *testing.T, ch *testutil.MockChannelsService, ts *testutil.MockTeamsService) {
-				ch.EXPECT().
-					Get(gomock.Any(), teamRef, "ChanA").
-					Return(nil, errNotFound).
-					Times(1)
-
-				ch.EXPECT().
-					CreatePrivateChannel(gomock.Any(), teamRef, "ChanA", []string{"u1"}, []string{"o1"}).
-					Return(nil, errBoom).
-					Times(1)
-			},
-			want: map[string]wantResult{
-				"ChanA": {status: StatusFailed, errNil: false, errContains: "failed to create channel ChanA in team TeamA"},
-			},
-		},
-
-		{
-			name: "channel exists + ensureMembersInChannel=false -> already exists",
-			request: map[string]ChannelData{
-				"ChanA": {"members": []string{"u1"}, "owners": []string{"o1"}},
-			},
-			setupMocks: func(t *testing.T, ch *testutil.MockChannelsService, ts *testutil.MockTeamsService) {
-				ch.EXPECT().
-					Get(gomock.Any(), teamRef, "ChanA").
-					Return(&models.Channel{ID: "existing"}, nil).
-					Times(1)
-			},
-			want: map[string]wantResult{
-				"ChanA": {status: StatusAlreadyExists, errNil: true},
-			},
-		},
-
-		{
-			name: "channel exists + ensureMembersInChannel=true -> members ensured",
-			request: map[string]ChannelData{
-				"ChanA": {"members": []string{"u1", "u2"}, "owners": []string{"o1"}},
-			},
-			ensureMembersInChannel: true,
-			setupMocks: func(t *testing.T, ch *testutil.MockChannelsService, ts *testutil.MockTeamsService) {
-				ch.EXPECT().
-					Get(gomock.Any(), teamRef, "ChanA").
-					Return(&models.Channel{ID: "existing"}, nil).
-					Times(1)
-
-				ch.EXPECT().AddMember(gomock.Any(), teamRef, "ChanA", "u1", false).Return(nil, nil).Times(1)
-				ch.EXPECT().AddMember(gomock.Any(), teamRef, "ChanA", "u2", false).Return(nil, nil).Times(1)
-				ch.EXPECT().AddMember(gomock.Any(), teamRef, "ChanA", "o1", true).Return(nil, nil).Times(1)
-			},
-			want: map[string]wantResult{
-				"ChanA": {status: StatusMembersEnsured, errNil: true, members: []string{"u1", "u2"}, owners: []string{"o1"}},
-			},
-		},
-
-		{
-			name: "channel exists + ensureMembersInChannel=true -> member add fails => partially ensured",
-			request: map[string]ChannelData{
+			name: "member add fails => partially ensured",
+			req: map[string]ChannelData{
 				"ChanA": {"members": []string{"uBad", "uOK"}, "owners": []string{"oOK"}},
 			},
-			ensureMembersInChannel: true,
-			setupMocks: func(t *testing.T, ch *testutil.MockChannelsService, ts *testutil.MockTeamsService) {
-				ch.EXPECT().
-					Get(gomock.Any(), teamRef, "ChanA").
-					Return(&models.Channel{ID: "existing"}, nil).
-					Times(1)
-
+			setupMocks: func(ch *testutil.MockChannelsService) {
+				ch.EXPECT().Get(gomock.Any(), teamRef, "ChanA").Return(&models.Channel{ID: "existing"}, nil).Times(1)
 				ch.EXPECT().AddMember(gomock.Any(), teamRef, "ChanA", "uBad", false).Return(nil, errBoom).Times(1)
 				ch.EXPECT().AddMember(gomock.Any(), teamRef, "ChanA", "uOK", false).Return(nil, nil).Times(1)
 				ch.EXPECT().AddMember(gomock.Any(), teamRef, "ChanA", "oOK", true).Return(nil, nil).Times(1)
 			},
-			want: map[string]wantResult{
-				"ChanA": {
-					status:  StatusPartiallyEnsured,
-					errNil:  false,
-					errIs:   errMembersPartiallyEnsured,
-					members: []string{"uOK"},
-					owners:  []string{"oOK"},
-				},
+			want: wantResult{
+				status:  StatusPartiallyEnsured,
+				errNil:  false,
+				errIs:   errMembersPartiallyEnsured,
+				members: []string{"uOK"},
+				owners:  []string{"oOK"},
 			},
 		},
-
 		{
-			name: "channel exists + ensureMembersInChannel=true -> owner add fails => partially ensured",
-			request: map[string]ChannelData{
+			name: "owner add fails => partially ensured",
+			req: map[string]ChannelData{
 				"ChanA": {"members": []string{"uOK"}, "owners": []string{"oBad", "oOK"}},
 			},
-			ensureMembersInChannel: true,
-			setupMocks: func(t *testing.T, ch *testutil.MockChannelsService, ts *testutil.MockTeamsService) {
-				ch.EXPECT().
-					Get(gomock.Any(), teamRef, "ChanA").
-					Return(&models.Channel{ID: "existing"}, nil).
-					Times(1)
-
+			setupMocks: func(ch *testutil.MockChannelsService) {
+				ch.EXPECT().Get(gomock.Any(), teamRef, "ChanA").Return(&models.Channel{ID: "existing"}, nil).Times(1)
 				ch.EXPECT().AddMember(gomock.Any(), teamRef, "ChanA", "uOK", false).Return(nil, nil).Times(1)
 				ch.EXPECT().AddMember(gomock.Any(), teamRef, "ChanA", "oBad", true).Return(nil, errBoom).Times(1)
 				ch.EXPECT().AddMember(gomock.Any(), teamRef, "ChanA", "oOK", true).Return(nil, nil).Times(1)
 			},
-			want: map[string]wantResult{
-				"ChanA": {
-					status:  StatusPartiallyEnsured,
-					errNil:  false,
-					errIs:   errMembersPartiallyEnsured,
-					members: []string{"uOK"},
-					owners:  []string{"oOK"},
-				},
-			},
-		},
-
-		{
-			name: "ensureMembersInTeam fails for a member + channel exists + ensureMembersInChannel=true -> skipped and partially ensured",
-			request: map[string]ChannelData{
-				"ChanA": {"members": []string{"uFail", "uOK"}, "owners": []string{"oOK"}},
-			},
-			ensureMembersInTeam:    true,
-			ensureMembersInChannel: true,
-			setupMocks: func(t *testing.T, ch *testutil.MockChannelsService, ts *testutil.MockTeamsService) {
-				ts.EXPECT().AddMember(gomock.Any(), teamRef, "uFail", false).Return(nil, errBoom).Times(1)
-				ts.EXPECT().AddMember(gomock.Any(), teamRef, "uOK", false).Return(nil, nil).Times(1)
-				ts.EXPECT().AddMember(gomock.Any(), teamRef, "oOK", false).Return(nil, nil).Times(1)
-
-				ch.EXPECT().
-					Get(gomock.Any(), teamRef, "ChanA").
-					Return(&models.Channel{ID: "existing"}, nil).
-					Times(1)
-
-				ch.EXPECT().AddMember(gomock.Any(), teamRef, "ChanA", "uOK", false).Return(nil, nil).Times(1)
-				ch.EXPECT().AddMember(gomock.Any(), teamRef, "ChanA", "oOK", true).Return(nil, nil).Times(1)
-			},
-			want: map[string]wantResult{
-				"ChanA": {
-					status:  StatusPartiallyEnsured,
-					errNil:  false,
-					errIs:   errMembersPartiallyEnsured,
-					members: []string{"uOK"},
-					owners:  []string{"oOK"},
-				},
-			},
-		},
-
-		{
-			name: "ensureMembersInTeam fails + channel missing -> should not create channel (fails fast)",
-			request: map[string]ChannelData{
-				"ChanA": {"members": []string{"uFail"}, "owners": []string{}},
-			},
-			ensureMembersInTeam: true,
-			setupMocks: func(t *testing.T, ch *testutil.MockChannelsService, ts *testutil.MockTeamsService) {
-				ts.EXPECT().AddMember(gomock.Any(), teamRef, "uFail", false).Return(nil, errBoom).Times(1)
-
-				ch.EXPECT().
-					Get(gomock.Any(), teamRef, "ChanA").
-					Return(nil, errNotFound).
-					Times(1)
-			},
-			want: map[string]wantResult{
-				"ChanA": {status: StatusFailed, errNil: false, errContains: "cannot create channel"},
-			},
-		},
-
-		{
-			name: "checkChannelExists returns non-404 error -> StatusFailed and wraps message",
-			request: map[string]ChannelData{
-				"ChanA": {"members": []string{"u1"}, "owners": []string{}},
-			},
-			setupMocks: func(t *testing.T, ch *testutil.MockChannelsService, ts *testutil.MockTeamsService) {
-				ch.EXPECT().
-					Get(gomock.Any(), teamRef, "ChanA").
-					Return(nil, errBoom).
-					Times(1)
-			},
-			want: map[string]wantResult{
-				"ChanA": {status: StatusFailed, errNil: false, errContains: "failed to check existence of channel ChanA in team TeamA"},
-			},
-		},
-
-		{
-			name: "ensureMembersInTeam snapshot deduplicates refs across channels (AddMember called once)",
-			request: map[string]ChannelData{
-				"Chan1": {"members": []string{"u1", "u1", " "}, "owners": []string{}},
-				"Chan2": {"members": []string{"u1"}, "owners": []string{""}},
-			},
-			ensureMembersInTeam: true,
-			setupMocks: func(t *testing.T, ch *testutil.MockChannelsService, ts *testutil.MockTeamsService) {
-				ts.EXPECT().AddMember(gomock.Any(), teamRef, "u1", false).Return(nil, nil).Times(1)
-
-				ch.EXPECT().Get(gomock.Any(), teamRef, gomock.Any()).
-					DoAndReturn(func(_ context.Context, _ string, channelRef string) (*models.Channel, error) {
-						switch channelRef {
-						case "Chan1", "Chan2":
-							return nil, errNotFound
-						default:
-							return nil, errors.New("unexpected channelRef: " + channelRef)
-						}
-					}).
-					Times(2)
-
-				ch.EXPECT().CreatePrivateChannel(gomock.Any(), teamRef, gomock.Any(), gomock.Any(), gomock.Any()).
-					DoAndReturn(func(_ context.Context, _ string, channelRef string, _ []string, _ []string) (*models.Channel, error) {
-						return &models.Channel{ID: "id-" + channelRef}, nil
-					}).
-					Times(2)
-			},
-			want: map[string]wantResult{
-				"Chan1": {status: StatusCreated, channelID: "id-Chan1", errNil: true},
-				"Chan2": {status: StatusCreated, channelID: "id-Chan2", errNil: true},
+			want: wantResult{
+				status:  StatusPartiallyEnsured,
+				errNil:  false,
+				errIs:   errMembersPartiallyEnsured,
+				members: []string{"uOK"},
+				owners:  []string{"oOK"},
 			},
 		},
 	}
@@ -347,89 +353,128 @@ func TestChannelCreator_CreateChannels_TableDriven(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			var ctrl *gomock.Controller
-			var ch *testutil.MockChannelsService
-			var ts *testutil.MockTeamsService
-
-			if tt.nilTeamsService {
-				ctrl, ch, _ = func() (*gomock.Controller, *testutil.MockChannelsService, *testutil.MockTeamsService) {
-					ctrl, ch, ts := newMocks(t)
-					_ = ts
-					return ctrl, ch, nil
-				}()
-				defer ctrl.Finish()
-
-				if tt.setupMocks != nil {
-					tt.setupMocks(t, ch, nil)
-				}
-
-				sut := NewChannelCreator(ch, nil)
-				got := sut.CreateChannels(ctx, teamRef, tt.request, tt.ensureMembersInChannel, tt.ensureMembersInTeam, tt.dryRun)
-
-				require.Len(t, got, len(tt.request))
-
-				gotMap := resultsByName(got)
-				for name, w := range tt.want {
-					r, ok := gotMap[name]
-					require.True(t, ok, "missing result for channel %q; got keys=%v", name, sortedKeys(gotMap))
-
-					assert.Equal(t, w.status, r.Status)
-					if w.errNil {
-						assert.NoError(t, r.Error)
-					} else {
-						assert.Error(t, r.Error)
-						if w.errIs != nil {
-							assert.ErrorIs(t, r.Error, w.errIs)
-						}
-						if w.errContains != "" {
-							assert.Contains(t, r.Error.Error(), w.errContains)
-						}
-					}
-				}
-				return
-			}
-
-			ctrl, ch, ts = newMocks(t)
+			ctrl, ch, ts := newMocks(t)
 			defer ctrl.Finish()
+			_ = ts
 
-			if tt.setupMocks != nil {
-				tt.setupMocks(t, ch, ts)
-			}
+			tt.setupMocks(ch)
 
 			sut := NewChannelCreator(ch, ts)
-			got := sut.CreateChannels(ctx, teamRef, tt.request, tt.ensureMembersInChannel, tt.ensureMembersInTeam, tt.dryRun)
+			got := sut.CreateChannels(ctx, teamRef, tt.req, true, false, false)
 
-			require.Len(t, got, len(tt.request))
+			require.Len(t, got, 1)
 			gotMap := resultsByName(got)
-
-			for name, w := range tt.want {
-				r, ok := gotMap[name]
-				require.True(t, ok, "missing result for channel %q; got keys=%v", name, sortedKeys(gotMap))
-
-				assert.Equal(t, w.status, r.Status)
-				assert.Equal(t, w.channelID, r.ChannelID)
-
-				if w.errNil {
-					assert.NoError(t, r.Error)
-				} else {
-					assert.Error(t, r.Error)
-					if w.errIs != nil {
-						assert.ErrorIs(t, r.Error, w.errIs)
-					}
-					if w.errContains != "" {
-						assert.Contains(t, r.Error.Error(), w.errContains)
-					}
-				}
-
-				if w.members != nil {
-					assert.Equal(t, w.members, r.MemberRefs)
-				}
-				if w.owners != nil {
-					assert.Equal(t, w.owners, r.OwnerRefs)
-				}
-			}
+			assertResult(t, gotMap, "ChanA", &tt.want)
 		})
 	}
+}
+
+func TestChannelCreator_CreateChannels_ensureMembersInTeam_failureBlocksCreateForMissingChannel(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	const teamRef = "TeamA"
+
+	ctrl, ch, ts := newMocks(t)
+	defer ctrl.Finish()
+
+	ts.EXPECT().AddMember(gomock.Any(), teamRef, "uFail", false).Return(nil, errBoom).Times(1)
+
+	ch.EXPECT().
+		Get(gomock.Any(), teamRef, "ChanA").
+		Return(nil, errNotFound).
+		Times(1)
+
+	sut := NewChannelCreator(ch, ts)
+	got := sut.CreateChannels(ctx, teamRef, map[string]ChannelData{
+		"ChanA": {"members": []string{"uFail"}, "owners": []string{}},
+	}, false, true, false)
+
+	require.Len(t, got, 1)
+	gotMap := resultsByName(got)
+	assertResult(t, gotMap, "ChanA", &wantResult{
+		status:      StatusFailed,
+		errNil:      false,
+		errContains: "cannot create channel",
+	})
+}
+
+func TestChannelCreator_CreateChannels_ensureMembersInTeam_failureSkipsEnsureInChannel(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	const teamRef = "TeamA"
+
+	ctrl, ch, ts := newMocks(t)
+	defer ctrl.Finish()
+
+	ts.EXPECT().AddMember(gomock.Any(), teamRef, "uFail", false).Return(nil, errBoom).Times(1)
+	ts.EXPECT().AddMember(gomock.Any(), teamRef, "uOK", false).Return(nil, nil).Times(1)
+	ts.EXPECT().AddMember(gomock.Any(), teamRef, "oOK", false).Return(nil, nil).Times(1)
+
+	ch.EXPECT().
+		Get(gomock.Any(), teamRef, "ChanA").
+		Return(&models.Channel{ID: "existing"}, nil).
+		Times(1)
+
+	ch.EXPECT().AddMember(gomock.Any(), teamRef, "ChanA", "uOK", false).Return(nil, nil).Times(1)
+	ch.EXPECT().AddMember(gomock.Any(), teamRef, "ChanA", "oOK", true).Return(nil, nil).Times(1)
+
+	sut := NewChannelCreator(ch, ts)
+	got := sut.CreateChannels(ctx, teamRef, map[string]ChannelData{
+		"ChanA": {"members": []string{"uFail", "uOK"}, "owners": []string{"oOK"}},
+	}, true, true, false)
+
+	require.Len(t, got, 1)
+	gotMap := resultsByName(got)
+	assertResult(t, gotMap, "ChanA", &wantResult{
+		status:  StatusPartiallyEnsured,
+		errNil:  false,
+		errIs:   errMembersPartiallyEnsured,
+		members: []string{"uOK"},
+		owners:  []string{"oOK"},
+	})
+}
+
+func TestChannelCreator_CreateChannels_ensureMembersInTeam_deduplicatesRefsAcrossBodies(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	const teamRef = "TeamA"
+
+	ctrl, ch, ts := newMocks(t)
+	defer ctrl.Finish()
+
+	ts.EXPECT().AddMember(gomock.Any(), teamRef, "u1", false).Return(nil, nil).Times(1)
+
+	ch.EXPECT().Get(gomock.Any(), teamRef, gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ string, channelRef string) (*models.Channel, error) {
+			switch channelRef {
+			case "Chan1", "Chan2":
+				return nil, errNotFound
+			default:
+				return nil, errors.New("unexpected channelRef: " + channelRef)
+			}
+		}).
+		Times(2)
+
+	ch.EXPECT().CreatePrivateChannel(gomock.Any(), teamRef, gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ string, channelRef string, _ []string, _ []string) (*models.Channel, error) {
+			return &models.Channel{ID: "id-" + channelRef}, nil
+		}).
+		Times(2)
+
+	sut := NewChannelCreator(ch, ts)
+	got := sut.CreateChannels(ctx, teamRef, map[string]ChannelData{
+		"Chan1": {"members": []string{"u1", "u1", " "}, "owners": []string{}},
+		"Chan2": {"members": []string{"u1"}, "owners": []string{""}},
+	}, false, true, false)
+
+	require.Len(t, got, 2)
+	gotMap := resultsByName(got)
+
+	assertResult(t, gotMap, "Chan1", &wantResult{status: StatusCreated, channelID: "id-Chan1", errNil: true})
+	assertResult(t, gotMap, "Chan2", &wantResult{status: StatusCreated, channelID: "id-Chan2", errNil: true})
 }
 
 func TestChannelCreator_executeActions_handlesNilReturnedResult(t *testing.T) {
@@ -581,30 +626,10 @@ func Test_channelCreator_checkChannelExists(t *testing.T) {
 	}
 
 	tests := []tc{
-		{
-			name:       "Get returns nil error -> exists",
-			getErr:     nil,
-			wantExists: true,
-			wantErr:    false,
-		},
-		{
-			name:       "Get returns [CODE: 404] -> does not exist, no error",
-			getErr:     errNotFound,
-			wantExists: false,
-			wantErr:    false,
-		},
-		{
-			name:       "Get returns 'not found' string -> does not exist, no error",
-			getErr:     errors.New("resource not found"),
-			wantExists: false,
-			wantErr:    false,
-		},
-		{
-			name:       "Get returns other error -> error",
-			getErr:     errBoom,
-			wantExists: false,
-			wantErr:    true,
-		},
+		{name: "Get returns nil error -> exists", getErr: nil, wantExists: true, wantErr: false},
+		{name: "Get returns [CODE: 404] -> does not exist, no error", getErr: errNotFound, wantExists: false, wantErr: false},
+		{name: "Get returns 'not found' string -> does not exist, no error", getErr: errors.New("resource not found"), wantExists: false, wantErr: false},
+		{name: "Get returns other error -> error", getErr: errBoom, wantExists: false, wantErr: true},
 	}
 
 	for _, tt := range tests {
@@ -724,7 +749,6 @@ func Test_channelCreator_ensureMembersInChannel_respectsSkip_andCollects(t *test
 
 	assert.ElementsMatch(t, []string{"uSkip"}, got.MembersRefsFailed)
 	assert.ElementsMatch(t, []string{"oSkip"}, got.OwnerRefsFailed)
-
 	assert.ElementsMatch(t, []string{"uOK"}, got.MembersRefsEnsured)
 	assert.ElementsMatch(t, []string{"oOK"}, got.OwnerRefsEnsured)
 }
