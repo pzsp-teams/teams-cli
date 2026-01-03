@@ -187,7 +187,7 @@ func (cc *channelCreator) ensureMembersInTeamSnapshot(ctx context.Context, teamR
 			logger.Error("Failed to ensure member in team", "team", teamRef, "member", ref, "error", err)
 			snapshot.failed[ref] = err
 			continue
-		} 
+		}
 		snapshot.ensured[ref] = struct{}{}
 	}
 	if len(snapshot.failed) > 0 {

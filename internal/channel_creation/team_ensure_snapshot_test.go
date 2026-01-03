@@ -13,54 +13,54 @@ func Test_teamEnsureSnapshot_hasFailuresForBody(t *testing.T) {
 	errBoom := errors.New("boom")
 
 	type tc struct {
-		name string
-		snap *teamEnsureSnapshot
-		body *createChannelBody
-		wantHas bool
+		name     string
+		snap     *teamEnsureSnapshot
+		body     *createChannelBody
+		wantHas  bool
 		wantRefs []string
 	}
 
 	tests := []tc{
 		{
-			name: "nil snapshot -> no failures",
-			snap: nil,
-			body: &createChannelBody{MemberRefs: []string{"u1"}, OwnerRefs: []string{"o1"}},
-			wantHas: false,
+			name:     "nil snapshot -> no failures",
+			snap:     nil,
+			body:     &createChannelBody{MemberRefs: []string{"u1"}, OwnerRefs: []string{"o1"}},
+			wantHas:  false,
 			wantRefs: nil,
 		},
 		{
-			name: "empty failed map -> no failures",
-			snap: &teamEnsureSnapshot{failed: map[string]error{}},
-			body: &createChannelBody{MemberRefs: []string{"u1"}, OwnerRefs: []string{"o1"}},
-			wantHas: false,
+			name:     "empty failed map -> no failures",
+			snap:     &teamEnsureSnapshot{failed: map[string]error{}},
+			body:     &createChannelBody{MemberRefs: []string{"u1"}, OwnerRefs: []string{"o1"}},
+			wantHas:  false,
 			wantRefs: nil,
 		},
 		{
-			name: "no matching refs in failed -> no failures",
-			snap: &teamEnsureSnapshot{failed: map[string]error{"uX": errBoom}},
-			body: &createChannelBody{MemberRefs: []string{"u1"}, OwnerRefs: []string{"o1"}},
-			wantHas: false,
+			name:     "no matching refs in failed -> no failures",
+			snap:     &teamEnsureSnapshot{failed: map[string]error{"uX": errBoom}},
+			body:     &createChannelBody{MemberRefs: []string{"u1"}, OwnerRefs: []string{"o1"}},
+			wantHas:  false,
 			wantRefs: nil,
 		},
 		{
-			name: "member match -> returns that member",
-			snap: &teamEnsureSnapshot{failed: map[string]error{"u1": errBoom}},
-			body: &createChannelBody{MemberRefs: []string{"u1", "u2"}, OwnerRefs: []string{"o1"}},
-			wantHas: true,
+			name:     "member match -> returns that member",
+			snap:     &teamEnsureSnapshot{failed: map[string]error{"u1": errBoom}},
+			body:     &createChannelBody{MemberRefs: []string{"u1", "u2"}, OwnerRefs: []string{"o1"}},
+			wantHas:  true,
 			wantRefs: []string{"u1"},
 		},
 		{
-			name: "owner match -> returns that owner",
-			snap: &teamEnsureSnapshot{failed: map[string]error{"o1": errBoom}},
-			body: &createChannelBody{MemberRefs: []string{"u2"}, OwnerRefs: []string{"o1", "o2"}},
-			wantHas: true,
+			name:     "owner match -> returns that owner",
+			snap:     &teamEnsureSnapshot{failed: map[string]error{"o1": errBoom}},
+			body:     &createChannelBody{MemberRefs: []string{"u2"}, OwnerRefs: []string{"o1", "o2"}},
+			wantHas:  true,
 			wantRefs: []string{"o1"},
 		},
 		{
-			name: "both member and owner match -> returns both in body order (members then owners)",
-			snap: &teamEnsureSnapshot{failed: map[string]error{"u1": errBoom, "o2": errBoom}},
-			body: &createChannelBody{MemberRefs: []string{"u1", "uX"}, OwnerRefs: []string{"o1", "o2"}},
-			wantHas: true,
+			name:     "both member and owner match -> returns both in body order (members then owners)",
+			snap:     &teamEnsureSnapshot{failed: map[string]error{"u1": errBoom, "o2": errBoom}},
+			body:     &createChannelBody{MemberRefs: []string{"u1", "uX"}, OwnerRefs: []string{"o1", "o2"}},
+			wantHas:  true,
 			wantRefs: []string{"u1", "o2"},
 		},
 		{
@@ -70,7 +70,7 @@ func Test_teamEnsureSnapshot_hasFailuresForBody(t *testing.T) {
 				MemberRefs: []string{"u1", "u1", "u2", "u1"},
 				OwnerRefs:  []string{"o1", "o1"},
 			},
-			wantHas: true,
+			wantHas:  true,
 			wantRefs: []string{"u1", "o1"},
 		},
 		{
@@ -80,7 +80,7 @@ func Test_teamEnsureSnapshot_hasFailuresForBody(t *testing.T) {
 				MemberRefs: []string{"x"},
 				OwnerRefs:  []string{"x"},
 			},
-			wantHas: true,
+			wantHas:  true,
 			wantRefs: []string{"x"},
 		},
 	}
