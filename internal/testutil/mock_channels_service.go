@@ -264,17 +264,17 @@ func (mr *MockChannelsServiceMockRecorder) SendReply(ctx, teamRef, channelRef, m
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendReply", reflect.TypeOf((*MockChannelsService)(nil).SendReply), ctx, teamRef, channelRef, messageID, body)
 }
 
-// UpdateMemberRole mocks base method.
-func (m *MockChannelsService) UpdateMemberRole(ctx context.Context, teamRef, channelRef, userRef string, isOwner bool) (*models.Member, error) {
+// UpdateMemberRoles mocks base method.
+func (m *MockChannelsService) UpdateMemberRoles(ctx context.Context, teamRef, channelRef, userRef string, isOwner bool) (*models.Member, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateMemberRole", ctx, teamRef, channelRef, userRef, isOwner)
+	ret := m.ctrl.Call(m, "UpdateMemberRoles", ctx, teamRef, channelRef, userRef, isOwner)
 	ret0, _ := ret[0].(*models.Member)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// UpdateMemberRole indicates an expected call of UpdateMemberRole.
-func (mr *MockChannelsServiceMockRecorder) UpdateMemberRole(ctx, teamRef, channelRef, userRef, isOwner any) *gomock.Call {
+// UpdateMemberRoles indicates an expected call of UpdateMemberRoles.
+func (mr *MockChannelsServiceMockRecorder) UpdateMemberRoles(ctx, teamRef, channelRef, userRef, isOwner any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMemberRole", reflect.TypeOf((*MockChannelsService)(nil).UpdateMemberRole), ctx, teamRef, channelRef, userRef, isOwner)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMemberRoles", reflect.TypeOf((*MockChannelsService)(nil).UpdateMemberRoles), ctx, teamRef, channelRef, userRef, isOwner)
 }
