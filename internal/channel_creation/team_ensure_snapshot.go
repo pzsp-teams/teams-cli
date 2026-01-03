@@ -8,21 +8,20 @@ type teamEnsureSnapshot struct {
 	failed  map[string]error
 }
 
-func (s *teamEnsureSnapshot) hasFailuresForBody(body *createChannelBody) (bool, []string) {
+func (s *teamEnsureSnapshot) hasFailuresForBody(body *createChannelBody) (has bool, failedRefs []string) {
 	if s == nil || len(s.failed) == 0 {
 		return false, nil
 	}
 	seen := map[string]struct{}{}
-	var out []string
 	for _, ref := range append(body.MemberRefs, body.OwnerRefs...) {
 		if _, ok := s.failed[ref]; ok {
 			if _, alreadySeen := seen[ref]; !alreadySeen {
-				out = append(out, ref)
+				failedRefs = append(failedRefs, ref)
 				seen[ref] = struct{}{}
 			}
 		}
 	}
-	return len(out) > 0, out
+	return len(failedRefs) > 0, failedRefs
 }
 
 func uniqueNonEmpty(refs []string) []string {
