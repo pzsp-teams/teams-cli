@@ -15,7 +15,6 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-
 func newMocks(t *testing.T) (*gomock.Controller, *testutil.MockChannelsService, *testutil.MockTeamsService) {
 	t.Helper()
 	ctrl := gomock.NewController(t)
@@ -70,7 +69,7 @@ func TestChannelCreator_CreateChannels_TableDriven(t *testing.T) {
 		ensureMembersInChannel bool
 		ensureMembersInTeam    bool
 		dryRun                 bool
-		nilTeamsService bool
+		nilTeamsService        bool
 
 		setupMocks func(t *testing.T, ch *testutil.MockChannelsService, ts *testutil.MockTeamsService)
 
@@ -288,7 +287,6 @@ func TestChannelCreator_CreateChannels_TableDriven(t *testing.T) {
 					Get(gomock.Any(), teamRef, "ChanA").
 					Return(nil, errNotFound).
 					Times(1)
-
 			},
 			want: map[string]wantResult{
 				"ChanA": {status: StatusFailed, errNil: false, errContains: "cannot create channel"},
@@ -463,7 +461,6 @@ func TestChannelCreator_executeActions_handlesNilReturnedResult(t *testing.T) {
 func TestChannelCreator_dryRunActions_handlesNilStaticResult(t *testing.T) {
 	t.Parallel()
 
-
 	cc := &channelCreator{}
 	actions := []*action{
 		{
@@ -577,10 +574,10 @@ func Test_channelCreator_checkChannelExists(t *testing.T) {
 	t.Parallel()
 
 	type tc struct {
-		name string
-		getErr error
+		name       string
+		getErr     error
 		wantExists bool
-		wantErr bool
+		wantErr    bool
 	}
 
 	tests := []tc{
@@ -677,7 +674,6 @@ func Test_channelCreator_ensureMembersInTeamSnapshot_nonDryRun_collectsEnsuredAn
 		{TeamRef: "TeamA", ChannelRef: "ChanB", MemberRefs: []string{"u1"}, OwnerRefs: []string{"o1", ""}},
 	}
 
-
 	ts.EXPECT().AddMember(gomock.Any(), "TeamA", "u1", false).Return(nil, nil).Times(1)
 	ts.EXPECT().AddMember(gomock.Any(), "TeamA", "uBad", false).Return(nil, errBoom).Times(1)
 	ts.EXPECT().AddMember(gomock.Any(), "TeamA", "o1", false).Return(nil, nil).Times(1)
@@ -770,53 +766,53 @@ func Test_channelCreator_planActionForBody_branches(t *testing.T) {
 	type tc struct {
 		name string
 
-		existsErr error
+		existsErr     error
 		ensureMembers bool
-		teamSnap *teamEnsureSnapshot
+		teamSnap      *teamEnsureSnapshot
 
-		wantStatus Status
+		wantStatus      Status
 		wantErrContains string
 	}
 
 	tests := []tc{
 		{
-			name: "exists and ensureMembers=false -> already exists action",
-			existsErr: nil,
+			name:          "exists and ensureMembers=false -> already exists action",
+			existsErr:     nil,
 			ensureMembers: false,
-			teamSnap: nil,
-			wantStatus: StatusAlreadyExists,
+			teamSnap:      nil,
+			wantStatus:    StatusAlreadyExists,
 		},
 		{
-			name: "exists and ensureMembers=true -> would ensure members action",
-			existsErr: nil,
+			name:          "exists and ensureMembers=true -> would ensure members action",
+			existsErr:     nil,
 			ensureMembers: true,
-			teamSnap: nil,
-			wantStatus: StatusWouldEnsureMembers,
+			teamSnap:      nil,
+			wantStatus:    StatusWouldEnsureMembers,
 		},
 		{
-			name: "not exists and no teamSnap failure -> would create",
-			existsErr: errNotFound,
+			name:          "not exists and no teamSnap failure -> would create",
+			existsErr:     errNotFound,
 			ensureMembers: false,
-			teamSnap: nil,
-			wantStatus: StatusWouldCreate,
+			teamSnap:      nil,
+			wantStatus:    StatusWouldCreate,
 		},
 		{
-			name: "not exists and teamSnap has failure for body -> failed",
-			existsErr: errNotFound,
+			name:          "not exists and teamSnap has failure for body -> failed",
+			existsErr:     errNotFound,
 			ensureMembers: false,
 			teamSnap: &teamEnsureSnapshot{
-				failed: map[string]error{"uBad": errBoom},
+				failed:  map[string]error{"uBad": errBoom},
 				ensured: map[string]struct{}{},
 			},
-			wantStatus: StatusFailed,
+			wantStatus:      StatusFailed,
 			wantErrContains: "cannot create channel",
 		},
 		{
-			name: "checkChannelExists returns non-404 error -> failed",
-			existsErr: errBoom,
-			ensureMembers: false,
-			teamSnap: nil,
-			wantStatus: StatusFailed,
+			name:            "checkChannelExists returns non-404 error -> failed",
+			existsErr:       errBoom,
+			ensureMembers:   false,
+			teamSnap:        nil,
+			wantStatus:      StatusFailed,
 			wantErrContains: "failed to check existence of channel",
 		},
 	}
