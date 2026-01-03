@@ -175,7 +175,7 @@ func createChannelsDemo() {
 	extension := filepath.Ext(dataFile.Name())[1:]
 
 	channelData, err := channelcreation.ParseChannelsDataByExtension(dataFile, extension)
-	teamRef := "pzsp2z1teams"
+	teamRef := "testowy1"
 	if err != nil {
 		log.Error("Failed to parse channels data", "error", err)
 		_ = dataFile.Close()
@@ -183,7 +183,7 @@ func createChannelsDemo() {
 	}
 	_ = dataFile.Close()
 	successCount := 0
-	results := teamsClient.ChannelCreator.CreateChannels(ctx, teamRef, channelData, true, true, true)
+	results := teamsClient.ChannelCreator.CreateChannels(ctx, teamRef, channelData, true, true, false)
 	for _, result := range results {
 		if result.Error == nil {
 			log.Info("Channel operation successful",
