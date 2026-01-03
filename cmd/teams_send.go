@@ -6,8 +6,8 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/pzsp-teams/cli/internal/channels/sender"
 	"github.com/pzsp-teams/cli/internal/initializers"
-	"github.com/pzsp-teams/cli/internal/messaging"
 )
 
 var teamsSendCmd = &cobra.Command{
@@ -77,7 +77,7 @@ func runTeamsSend(cmd *cobra.Command, args []string) error {
 	}
 
 	log.Info("Sending messages to channels", "team", teamsTeam, "count", len(messages), "dryRun", teamsDryRun)
-	results := teamsClient.ChannelSender.Send(ctx, teamsTeam, messages, teamsDryRun, teamsIgnoreErrors)
+	results := teamsClient.Channels.Send(ctx, teamsTeam, messages, teamsDryRun, teamsIgnoreErrors)
 
 	printChannelResults(results, teamsDryRun)
 
@@ -136,7 +136,7 @@ func processTeamsMessageFileMode() (map[string]string, error) {
 	return createMessagesFromFile(teamsMessageFile, teamsChannels)
 }
 
-func printChannelResults(results []messaging.ChannelSendResult, dryRun bool) {
+func printChannelResults(results []sender.ChannelSendResult, dryRun bool) {
 	if dryRun {
 		for _, res := range results {
 			if res.Error != nil {

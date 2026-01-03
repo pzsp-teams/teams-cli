@@ -7,7 +7,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/pzsp-teams/cli/internal/initializers"
-	"github.com/pzsp-teams/cli/internal/messaging"
+
+	"github.com/pzsp-teams/cli/internal/chats/sender"
 )
 
 var chatsSendCmd = &cobra.Command{
@@ -71,7 +72,7 @@ func runChatsSend(cmd *cobra.Command, args []string) error {
 	}
 
 	log.Info("Sending messages to chats", "count", len(messages), "dryRun", chatsDryRun)
-	results := teamsClient.ChatSender.Send(ctx, messages, chatsDryRun, chatsIgnoreErrors)
+	results := teamsClient.Chats.Send(ctx, messages, chatsDryRun, chatsIgnoreErrors)
 
 	printChatResults(results, chatsDryRun)
 
@@ -130,20 +131,20 @@ func processChatsMessageFileMode() (map[string]string, error) {
 	return createMessagesFromFile(chatsMessageFile, chatsList)
 }
 
-func printChatResults(results []messaging.ChatSendResult, dryRun bool) {
+func printChatResults(results []sender.ChatSendResult, dryRun bool) {
 	if dryRun {
 		for _, res := range results {
-			if res.Error != nil {
-				fmt.Printf("Would fail - chat: %s, error: %v\n", res.ChatRef, res.Error)
+			if res.GetError() != nil {
+				fmt.Printf("Would fail - chat: %s, error: %v\n", res.GetRef(), res.GetRef())
 			} else {
-				fmt.Printf("Would send - chat: %s, message: %s\n", res.ChatRef, res.Message)
+				fmt.Printf("Would send - chat: %s, message: %s\n", res.GetRef(), res.GetMessage())
 			}
 		}
 	} else {
 		successCount := 0
 		for _, res := range results {
-			if res.Error != nil {
-				fmt.Printf("Failed - chat: %s, error: %v\n", res.ChatRef, res.Error)
+			if res.GetError() != nil {
+				fmt.Printf("Failed - chat: %s, error: %v\n", res.GetRef(), res.GetError())
 			} else {
 				successCount++
 			}

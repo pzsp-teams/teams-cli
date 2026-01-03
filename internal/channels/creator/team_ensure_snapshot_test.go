@@ -1,4 +1,4 @@
-package channelcreation
+package creator
 
 import (
 	"errors"

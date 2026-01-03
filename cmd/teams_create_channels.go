@@ -9,7 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	channelcreation "github.com/pzsp-teams/cli/internal/channel_creation"
+	channelcreation "github.com/pzsp-teams/cli/internal/channels/creator"
 	"github.com/pzsp-teams/cli/internal/initializers"
 )
 
@@ -92,7 +92,7 @@ func runTeamsCreateChannels(cmd *cobra.Command, args []string) error {
 	}
 
 	log.Info("Creating channels", "count", len(channelData), "dryRun", createChannelsDryRun)
-	results := teamsClient.ChannelCreator.CreateChannels(ctx, teamRef, channelData, ensureInChannels, ensureInTeam, createChannelsDryRun)
+	results := teamsClient.Channels.Create(ctx, teamRef, channelData, ensureInChannels, ensureInTeam, createChannelsDryRun)
 
 	printChannelCreationResults(results, createChannelsDryRun)
 
