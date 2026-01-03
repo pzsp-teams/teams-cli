@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/pzsp-teams/lib/channels"
+	lib_channels "github.com/pzsp-teams/lib/channels"
 	"github.com/pzsp-teams/lib/models"
-	"github.com/pzsp-teams/lib/teams"
+	lib_teams "github.com/pzsp-teams/lib/teams"
 )
 
 type teamChannels = map[string][]string
@@ -18,12 +18,12 @@ type Retriever interface {
 
 // retriever retrieves messages from channels within a time range
 type retriever struct {
-	teamsService    teams.Service
-	channelsService channels.Service
+	teamsService    lib_teams.Service
+	channelsService lib_channels.Service
 }
 
 // NewRetriever creates a new channel message retriever
-func NewRetriever(teamsService teams.Service, channelsService channels.Service) Retriever {
+func NewRetriever(teamsService lib_teams.Service, channelsService lib_channels.Service) Retriever {
 	return &retriever{
 		teamsService:    teamsService,
 		channelsService: channelsService,
