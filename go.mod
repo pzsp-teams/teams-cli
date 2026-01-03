@@ -8,6 +8,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/pzsp-teams/lib v0.0.0-20260101113908-bafa8ca37eae
 	github.com/stretchr/testify v1.11.1
+	go.uber.org/mock v0.6.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
