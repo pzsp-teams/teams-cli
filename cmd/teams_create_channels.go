@@ -107,9 +107,39 @@ func printChannelCreationResults(results []channelcreation.CreateResult, dryRun 
 		} else {
 			successCount++
 			if dryRun {
-				fmt.Printf("Would create - channel: %s\n", res.ChannelName)
+				switch res.Status {
+				case channelcreation.StatusWouldCreate:
+					fmt.Printf("[Dry Run] Would create - channel: %s\n", res.ChannelName)
+					fmt.Printf("Members: %s\n", strings.Join(res.MemberRefs, ", "))
+					fmt.Printf("Owners: %s\n", strings.Join(res.OwnerRefs, ", "))
+				case channelcreation.StatusWouldEnsureMembers:
+					fmt.Printf("[Dry Run] Would ensure members - channel: %s\n", res.ChannelName)
+					fmt.Printf("Members to ensure: %s\n", strings.Join(res.MemberRefs, ", "))
+					fmt.Printf("Owners to ensure: %s\n", strings.Join(res.OwnerRefs, ", "))
+				case channelcreation.StatusAlreadyExists:
+					fmt.Printf("[Dry Run] Already exists - channel: %s\n", res.ChannelName)
+				default:
+					fmt.Printf("[Dry Run] Processed - channel: %s\n", res.ChannelName)
+				}
 			} else {
-				fmt.Printf("Created - channel: %s, id: %s\n", res.ChannelName, res.ChannelID)
+				switch res.Status {
+				case channelcreation.StatusCreated:
+					fmt.Printf("Created - channel: %s\n", res.ChannelName)
+					fmt.Printf("Members: %s\n", strings.Join(res.MemberRefs, ", "))
+					fmt.Printf("Owners: %s\n", strings.Join(res.OwnerRefs, ", "))
+				case channelcreation.StatusAlreadyExists:
+					fmt.Printf("Already exists - channel: %s\n", res.ChannelName)
+				case channelcreation.StatusMembersEnsured:
+					fmt.Printf("Members ensured - channel: %s\n", res.ChannelName)
+					fmt.Printf("Members ensured: %s\n", strings.Join(res.MemberRefs, ", "))
+					fmt.Printf("Owners ensured: %s\n", strings.Join(res.OwnerRefs, ", "))
+				case channelcreation.StatusPartiallyEnsured:
+					fmt.Printf("Partially ensured - channel: %s\n", res.ChannelName)
+					fmt.Printf("Members ensured: %s\n", strings.Join(res.MemberRefs, ", "))
+					fmt.Printf("Owners ensured: %s\n", strings.Join(res.OwnerRefs, ", "))
+				default:
+					fmt.Printf("Processed - channel: %s\n", res.ChannelName)
+				}
 			}
 		}
 	}
