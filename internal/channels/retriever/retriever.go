@@ -3,6 +3,7 @@ package retriever
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	lib_channels "github.com/pzsp-teams/lib/channels"
 	"github.com/pzsp-teams/lib/models"
@@ -75,7 +76,7 @@ func (r *retriever) getChannels(ctx context.Context, teams []*models.Team) (team
 
 func (r *retriever) getMessagesInTimeRange(ctx context.Context, teamChannels teamChannels, timeRange TimeRange) ([]*DisplayMessageInfo, error) {
 	var messagesInfo []*DisplayMessageInfo
-	top := int32(100)
+	top := int32(30)
 	opts := &models.ListMessagesOptions{
 		Top:           &top,
 		ExpandReplies: true,
@@ -84,7 +85,7 @@ func (r *retriever) getMessagesInTimeRange(ctx context.Context, teamChannels tea
 	for team, channels := range teamChannels {
 		for _, channel := range channels {
 			messages, err := r.channelsService.ListMessages(ctx, team, channel, opts)
-			if err != nil {
+			if err != nil && !strings.Contains(err.Error(), "403") {
 				return nil, fmt.Errorf("%w: team=%s channel=%s: %v",
 					ErrListingMessagesFailed, team, channel, err)
 			}
