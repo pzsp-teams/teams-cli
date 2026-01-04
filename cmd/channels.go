@@ -5,7 +5,7 @@ import (
 )
 
 var channelsCmd = &cobra.Command{
-	Use:   "chanels",
+	Use:   "channels",
 	Short: "Manage channels operations",
 	Long:  `Commands for interacting with Microsoft Teams channels`,
 }
