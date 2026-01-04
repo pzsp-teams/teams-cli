@@ -14,6 +14,7 @@ type TeamsClient struct {
 	ChannelSender  messaging.ChannelSender
 	ChatSender     messaging.ChatSender
 	ChannelCreator channelcreation.ChannelCreator
+	Client         *lib.Client
 }
 
 // NewTeamsClient creates a new TeamsClient by constructing the underlying library client
@@ -27,5 +28,6 @@ func NewTeamsClient(ctx context.Context, authConfig *lib_config.AuthConfig, send
 		ChannelSender:  messaging.NewChannelSender(libClient.Channels),
 		ChatSender:     messaging.NewChatSender(libClient.Chats),
 		ChannelCreator: channelcreation.NewChannelCreator(libClient.Channels, libClient.Teams),
+		Client:         libClient,
 	}, nil
 }
