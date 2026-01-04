@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/pzsp-teams/cli/internal/core/formatter"
+	coreretriever "github.com/pzsp-teams/cli/internal/core/retriever"
 	lib_channels "github.com/pzsp-teams/lib/channels"
 	"github.com/pzsp-teams/lib/models"
 	lib_teams "github.com/pzsp-teams/lib/teams"
@@ -14,20 +16,22 @@ type teamChannels = map[string][]string
 
 // Retriever defines the interface for retrieving channel messages
 type Retriever interface {
-	GetMessages(ctx context.Context, timeRange TimeRange) ([]*DisplayMessageInfo, error)
+	GetMessages(ctx context.Context, timeRange coreretriever.TimeRange) ([]*models.Message, error)
 }
 
 // retriever retrieves messages from channels within a time range
 type retriever struct {
 	teamsService    lib_teams.Service
 	channelsService lib_channels.Service
+	formatter       formatter.Formatter
 }
 
 // NewRetriever creates a new channel message retriever
-func NewRetriever(teamsService lib_teams.Service, channelsService lib_channels.Service) Retriever {
+func NewRetriever(teamsService lib_teams.Service, channelsService lib_channels.Service, formatter formatter.Formatter) Retriever {
 	return &retriever{
 		teamsService:    teamsService,
 		channelsService: channelsService,
+		formatter:       formatter,
 	}
 }
 
@@ -74,8 +78,8 @@ func (r *retriever) getChannels(ctx context.Context, teams []*models.Team) (team
 	return teamChannels, nil
 }
 
-func (r *retriever) getMessagesInTimeRange(ctx context.Context, teamChannels teamChannels, timeRange TimeRange) ([]*DisplayMessageInfo, error) {
-	var messagesInfo []*DisplayMessageInfo
+func (r *retriever) getMessagesInTimeRange(ctx context.Context, teamChannels teamChannels, timeRange coreretriever.TimeRange) ([]*models.Message, error) {
+	var allMessages []*models.Message
 	top := int32(30)
 	opts := &models.ListMessagesOptions{
 		Top:           &top,
@@ -92,21 +96,22 @@ func (r *retriever) getMessagesInTimeRange(ctx context.Context, teamChannels tea
 
 			for _, message := range messages {
 				if message.CreatedDateTime.After(timeRange.Start) && message.CreatedDateTime.Before(timeRange.End) {
-					messagesInfo = append(messagesInfo, &DisplayMessageInfo{
-						TeamName:    team,
-						ChannelName: channel,
-						Message:     message,
-					})
+					// Format HTML content before adding to results
+					if message.ContentType == models.MessageContentTypeHTML {
+						message.Content = r.formatter.Format(message.Content)
+					}
+
+					allMessages = append(allMessages, message)
 				}
 			}
 		}
 	}
 
-	return messagesInfo, nil
+	return allMessages, nil
 }
 
 // GetMessages retrieves messages from all channels within the specified time range
-func (r *retriever) GetMessages(ctx context.Context, timeRange TimeRange) ([]*DisplayMessageInfo, error) {
+func (r *retriever) GetMessages(ctx context.Context, timeRange coreretriever.TimeRange) ([]*models.Message, error) {
 	activeTeams, err := r.getActiveTeams(ctx)
 	if err != nil {
 		return nil, err
@@ -115,9 +120,9 @@ func (r *retriever) GetMessages(ctx context.Context, timeRange TimeRange) ([]*Di
 	if err != nil {
 		return nil, err
 	}
-	messagesInfo, err := r.getMessagesInTimeRange(ctx, teamChannels, timeRange)
+	messages, err := r.getMessagesInTimeRange(ctx, teamChannels, timeRange)
 	if err != nil {
 		return nil, err
 	}
-	return messagesInfo, nil
+	return messages, nil
 }

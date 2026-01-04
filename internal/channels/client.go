@@ -6,7 +6,10 @@ import (
 	"github.com/pzsp-teams/cli/internal/channels/creator"
 	"github.com/pzsp-teams/cli/internal/channels/retriever"
 	"github.com/pzsp-teams/cli/internal/channels/sender"
+	"github.com/pzsp-teams/cli/internal/core/formatter"
+	coreretriever "github.com/pzsp-teams/cli/internal/core/retriever"
 	"github.com/pzsp-teams/lib/channels"
+	"github.com/pzsp-teams/lib/models"
 	"github.com/pzsp-teams/lib/teams"
 )
 
@@ -19,10 +22,12 @@ type Client struct {
 
 // NewClient creates a new channels client
 func NewClient(channelsService channels.Service, teamsService teams.Service) *Client {
+	formatterInstance := formatter.NewPlainTextFormatter()
+
 	return &Client{
 		sender:    sender.NewChannelSender(channelsService),
-		creator:   creator.NewChannelCreator(channelsService, teamsService),
-		retriever: retriever.NewRetriever(teamsService, channelsService),
+		creator:   creator.NewChannelCreator(channelsService),
+		retriever: retriever.NewRetriever(teamsService, channelsService, formatterInstance),
 	}
 }
 
@@ -37,6 +42,6 @@ func (c *Client) Create(ctx context.Context, teamRef string, request map[string]
 }
 
 // GetMessages retrieves messages from all channels within the specified time range
-func (c *Client) GetMessages(ctx context.Context, timeRange retriever.TimeRange) ([]*retriever.DisplayMessageInfo, error) {
+func (c *Client) GetMessages(ctx context.Context, timeRange coreretriever.TimeRange) ([]*models.Message, error) {
 	return c.retriever.GetMessages(ctx, timeRange)
 }
