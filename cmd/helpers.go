@@ -24,6 +24,7 @@ func getDecodeFunc(extension string) (file_readers.DecodeFunc, error) {
 	return file_readers.GetDecoderByExtension(extension)
 }
 
+// GetOrCreateTeamsClient initializes or returns the existing TeamsClient instance
 func GetOrCreateTeamsClient(ctx context.Context) (*client.TeamsClient, error) {
 	if teamsClientInstance != nil {
 		return teamsClientInstance, nil
