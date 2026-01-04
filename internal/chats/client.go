@@ -3,24 +3,36 @@ package chats
 import (
 	"context"
 
+	"github.com/pzsp-teams/cli/internal/chats/retriever"
 	"github.com/pzsp-teams/cli/internal/chats/sender"
+	"github.com/pzsp-teams/cli/internal/core/formatter"
+	coreretriever "github.com/pzsp-teams/cli/internal/core/retriever"
 	"github.com/pzsp-teams/lib/chats"
+	"github.com/pzsp-teams/lib/models"
 )
 
 // Client provides all chat-related operations
 type Client struct {
-	sender sender.ChatSender
-	// TODO: add retriever
+	sender    sender.ChatSender
+	retriever retriever.Retriever
 }
 
 // NewClient creates a new chats client
 func NewClient(chatsService chats.Service) *Client {
+	formatterInstance := formatter.NewPlainTextFormatter()
+
 	return &Client{
-		sender: sender.NewChatSender(chatsService),
+		sender:    sender.NewChatSender(chatsService),
+		retriever: retriever.NewRetriever(chatsService, formatterInstance),
 	}
 }
 
 // Send sends messages to chats
 func (c *Client) Send(ctx context.Context, messages map[string]string, dryRun, ignoreError bool) []sender.ChatSendResult {
 	return c.sender.Send(ctx, messages, dryRun, ignoreError)
+}
+
+// GetMessages retrieves messages from all chats within the specified time range
+func (c *Client) GetMessages(ctx context.Context, timeRange coreretriever.TimeRange) ([]*models.Message, error) {
+	return c.retriever.GetMessages(ctx, timeRange)
 }
