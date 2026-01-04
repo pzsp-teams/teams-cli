@@ -21,7 +21,8 @@ var teamListCmd = &cobra.Command{
 }
 
 var (
-	tRef string
+	tRef        string
+	spoReadOnly bool
 )
 
 func init() {
@@ -37,6 +38,12 @@ func init() {
 	teamCreateCmd.Flags().StringVar(&newTeamDescription, "description", "", "Description of the new team")
 	if err := teamCreateCmd.MarkFlagRequired("name"); err != nil {
 		panic(fmt.Sprintf("failed to mark name flag as required: %v", err))
+	}
+	teamCmd.AddCommand(teamArchiveCmd)
+	teamArchiveCmd.Flags().StringVar(&tRef, "team", "", "ID or display name of the team to archive")
+	teamArchiveCmd.Flags().BoolVar(&spoReadOnly, "spo-read-only", false, "Set SharePoint Online site to read-only mode when archiving the team")
+	if err := teamArchiveCmd.MarkFlagRequired("team"); err != nil {
+		panic(fmt.Sprintf("failed to mark team flag as required: %v", err))
 	}
 }
 
@@ -118,4 +125,24 @@ func printTeamDetails(t *models.Team) {
 	if t.Visibility != nil {
 		fmt.Printf("Visibility: %s\n", *t.Visibility)
 	}
+}
+
+var teamArchiveCmd = &cobra.Command{
+	Use:   "archive",
+	Short: "Archive a team",
+	Long:  `Archive a Microsoft Teams team by its ID or display name.`,
+	RunE:  runTeamArchive,
+}
+
+func runTeamArchive(cmd *cobra.Command, args []string) error {
+	c, err := GetOrCreateTeamsClient(cmd.Context())
+	if err != nil {
+		return err
+	}
+	err = c.Client.Teams.Archive(cmd.Context(), tRef, &spoReadOnly)
+	if err != nil {
+		return err
+	}
+	fmt.Println("Team archive initiated. The team will be archived shortly.")
+	return nil
 }
