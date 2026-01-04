@@ -45,6 +45,12 @@ func init() {
 	if err := teamArchiveCmd.MarkFlagRequired("team"); err != nil {
 		panic(fmt.Sprintf("failed to mark team flag as required: %v", err))
 	}
+
+	teamCmd.AddCommand(teamUnarchiveCmd)
+	teamUnarchiveCmd.Flags().StringVar(&tRef, "team", "", "ID or display name of the team to unarchive")
+	if err := teamUnarchiveCmd.MarkFlagRequired("team"); err != nil {
+		panic(fmt.Sprintf("failed to mark team flag as required: %v", err))
+	}
 }
 
 func runTeamList(cmd *cobra.Command, args []string) error {
@@ -146,3 +152,24 @@ func runTeamArchive(cmd *cobra.Command, args []string) error {
 	fmt.Println("Team archive initiated. The team will be archived shortly.")
 	return nil
 }
+
+var teamUnarchiveCmd = &cobra.Command{
+	Use:   "unarchive",
+	Short: "Unarchive a team",
+	Long:  `Unarchive a Microsoft Teams team by its ID or display name.`,
+	RunE:  runTeamUnarchive,
+}
+
+func runTeamUnarchive(cmd *cobra.Command, args []string) error {
+	c, err := GetOrCreateTeamsClient(cmd.Context())
+	if err != nil {
+		return err
+	}
+	err = c.Client.Teams.Unarchive(cmd.Context(), tRef)
+	if err != nil {
+		return err
+	}
+	fmt.Println("Team unarchive initiated. The team will be unarchived shortly.")
+	return nil
+}
+
