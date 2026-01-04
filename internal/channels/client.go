@@ -26,7 +26,7 @@ func NewClient(channelsService channels.Service, teamsService teams.Service) *Cl
 
 	return &Client{
 		sender:    sender.NewChannelSender(channelsService),
-		creator:   creator.NewChannelCreator(channelsService),
+		creator:   creator.NewChannelCreator(channelsService, teamsService),
 		retriever: retriever.NewRetriever(teamsService, channelsService, formatterInstance),
 	}
 }
