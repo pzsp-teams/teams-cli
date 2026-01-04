@@ -33,14 +33,14 @@ func init() {
 	if err := teamGetCmd.MarkFlagRequired("team"); err != nil {
 		panic(fmt.Sprintf("failed to mark team flag as required: %v", err))
 	}
-	
+
 	teamCmd.AddCommand(teamCreateCmd)
 	teamCreateCmd.Flags().StringVar(&newTeamDisplayName, "name", "", "Display name of the new team")
 	teamCreateCmd.Flags().StringVar(&newTeamDescription, "description", "", "Description of the new team")
 	if err := teamCreateCmd.MarkFlagRequired("name"); err != nil {
 		panic(fmt.Sprintf("failed to mark name flag as required: %v", err))
 	}
-	
+
 	teamCmd.AddCommand(teamArchiveCmd)
 	teamArchiveCmd.Flags().StringVar(&tRef, "team", "", "ID or display name of the team to archive")
 	teamArchiveCmd.Flags().BoolVar(&spoReadOnly, "spo-read-only", false, "Set SharePoint Online site to read-only mode when archiving the team")
