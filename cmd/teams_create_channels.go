@@ -22,13 +22,20 @@ The data file should contain channel definitions with team_ref, channel_ref, rol
 
 Examples:
   # Create channels from YAML file
-  cli teams create-channels --data channels.yaml
+  cli teams create-channels --team myteam --data channels.yaml
 
   # Create channels from JSON file
-  cli teams create-channels --data channels.json
+  cli teams create-channels --team myteam --data channels.json
 
   # Dry run to preview
-  cli teams create-channels --data channels.yaml --dry-run`,
+  cli teams create-channels --team myteam --data channels.yaml --dry-run
+  
+  # Ensure members are added to channels if they already exist
+  cli teams create-channels --team myteam --data channels.yaml --ensure-in-channels
+
+  # Ensure members are memebers of the team
+  cli teams create-channels --team myteam --data channels.yaml --ensure-in-team
+  `,
 	RunE: runTeamsCreateChannels,
 }
 
@@ -36,12 +43,16 @@ var (
 	teamRef              string
 	createChannelsData   string
 	createChannelsDryRun bool
+	ensureInChannels     bool
+	ensureInTeam         bool
 )
 
 func init() {
 	teamsCreateChannelsCmd.Flags().StringVar(&teamRef, "team", "", "Name of the team in which to create channels")
 	teamsCreateChannelsCmd.Flags().StringVar(&createChannelsData, "data", "", "Path to channels data file (YAML/JSON/TOML/CSV)")
 	teamsCreateChannelsCmd.Flags().BoolVar(&createChannelsDryRun, "dry-run", false, "Preview without creating channels")
+	teamsCreateChannelsCmd.Flags().BoolVar(&ensureInChannels, "ensure-in-channels", false, "Ensure members are added to channels if they already exist")
+	teamsCreateChannelsCmd.Flags().BoolVar(&ensureInTeam, "ensure-in-team", false, "Ensure members are members of the team")
 
 	if err := teamsCreateChannelsCmd.MarkFlagRequired("data"); err != nil {
 		panic(fmt.Sprintf("failed to mark data flag as required: %v", err))
@@ -81,7 +92,7 @@ func runTeamsCreateChannels(cmd *cobra.Command, args []string) error {
 	}
 
 	log.Info("Creating channels", "count", len(channelData), "dryRun", createChannelsDryRun)
-	results := teamsClient.ChannelCreator.CreateChannels(ctx, teamRef, channelData, true, createChannelsDryRun)
+	results := teamsClient.ChannelCreator.CreateChannels(ctx, teamRef, channelData, ensureInChannels, ensureInTeam, createChannelsDryRun)
 
 	printChannelCreationResults(results, createChannelsDryRun)
 
