@@ -18,6 +18,7 @@ var rootCmd = &cobra.Command{
 	PersistentPreRun: initializeLogger,
 }
 
+// Execute runs the root command
 func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
