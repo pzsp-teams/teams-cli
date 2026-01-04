@@ -33,12 +33,14 @@ func init() {
 	if err := teamGetCmd.MarkFlagRequired("team"); err != nil {
 		panic(fmt.Sprintf("failed to mark team flag as required: %v", err))
 	}
+	
 	teamCmd.AddCommand(teamCreateCmd)
 	teamCreateCmd.Flags().StringVar(&newTeamDisplayName, "name", "", "Display name of the new team")
 	teamCreateCmd.Flags().StringVar(&newTeamDescription, "description", "", "Description of the new team")
 	if err := teamCreateCmd.MarkFlagRequired("name"); err != nil {
 		panic(fmt.Sprintf("failed to mark name flag as required: %v", err))
 	}
+	
 	teamCmd.AddCommand(teamArchiveCmd)
 	teamArchiveCmd.Flags().StringVar(&tRef, "team", "", "ID or display name of the team to archive")
 	teamArchiveCmd.Flags().BoolVar(&spoReadOnly, "spo-read-only", false, "Set SharePoint Online site to read-only mode when archiving the team")
@@ -49,6 +51,12 @@ func init() {
 	teamCmd.AddCommand(teamUnarchiveCmd)
 	teamUnarchiveCmd.Flags().StringVar(&tRef, "team", "", "ID or display name of the team to unarchive")
 	if err := teamUnarchiveCmd.MarkFlagRequired("team"); err != nil {
+		panic(fmt.Sprintf("failed to mark team flag as required: %v", err))
+	}
+
+	teamCmd.AddCommand(teamDeleteCmd)
+	teamDeleteCmd.Flags().StringVar(&tRef, "team", "", "ID or display name of the team to delete")
+	if err := teamDeleteCmd.MarkFlagRequired("team"); err != nil {
 		panic(fmt.Sprintf("failed to mark team flag as required: %v", err))
 	}
 }
@@ -173,3 +181,22 @@ func runTeamUnarchive(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+var teamDeleteCmd = &cobra.Command{
+	Use:   "delete",
+	Short: "Delete a team",
+	Long:  `Delete a Microsoft Teams team by its ID or display name.`,
+	RunE:  runTeamDelete,
+}
+
+func runTeamDelete(cmd *cobra.Command, args []string) error {
+	c, err := GetOrCreateTeamsClient(cmd.Context())
+	if err != nil {
+		return err
+	}
+	err = c.Client.Teams.Delete(cmd.Context(), tRef)
+	if err != nil {
+		return err
+	}
+	fmt.Println("Team deletion initiated. The team will be deleted shortly.")
+	return nil
+}
