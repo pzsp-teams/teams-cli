@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pzsp-teams/cli/internal/core/formatter"
+	f "github.com/pzsp-teams/cli/internal/core/formatter"
 	coreretriever "github.com/pzsp-teams/cli/internal/core/retriever"
 	lib_channels "github.com/pzsp-teams/lib/channels"
 	"github.com/pzsp-teams/lib/models"
@@ -23,11 +23,11 @@ type Retriever interface {
 type retriever struct {
 	teamsService    lib_teams.Service
 	channelsService lib_channels.Service
-	formatter       formatter.Formatter
+	formatter       f.Formatter
 }
 
 // NewRetriever creates a new channel message retriever
-func NewRetriever(teamsService lib_teams.Service, channelsService lib_channels.Service, formatter formatter.Formatter) Retriever {
+func NewRetriever(teamsService lib_teams.Service, channelsService lib_channels.Service, formatter f.Formatter) Retriever {
 	return &retriever{
 		teamsService:    teamsService,
 		channelsService: channelsService,
