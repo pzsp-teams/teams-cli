@@ -62,7 +62,7 @@ func TestGetMessages_Success(t *testing.T) {
 		ExpandReplies: true,
 	}
 	mockChannelsService.EXPECT().
-		ListMessages(ctx, "Team1", "General", opts).
+		ListMessages(ctx, "Team1", "General", opts, true).
 		Return(messages, nil)
 
 	retriever := NewRetriever(mockTeamsService, mockChannelsService, formatterInstance)
@@ -149,7 +149,7 @@ func TestGetMessages_ArchivedTeamsFiltered(t *testing.T) {
 		ExpandReplies: true,
 	}
 	mockChannelsService.EXPECT().
-		ListMessages(ctx, "ActiveTeam", "General", opts).
+		ListMessages(ctx, "ActiveTeam", "General", opts, true).
 		Return(messages, nil)
 
 	retriever := NewRetriever(mockTeamsService, mockChannelsService, formatterInstance)
@@ -291,7 +291,7 @@ func TestGetMessages_MessagesServiceError(t *testing.T) {
 		ExpandReplies: true,
 	}
 	mockChannelsService.EXPECT().
-		ListMessages(ctx, "Team1", "General", opts).
+		ListMessages(ctx, "Team1", "General", opts, true).
 		Return(nil, expectedError)
 
 	retriever := NewRetriever(mockTeamsService, mockChannelsService, formatterInstance)
@@ -338,7 +338,7 @@ func TestGetMessages_403ErrorIgnored(t *testing.T) {
 		ExpandReplies: true,
 	}
 	mockChannelsService.EXPECT().
-		ListMessages(ctx, "Team1", "General", opts).
+		ListMessages(ctx, "Team1", "General", opts, true).
 		Return(nil, forbiddenError)
 
 	retriever := NewRetriever(mockTeamsService, mockChannelsService, formatterInstance)
@@ -408,7 +408,7 @@ func TestGetMessages_TimeRangeFiltering(t *testing.T) {
 		ExpandReplies: true,
 	}
 	mockChannelsService.EXPECT().
-		ListMessages(ctx, "Team1", "General", opts).
+		ListMessages(ctx, "Team1", "General", opts, true).
 		Return(messages, nil)
 
 	retriever := NewRetriever(mockTeamsService, mockChannelsService, formatterInstance)
@@ -477,7 +477,7 @@ func TestGetMessages_MultipleTeamsAndChannels(t *testing.T) {
 		},
 	}
 	mockChannelsService.EXPECT().
-		ListMessages(ctx, "Team1", "General", opts).
+		ListMessages(ctx, "Team1", "General", opts, true).
 		Return(team1GeneralMessages, nil)
 
 	team1RandomMessages := []*models.Message{
@@ -489,7 +489,7 @@ func TestGetMessages_MultipleTeamsAndChannels(t *testing.T) {
 		},
 	}
 	mockChannelsService.EXPECT().
-		ListMessages(ctx, "Team1", "Random", opts).
+		ListMessages(ctx, "Team1", "Random", opts, true).
 		Return(team1RandomMessages, nil)
 
 	team2AnnouncementsMessages := []*models.Message{
@@ -501,7 +501,7 @@ func TestGetMessages_MultipleTeamsAndChannels(t *testing.T) {
 		},
 	}
 	mockChannelsService.EXPECT().
-		ListMessages(ctx, "Team2", "Announcements", opts).
+		ListMessages(ctx, "Team2", "Announcements", opts, true).
 		Return(team2AnnouncementsMessages, nil)
 
 	retriever := NewRetriever(mockTeamsService, mockChannelsService, formatterInstance)

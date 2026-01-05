@@ -88,7 +88,7 @@ func (r *retriever) getMessagesInTimeRange(ctx context.Context, teamChannels tea
 
 	for team, channels := range teamChannels {
 		for _, channel := range channels {
-			messages, err := r.channelsService.ListMessages(ctx, team, channel, opts)
+			messages, err := r.channelsService.ListMessages(ctx, team, channel, opts, false)
 			if err != nil && !strings.Contains(err.Error(), "403") {
 				return nil, fmt.Errorf("%w: team=%s channel=%s: %v",
 					ErrListingMessagesFailed, team, channel, err)
