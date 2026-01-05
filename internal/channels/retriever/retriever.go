@@ -80,12 +80,12 @@ func (r *retriever) getChannels(ctx context.Context, teams []*models.Team) ([]te
 	return result, nil
 }
 
-func (r *retriever) getMessagesInTimeRange(ctx context.Context, teamChannelMaps []teamChannelMap, timeRange coreretriever.TimeRange) ([]*ChannelMessageWithContext, error) {
-	type channelJob struct {
-		Team    *models.Team
-		Channel *models.Channel
-	}
+type channelJob struct {
+	Team    *models.Team
+	Channel *models.Channel
+}
 
+func (r *retriever) getMessagesInTimeRange(ctx context.Context, teamChannelMaps []teamChannelMap, timeRange coreretriever.TimeRange) ([]*ChannelMessageWithContext, error) {
 	var jobs []channelJob
 	for _, tcm := range teamChannelMaps {
 		for _, channel := range tcm.Channels {
@@ -96,40 +96,47 @@ func (r *retriever) getMessagesInTimeRange(ctx context.Context, teamChannelMaps 
 		}
 	}
 
+	results := coreretriever.ExecuteJobs(jobs, coreretriever.WorkersCount, func(job channelJob) ([]*ChannelMessageWithContext, error) {
+		return r.processChannelMessages(ctx, job, timeRange)
+	})
+
+	return coreretriever.AggregateResults(results)
+}
+
+func (r *retriever) processChannelMessages(ctx context.Context, job channelJob, timeRange coreretriever.TimeRange) ([]*ChannelMessageWithContext, error) {
 	top := int32(30)
 	opts := &models.ListMessagesOptions{
 		Top:           &top,
 		ExpandReplies: true,
 	}
 
-	results := coreretriever.ExecuteJobs(jobs, coreretriever.WorkersCount, func(job channelJob) ([]*ChannelMessageWithContext, error) {
-		messages, err := r.channelsService.ListMessages(ctx, job.Team.ID, job.Channel.ID, opts, false)
-		if err != nil && !strings.Contains(err.Error(), "403") {
-			return nil, fmt.Errorf("%w: team=%s channel=%s: %v",
-				ErrListingMessagesFailed, job.Team.DisplayName, job.Channel.Name, err)
+	messages, err := r.channelsService.ListMessages(ctx, job.Team.ID, job.Channel.ID, opts, false)
+	if err != nil {
+		if strings.Contains(err.Error(), "403") {
+			return nil, nil
 		}
+		return nil, fmt.Errorf("%w: team=%s channel=%s: %v",
+			ErrListingMessagesFailed, job.Team.DisplayName, job.Channel.Name, err)
+	}
 
-		var filteredMessages []*ChannelMessageWithContext
-		for _, message := range messages {
-			if message.CreatedDateTime.After(timeRange.Start) && message.CreatedDateTime.Before(timeRange.End) {
-				if message.ContentType == models.MessageContentTypeHTML {
-					message.Content = r.formatter.Format(message.Content)
-				}
-
-				filteredMessages = append(filteredMessages, &ChannelMessageWithContext{
-					TeamName:    job.Team.DisplayName,
-					TeamID:      job.Team.ID,
-					ChannelName: job.Channel.Name,
-					ChannelID:   job.Channel.ID,
-					Message:     message,
-				})
+	var filteredMessages []*ChannelMessageWithContext
+	for _, message := range messages {
+		if message.CreatedDateTime.After(timeRange.Start) && message.CreatedDateTime.Before(timeRange.End) {
+			if message.ContentType == models.MessageContentTypeHTML {
+				message.Content = r.formatter.Format(message.Content)
 			}
+
+			filteredMessages = append(filteredMessages, &ChannelMessageWithContext{
+				TeamName:    job.Team.DisplayName,
+				TeamID:      job.Team.ID,
+				ChannelName: job.Channel.Name,
+				ChannelID:   job.Channel.ID,
+				Message:     message,
+			})
 		}
+	}
 
-		return filteredMessages, nil
-	})
-
-	return coreretriever.AggregateResults(results)
+	return filteredMessages, nil
 }
 
 // GetMessages retrieves messages from all channels within the specified time range
