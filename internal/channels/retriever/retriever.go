@@ -96,7 +96,6 @@ func (r *retriever) getMessagesInTimeRange(ctx context.Context, teamChannels tea
 
 			for _, message := range messages {
 				if message.CreatedDateTime.After(timeRange.Start) && message.CreatedDateTime.Before(timeRange.End) {
-					// Format HTML content before adding to results
 					if message.ContentType == models.MessageContentTypeHTML {
 						message.Content = r.formatter.Format(message.Content)
 					}
