@@ -35,24 +35,36 @@ var (
 	htmlTagPattern = regexp.MustCompile(`</?[a-zA-Z][^>]*>`)
 )
 
+// reduceConsecutiveNewlines reduces consecutive newlines to a maximum count
+func reduceConsecutiveNewlines(s string, maxNewlines int) string {
+	if maxNewlines < 1 {
+		maxNewlines = 1
+	}
+
+	targetPattern := strings.Repeat("\n", maxNewlines+1)
+	replacement := strings.Repeat("\n", maxNewlines)
+
+	for strings.Contains(s, targetPattern) {
+		s = strings.ReplaceAll(s, targetPattern, replacement)
+	}
+
+	return s
+}
+
 // cleanupWhitespace removes excessive whitespace while preserving intentional formatting
-func cleanupWhitespace(s string) string {
-	// Remove spaces/tabs before newlines
+func cleanupWhitespace(s string, maxNewlines int) string {
 	for strings.Contains(s, " \n") || strings.Contains(s, "\t\n") {
 		s = strings.ReplaceAll(s, " \n", "\n")
 		s = strings.ReplaceAll(s, "\t\n", "\n")
 	}
 
-	// Trim leading whitespace
 	s = strings.TrimLeft(s, " \t\n\r")
 
-	// Trim trailing spaces/tabs only
 	s = strings.TrimRight(s, " \t")
 
-	// Limit consecutive newlines to maximum of 2
-	for strings.Contains(s, "\n\n\n") {
-		s = strings.ReplaceAll(s, "\n\n\n", "\n\n")
-	}
+	s = reduceConsecutiveNewlines(s, maxNewlines)
+
+	s = strings.TrimRight(s, "\n")
 
 	if strings.TrimSpace(s) == "" {
 		return ""

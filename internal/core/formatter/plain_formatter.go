@@ -42,6 +42,8 @@ func (f *plainTextFormatter) Format(htmlContent string) string {
 
 	content = brPattern.ReplaceAllString(content, "\n")
 
+	content = reduceConsecutiveNewlines(content, 1)
+
 	content = boldPattern.ReplaceAllString(content, "$1")
 	content = italicPattern.ReplaceAllString(content, "$1")
 	content = underlinePattern.ReplaceAllString(content, "$1")
@@ -51,7 +53,7 @@ func (f *plainTextFormatter) Format(htmlContent string) string {
 
 	content = htmlTagPattern.ReplaceAllString(content, "")
 
-	content = cleanupWhitespace(content)
+	content = cleanupWhitespace(content, 2)
 
 	return content
 }

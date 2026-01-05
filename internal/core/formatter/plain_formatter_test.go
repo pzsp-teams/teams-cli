@@ -72,17 +72,17 @@ func TestPlainTextFormatter_Format(t *testing.T) {
 		{
 			name:  "simple paragraph",
 			input: "<p>This is a paragraph</p>",
-			want:  "This is a paragraph\n\n",
+			want:  "This is a paragraph",
 		},
 		{
 			name:  "multiple paragraphs",
 			input: "<p>First paragraph</p><p>Second paragraph</p>",
-			want:  "First paragraph\n\nSecond paragraph\n\n",
+			want:  "First paragraph\n\nSecond paragraph",
 		},
 		{
 			name:  "paragraph with formatting",
 			input: "<p>This is <b>bold</b> and <i>italic</i></p>",
-			want:  "This is bold and italic\n\n",
+			want:  "This is bold and italic",
 		},
 		{
 			name:  "simple mention",
@@ -117,27 +117,27 @@ func TestPlainTextFormatter_Format(t *testing.T) {
 		{
 			name:  "nested formatting tags",
 			input: "<p><b><i>Bold and italic</i></b></p>",
-			want:  "Bold and italic\n\n",
+			want:  "Bold and italic",
 		},
 		{
 			name:  "complex nested structure",
 			input: "<p>This is <b>bold <i>and italic</i></b> text</p>",
-			want:  "This is bold and italic text\n\n",
+			want:  "This is bold and italic text",
 		},
 		{
 			name:  "real Teams message example",
 			input: "Hello Alice!<br>This is a channel mention <at id=\"0\">General</at><br>This is a personal mention <at id=\"1\">Kamil</at><br>This is a duplicate channel mention <at id=\"2\">General</at><br>This is a team mention <at id=\"3\">pzsp2z1teams</at><br><br>Your order #12345 is ready.<br>Thank you!<br>",
-			want:  "Hello Alice!\nThis is a channel mention @General\nThis is a personal mention @Kamil\nThis is a duplicate channel mention @General\nThis is a team mention @pzsp2z1teams\n\nYour order #12345 is ready.\nThank you!\n",
+			want:  "Hello Alice!\nThis is a channel mention @General\nThis is a personal mention @Kamil\nThis is a duplicate channel mention @General\nThis is a team mention @pzsp2z1teams\nYour order #12345 is ready.\nThank you!",
 		},
 		{
 			name:  "message with paragraphs and links",
 			input: "<p>Check out this link: <a href=\"https://github.com\">GitHub</a></p><p>And this one: <a href=\"https://google.com\">Google</a></p>",
-			want:  "Check out this link: GitHub (https://github.com)\n\nAnd this one: Google (https://google.com)\n\n",
+			want:  "Check out this link: GitHub (https://github.com)\n\nAnd this one: Google (https://google.com)",
 		},
 		{
 			name:  "message with mentions and formatting",
 			input: "<p>Hey <at id=\"0\">Team</at>, please review this <b>important</b> update!</p>",
-			want:  "Hey @Team, please review this important update!\n\n",
+			want:  "Hey @Team, please review this important update!",
 		},
 		{
 			name:  "HTML entities - ampersand",
@@ -162,12 +162,37 @@ func TestPlainTextFormatter_Format(t *testing.T) {
 		{
 			name:  "whitespace handling",
 			input: "  <p>  Some text  </p>  ",
-			want:  "Some text\n\n",
+			want:  "Some text",
 		},
 		{
 			name:  "consecutive breaks",
 			input: "Line 1<br><br><br>Line 2",
-			want:  "Line 1\n\nLine 2", // Cleaned up to max 2 newlines for readability
+			want:  "Line 1\nLine 2",
+		},
+		{
+			name:  "br followed by literal newline",
+			input: "Line 1<br>\nLine 2",
+			want:  "Line 1\nLine 2",
+		},
+		{
+			name:  "literal newline followed by br",
+			input: "Line 1\n<br>Line 2",
+			want:  "Line 1\nLine 2",
+		},
+		{
+			name:  "multiple br and literal newlines mixed",
+			input: "Line 1<br>\n<br>\nLine 2",
+			want:  "Line 1\nLine 2",
+		},
+		{
+			name:  "paragraph with literal newlines",
+			input: "<p>Para 1\n\n</p>\n<p>Para 2</p>",
+			want:  "Para 1\n\nPara 2",
+		},
+		{
+			name:  "br with newline before paragraph",
+			input: "Line 1<br>\n<p>Para 1</p>",
+			want:  "Line 1\n\nPara 1",
 		},
 		{
 			name:  "empty paragraph",
