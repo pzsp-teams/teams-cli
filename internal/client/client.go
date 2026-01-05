@@ -5,15 +5,16 @@ import (
 
 	"github.com/pzsp-teams/cli/internal/channels"
 	"github.com/pzsp-teams/cli/internal/chats"
+	"github.com/pzsp-teams/cli/internal/teams"
 	"github.com/pzsp-teams/lib"
 	lib_config "github.com/pzsp-teams/lib/config"
 )
 
 // TeamsClient aggregates resource-level clients
 type TeamsClient struct {
-	Client   *lib.Client
 	Channels *channels.Client
 	Chats    *chats.Client
+	Teams    *teams.Client
 }
 
 // NewTeamsClient creates a new TeamsClient by constructing the underlying library client
@@ -24,8 +25,8 @@ func NewTeamsClient(ctx context.Context, authConfig *lib_config.AuthConfig, send
 	}
 
 	return &TeamsClient{
-		Client:   libClient,
 		Channels: channels.NewClient(libClient.Channels, libClient.Teams),
 		Chats:    chats.NewClient(libClient.Chats),
+		Teams:    teams.NewClient(libClient.Teams),
 	}, nil
 }

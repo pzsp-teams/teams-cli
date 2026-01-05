@@ -66,7 +66,7 @@ func runTeamList(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	ts, err := c.Client.Teams.ListMyJoined(cmd.Context())
+	ts, err := c.Teams.ListMyJoined(cmd.Context())
 	if err != nil {
 		return err
 	}
@@ -97,7 +97,7 @@ func runTeamGet(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	t, err := c.Client.Teams.Get(cmd.Context(), tRef)
+	t, err := c.Teams.Get(cmd.Context(), tRef)
 	if err != nil {
 		return err
 	}
@@ -122,7 +122,7 @@ func runTeamCreate(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	_, err = c.Client.Teams.CreateFromTemplate(cmd.Context(), newTeamDisplayName, newTeamDescription, nil)
+	_, err = c.Teams.CreateFromTemplate(cmd.Context(), newTeamDisplayName, newTeamDescription, nil)
 	if err != nil {
 		return err
 	}
@@ -153,7 +153,7 @@ func runTeamArchive(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	err = c.Client.Teams.Archive(cmd.Context(), tRef, &spoReadOnly)
+	err = c.Teams.Archive(cmd.Context(), tRef, spoReadOnly)
 	if err != nil {
 		return err
 	}
@@ -173,7 +173,7 @@ func runTeamUnarchive(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	err = c.Client.Teams.Unarchive(cmd.Context(), tRef)
+	err = c.Teams.Unarchive(cmd.Context(), tRef)
 	if err != nil {
 		return err
 	}
@@ -193,7 +193,7 @@ func runTeamDelete(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	err = c.Client.Teams.Delete(cmd.Context(), tRef)
+	err = c.Teams.Delete(cmd.Context(), tRef)
 	if err != nil {
 		return err
 	}
