@@ -20,6 +20,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/internal v1.11.2 // indirect
 	github.com/AzureAD/microsoft-authentication-extensions-for-go/cache v0.1.1 // indirect
 	github.com/AzureAD/microsoft-authentication-library-for-go v1.6.0 // indirect
+	github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/charmbracelet/colorprofile v0.2.3-0.20250311203215-f60798e515dc // indirect
 	github.com/charmbracelet/lipgloss v1.1.0 // indirect

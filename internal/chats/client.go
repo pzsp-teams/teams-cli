@@ -13,8 +13,9 @@ import (
 
 // Client provides all chat-related operations
 type Client struct {
-	sender    sender.ChatSender
-	retriever retriever.Retriever
+	sender       sender.ChatSender
+	retriever    retriever.Retriever
+	chatsService chats.Service
 }
 
 // NewClient creates a new chats client
@@ -22,8 +23,9 @@ func NewClient(chatsService chats.Service) *Client {
 	formatterInstance := formatter.NewPlainTextFormatter()
 
 	return &Client{
-		sender:    sender.NewChatSender(chatsService),
-		retriever: retriever.NewRetriever(chatsService, formatterInstance),
+		sender:       sender.NewChatSender(chatsService),
+		retriever:    retriever.NewRetriever(chatsService, formatterInstance),
+		chatsService: chatsService,
 	}
 }
 
@@ -35,4 +37,9 @@ func (c *Client) Send(ctx context.Context, messages map[string]string, dryRun, i
 // GetMessages retrieves messages from all chats within the specified time range
 func (c *Client) GetMessages(ctx context.Context, timeRange coreretriever.TimeRange) ([]*models.Message, error) {
 	return c.retriever.GetMessages(ctx, timeRange)
+}
+
+// List returns a list of chats
+func (c *Client) List(ctx context.Context) ([]*models.Chat, error) {
+	return c.chatsService.ListChats(ctx, nil)
 }

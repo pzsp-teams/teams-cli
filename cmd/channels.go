@@ -14,4 +14,5 @@ func init() {
 	rootCmd.AddCommand(channelsCmd)
 	channelsCmd.AddCommand(channelsSendCmd)
 	channelsCmd.AddCommand(createChannelsCmd)
+	channelsCmd.AddCommand(channelsMessagesCmd)
 }

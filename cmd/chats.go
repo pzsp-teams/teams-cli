@@ -13,4 +13,6 @@ var chatsCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(chatsCmd)
 	chatsCmd.AddCommand(chatsSendCmd)
+	chatsCmd.AddCommand(chatsListCmd)
+	chatsCmd.AddCommand(chatsMessagesCmd)
 }
