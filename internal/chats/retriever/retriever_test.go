@@ -3,18 +3,24 @@ package retriever
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/pzsp-teams/cli/internal/core/formatter"
 	coreretriever "github.com/pzsp-teams/cli/internal/core/retriever"
 	"github.com/pzsp-teams/cli/internal/testutil"
+	"github.com/pzsp-teams/lib/chats"
 	"github.com/pzsp-teams/lib/models"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
 
-func TestGetMessages_Success(t *testing.T) {
+func stringPtr(s string) *string {
+	return &s
+}
+
+func TestGetMessages_Success_BothChatTypes(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -27,26 +33,58 @@ func TestGetMessages_Success(t *testing.T) {
 		End:   time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
 	}
 
-	// Expected messages from the service
-	expectedMessages := []*models.Message{
+	oneOnOneTopic := "One on One Chat"
+	groupTopic := "Group Chat"
+	chatList := []*models.Chat{
+		{
+			ID:    "chat1-id",
+			Topic: &oneOnOneTopic,
+			Type:  models.ChatTypeOneOnOne,
+		},
+		{
+			ID:    "chat2-id",
+			Topic: &groupTopic,
+			Type:  models.ChatTypeGroup,
+		},
+	}
+
+	messagesChat1 := []*models.Message{
 		{
 			ID:              "msg1",
 			Content:         "<p>Hello</p>",
 			ContentType:     models.MessageContentTypeHTML,
 			CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
+			From: &models.MessageFrom{
+				DisplayName: "User 1",
+				UserID:      "user1",
+			},
 		},
+	}
+
+	messagesChat2 := []*models.Message{
 		{
 			ID:              "msg2",
 			Content:         "Plain text message",
 			ContentType:     models.MessageContentTypeText,
 			CreatedDateTime: time.Date(2024, 1, 1, 13, 0, 0, 0, time.UTC),
+			From: &models.MessageFrom{
+				DisplayName: "User 2",
+				UserID:      "user2",
+			},
 		},
 	}
 
-	top := int32(50)
 	mockService.EXPECT().
-		ListAllMessages(ctx, &timeRange.Start, &timeRange.End, &top).
-		Return(expectedMessages, nil)
+		ListChats(ctx, nil).
+		Return(chatList, nil)
+
+	mockService.EXPECT().
+		ListMessages(ctx, chats.OneOnOneChatRef{Ref: "chat1-id"}, false).
+		Return(messagesChat1, nil)
+
+	mockService.EXPECT().
+		ListMessages(ctx, chats.GroupChatRef{Ref: "chat2-id"}, false).
+		Return(messagesChat2, nil)
 
 	retriever := NewRetriever(mockService, formatterInstance)
 	messages, err := retriever.GetMessages(ctx, timeRange)
@@ -54,14 +92,78 @@ func TestGetMessages_Success(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, messages, 2)
 
-	assert.Equal(t, "msg1", messages[0].ID)
-	assert.Equal(t, "Hello\n\n", messages[0].Content)
+	assert.Equal(t, "msg1", messages[0].Message.ID)
+	assert.Equal(t, "Hello", messages[0].Message.Content)
+	assert.Equal(t, "One on One Chat", messages[0].ChatName)
+	assert.Equal(t, "chat1-id", messages[0].ChatID)
+	assert.Equal(t, "one-on-one", messages[0].ChatType)
 
-	assert.Equal(t, "msg2", messages[1].ID)
-	assert.Equal(t, "Plain text message", messages[1].Content)
+	assert.Equal(t, "msg2", messages[1].Message.ID)
+	assert.Equal(t, "Plain text message", messages[1].Message.Content)
+	assert.Equal(t, "Group Chat", messages[1].ChatName)
+	assert.Equal(t, "chat2-id", messages[1].ChatID)
+	assert.Equal(t, "group", messages[1].ChatType)
 }
 
-func TestGetMessages_EmptyResult(t *testing.T) {
+func TestGetMessages_TimeRangeFiltering(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockService := testutil.NewMockChatsService(ctrl)
+	formatterInstance := formatter.NewPlainTextFormatter()
+
+	ctx := context.Background()
+	timeRange := coreretriever.TimeRange{
+		Start: time.Date(2024, 1, 1, 10, 0, 0, 0, time.UTC),
+		End:   time.Date(2024, 1, 1, 14, 0, 0, 0, time.UTC),
+	}
+
+	chatList := []*models.Chat{
+		{
+			ID:    "chat1-id",
+			Topic: stringPtr("Test Chat"),
+			Type:  models.ChatTypeGroup,
+		},
+	}
+
+	messages := []*models.Message{
+		{
+			ID:              "msg-before",
+			Content:         "Before range",
+			ContentType:     models.MessageContentTypeText,
+			CreatedDateTime: time.Date(2024, 1, 1, 9, 0, 0, 0, time.UTC),
+		},
+		{
+			ID:              "msg-inside",
+			Content:         "Inside range",
+			ContentType:     models.MessageContentTypeText,
+			CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
+		},
+		{
+			ID:              "msg-after",
+			Content:         "After range",
+			ContentType:     models.MessageContentTypeText,
+			CreatedDateTime: time.Date(2024, 1, 1, 15, 0, 0, 0, time.UTC),
+		},
+	}
+
+	mockService.EXPECT().
+		ListChats(ctx, nil).
+		Return(chatList, nil)
+
+	mockService.EXPECT().
+		ListMessages(ctx, chats.GroupChatRef{Ref: "chat1-id"}, false).
+		Return(messages, nil)
+
+	retriever := NewRetriever(mockService, formatterInstance)
+	result, err := retriever.GetMessages(ctx, timeRange)
+
+	assert.NoError(t, err)
+	assert.Len(t, result, 1)
+	assert.Equal(t, "msg-inside", result[0].Message.ID)
+}
+
+func TestGetMessages_NoChatsFound(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -74,19 +176,19 @@ func TestGetMessages_EmptyResult(t *testing.T) {
 		End:   time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
 	}
 
-	top := int32(50)
 	mockService.EXPECT().
-		ListAllMessages(ctx, &timeRange.Start, &timeRange.End, &top).
-		Return([]*models.Message{}, nil)
+		ListChats(ctx, nil).
+		Return([]*models.Chat{}, nil)
 
 	retriever := NewRetriever(mockService, formatterInstance)
 	messages, err := retriever.GetMessages(ctx, timeRange)
 
-	assert.NoError(t, err)
-	assert.Empty(t, messages)
+	assert.Error(t, err)
+	assert.Nil(t, messages)
+	assert.ErrorIs(t, err, ErrNoChatsFound)
 }
 
-func TestGetMessages_ServiceError(t *testing.T) {
+func TestGetMessages_ListChatsFailed(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -99,10 +201,48 @@ func TestGetMessages_ServiceError(t *testing.T) {
 		End:   time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
 	}
 
-	top := int32(50)
 	expectedError := errors.New("API error")
 	mockService.EXPECT().
-		ListAllMessages(ctx, &timeRange.Start, &timeRange.End, &top).
+		ListChats(ctx, nil).
+		Return(nil, expectedError)
+
+	retriever := NewRetriever(mockService, formatterInstance)
+	messages, err := retriever.GetMessages(ctx, timeRange)
+
+	assert.Error(t, err)
+	assert.Nil(t, messages)
+	assert.ErrorIs(t, err, ErrListingChatsFailed)
+	assert.Contains(t, err.Error(), "API error")
+}
+
+func TestGetMessages_ListMessagesFailed(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockService := testutil.NewMockChatsService(ctrl)
+	formatterInstance := formatter.NewPlainTextFormatter()
+
+	ctx := context.Background()
+	timeRange := coreretriever.TimeRange{
+		Start: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+		End:   time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
+	}
+
+	chatList := []*models.Chat{
+		{
+			ID:    "chat1-id",
+			Topic: stringPtr("Test Chat"),
+			Type:  models.ChatTypeGroup,
+		},
+	}
+
+	expectedError := errors.New("API error")
+	mockService.EXPECT().
+		ListChats(ctx, nil).
+		Return(chatList, nil)
+
+	mockService.EXPECT().
+		ListMessages(ctx, chats.GroupChatRef{Ref: "chat1-id"}, false).
 		Return(nil, expectedError)
 
 	retriever := NewRetriever(mockService, formatterInstance)
@@ -112,6 +252,61 @@ func TestGetMessages_ServiceError(t *testing.T) {
 	assert.Nil(t, messages)
 	assert.ErrorIs(t, err, ErrListingMessagesFailed)
 	assert.Contains(t, err.Error(), "API error")
+}
+
+func TestGetMessages_403ErrorIgnored(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockService := testutil.NewMockChatsService(ctrl)
+	formatterInstance := formatter.NewPlainTextFormatter()
+
+	ctx := context.Background()
+	timeRange := coreretriever.TimeRange{
+		Start: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+		End:   time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
+	}
+
+	chatList := []*models.Chat{
+		{
+			ID:    "chat1-id",
+			Topic: stringPtr("Accessible Chat"),
+			Type:  models.ChatTypeGroup,
+		},
+		{
+			ID:    "chat2-id",
+			Topic: stringPtr("Forbidden Chat"),
+			Type:  models.ChatTypeGroup,
+		},
+	}
+
+	messagesChat1 := []*models.Message{
+		{
+			ID:              "msg1",
+			Content:         "Accessible message",
+			ContentType:     models.MessageContentTypeText,
+			CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
+		},
+	}
+
+	mockService.EXPECT().
+		ListChats(ctx, nil).
+		Return(chatList, nil)
+
+	mockService.EXPECT().
+		ListMessages(ctx, chats.GroupChatRef{Ref: "chat1-id"}, false).
+		Return(messagesChat1, nil)
+
+	mockService.EXPECT().
+		ListMessages(ctx, chats.GroupChatRef{Ref: "chat2-id"}, false).
+		Return(nil, fmt.Errorf("403 Forbidden"))
+
+	retriever := NewRetriever(mockService, formatterInstance)
+	messages, err := retriever.GetMessages(ctx, timeRange)
+
+	assert.NoError(t, err)
+	assert.Len(t, messages, 1)
+	assert.Equal(t, "msg1", messages[0].Message.ID)
 }
 
 func TestGetMessages_OnlyHTMLMessagesFormatted(t *testing.T) {
@@ -127,28 +322,41 @@ func TestGetMessages_OnlyHTMLMessagesFormatted(t *testing.T) {
 		End:   time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
 	}
 
-	// Mix of HTML and plain text messages
-	messages := []*models.Message{
+	chatList := []*models.Chat{
 		{
-			ID:          "msg1",
-			Content:     "<p>HTML</p>",
-			ContentType: models.MessageContentTypeHTML,
-		},
-		{
-			ID:          "msg2",
-			Content:     "Plain",
-			ContentType: models.MessageContentTypeText,
-		},
-		{
-			ID:          "msg3",
-			Content:     "<b>More HTML</b>",
-			ContentType: models.MessageContentTypeHTML,
+			ID:    "chat1-id",
+			Topic: stringPtr("Test Chat"),
+			Type:  models.ChatTypeGroup,
 		},
 	}
 
-	top := int32(50)
+	messages := []*models.Message{
+		{
+			ID:              "msg1",
+			Content:         "<p>HTML</p>",
+			ContentType:     models.MessageContentTypeHTML,
+			CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
+		},
+		{
+			ID:              "msg2",
+			Content:         "Plain",
+			ContentType:     models.MessageContentTypeText,
+			CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
+		},
+		{
+			ID:              "msg3",
+			Content:         "<b>More HTML</b>",
+			ContentType:     models.MessageContentTypeHTML,
+			CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
+		},
+	}
+
 	mockService.EXPECT().
-		ListAllMessages(ctx, &timeRange.Start, &timeRange.End, &top).
+		ListChats(ctx, nil).
+		Return(chatList, nil)
+
+	mockService.EXPECT().
+		ListMessages(ctx, chats.GroupChatRef{Ref: "chat1-id"}, false).
 		Return(messages, nil)
 
 	retriever := NewRetriever(mockService, formatterInstance)
@@ -157,12 +365,12 @@ func TestGetMessages_OnlyHTMLMessagesFormatted(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, result, 3)
 
-	assert.Equal(t, "HTML\n\n", result[0].Content)  // HTML - formatted
-	assert.Equal(t, "Plain", result[1].Content)     // Text - not formatted
-	assert.Equal(t, "More HTML", result[2].Content) // HTML - formatted
+	assert.Equal(t, "HTML", result[0].Message.Content)
+	assert.Equal(t, "Plain", result[1].Message.Content)
+	assert.Equal(t, "More HTML", result[2].Message.Content)
 }
 
-func TestGetMessages_ComplexHTML(t *testing.T) {
+func TestGetMessages_ChatWithoutTopic(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -175,17 +383,29 @@ func TestGetMessages_ComplexHTML(t *testing.T) {
 		End:   time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
 	}
 
-	messages := []*models.Message{
+	chatList := []*models.Chat{
 		{
-			ID:          "msg1",
-			Content:     "Hello <at id=\"0\">User</at>!<br>Check <a href=\"https://example.com\">this link</a>",
-			ContentType: models.MessageContentTypeHTML,
+			ID:    "chat1-id",
+			Topic: nil,
+			Type:  models.ChatTypeOneOnOne,
 		},
 	}
 
-	top := int32(50)
+	messages := []*models.Message{
+		{
+			ID:              "msg1",
+			Content:         "Test message",
+			ContentType:     models.MessageContentTypeText,
+			CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
+		},
+	}
+
 	mockService.EXPECT().
-		ListAllMessages(ctx, &timeRange.Start, &timeRange.End, &top).
+		ListChats(ctx, nil).
+		Return(chatList, nil)
+
+	mockService.EXPECT().
+		ListMessages(ctx, chats.OneOnOneChatRef{Ref: "chat1-id"}, false).
 		Return(messages, nil)
 
 	retriever := NewRetriever(mockService, formatterInstance)
@@ -193,8 +413,41 @@ func TestGetMessages_ComplexHTML(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Len(t, result, 1)
+	assert.Equal(t, "chat1-id", result[0].ChatName)
+}
 
-	// Verify the HTML was properly formatted to plain text
-	expected := "Hello @User!\nCheck this link (https://example.com)"
-	assert.Equal(t, expected, result[0].Content)
+func TestGetMessages_EmptyMessagesInChat(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockService := testutil.NewMockChatsService(ctrl)
+	formatterInstance := formatter.NewPlainTextFormatter()
+
+	ctx := context.Background()
+	timeRange := coreretriever.TimeRange{
+		Start: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+		End:   time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
+	}
+
+	chatList := []*models.Chat{
+		{
+			ID:    "chat1-id",
+			Topic: stringPtr("Empty Chat"),
+			Type:  models.ChatTypeGroup,
+		},
+	}
+
+	mockService.EXPECT().
+		ListChats(ctx, nil).
+		Return(chatList, nil)
+
+	mockService.EXPECT().
+		ListMessages(ctx, chats.GroupChatRef{Ref: "chat1-id"}, false).
+		Return([]*models.Message{}, nil)
+
+	retriever := NewRetriever(mockService, formatterInstance)
+	messages, err := retriever.GetMessages(ctx, timeRange)
+
+	assert.NoError(t, err)
+	assert.Empty(t, messages)
 }
