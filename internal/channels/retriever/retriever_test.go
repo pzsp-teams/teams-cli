@@ -29,17 +29,17 @@ func TestGetMessages_Success(t *testing.T) {
 	}
 
 	teams := []*models.Team{
-		{DisplayName: "Team1", IsArchived: false},
+		{ID: "team1-id", DisplayName: "Team1", IsArchived: false},
 	}
 	mockTeamsService.EXPECT().
 		ListMyJoined(ctx).
 		Return(teams, nil)
 
 	channels := []*models.Channel{
-		{Name: "General"},
+		{ID: "channel1-id", Name: "General"},
 	}
 	mockChannelsService.EXPECT().
-		ListChannels(ctx, "Team1").
+		ListChannels(ctx, "team1-id").
 		Return(channels, nil)
 
 	messages := []*models.Message{
@@ -62,7 +62,7 @@ func TestGetMessages_Success(t *testing.T) {
 		ExpandReplies: true,
 	}
 	mockChannelsService.EXPECT().
-		ListMessages(ctx, "Team1", "General", opts, true).
+		ListMessages(ctx, "team1-id", "channel1-id", opts, false).
 		Return(messages, nil)
 
 	retriever := NewRetriever(mockTeamsService, mockChannelsService, formatterInstance)
@@ -71,13 +71,17 @@ func TestGetMessages_Success(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, result, 2)
 
-	// First message should be formatted
-	assert.Equal(t, "msg1", result[0].ID)
-	assert.Equal(t, "Hello from channel\n\n", result[0].Content)
+	// First message should be formatted with context
+	assert.Equal(t, "Team1", result[0].TeamName)
+	assert.Equal(t, "team1-id", result[0].TeamID)
+	assert.Equal(t, "General", result[0].ChannelName)
+	assert.Equal(t, "channel1-id", result[0].ChannelID)
+	assert.Equal(t, "msg1", result[0].Message.ID)
+	assert.Equal(t, "Hello from channel", result[0].Message.Content)
 
 	// Second message should not be formatted (plain text)
-	assert.Equal(t, "msg2", result[1].ID)
-	assert.Equal(t, "Plain text", result[1].Content)
+	assert.Equal(t, "msg2", result[1].Message.ID)
+	assert.Equal(t, "Plain text", result[1].Message.Content)
 }
 
 func TestGetMessages_NoTeamsFound(t *testing.T) {
@@ -121,18 +125,18 @@ func TestGetMessages_ArchivedTeamsFiltered(t *testing.T) {
 	}
 
 	teams := []*models.Team{
-		{DisplayName: "ArchivedTeam", IsArchived: true},
-		{DisplayName: "ActiveTeam", IsArchived: false},
+		{ID: "archived-team-id", DisplayName: "ArchivedTeam", IsArchived: true},
+		{ID: "active-team-id", DisplayName: "ActiveTeam", IsArchived: false},
 	}
 	mockTeamsService.EXPECT().
 		ListMyJoined(ctx).
 		Return(teams, nil)
 
 	channels := []*models.Channel{
-		{Name: "General"},
+		{ID: "channel1-id", Name: "General"},
 	}
 	mockChannelsService.EXPECT().
-		ListChannels(ctx, "ActiveTeam").
+		ListChannels(ctx, "active-team-id").
 		Return(channels, nil)
 
 	messages := []*models.Message{
@@ -149,7 +153,7 @@ func TestGetMessages_ArchivedTeamsFiltered(t *testing.T) {
 		ExpandReplies: true,
 	}
 	mockChannelsService.EXPECT().
-		ListMessages(ctx, "ActiveTeam", "General", opts, true).
+		ListMessages(ctx, "active-team-id", "channel1-id", opts, false).
 		Return(messages, nil)
 
 	retriever := NewRetriever(mockTeamsService, mockChannelsService, formatterInstance)
@@ -157,7 +161,8 @@ func TestGetMessages_ArchivedTeamsFiltered(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Len(t, result, 1)
-	assert.Equal(t, "Active team message", result[0].Content)
+	assert.Equal(t, "ActiveTeam", result[0].TeamName)
+	assert.Equal(t, "Active team message", result[0].Message.Content)
 }
 
 func TestGetMessages_NoChannelsFound(t *testing.T) {
@@ -175,14 +180,14 @@ func TestGetMessages_NoChannelsFound(t *testing.T) {
 	}
 
 	teams := []*models.Team{
-		{DisplayName: "Team1", IsArchived: false},
+		{ID: "team1-id", DisplayName: "Team1", IsArchived: false},
 	}
 	mockTeamsService.EXPECT().
 		ListMyJoined(ctx).
 		Return(teams, nil)
 
 	mockChannelsService.EXPECT().
-		ListChannels(ctx, "Team1").
+		ListChannels(ctx, "team1-id").
 		Return([]*models.Channel{}, nil)
 
 	retriever := NewRetriever(mockTeamsService, mockChannelsService, formatterInstance)
@@ -236,7 +241,7 @@ func TestGetMessages_ChannelsServiceError(t *testing.T) {
 	}
 
 	teams := []*models.Team{
-		{DisplayName: "Team1", IsArchived: false},
+		{ID: "team1-id", DisplayName: "Team1", IsArchived: false},
 	}
 	mockTeamsService.EXPECT().
 		ListMyJoined(ctx).
@@ -244,7 +249,7 @@ func TestGetMessages_ChannelsServiceError(t *testing.T) {
 
 	expectedError := errors.New("channels API error")
 	mockChannelsService.EXPECT().
-		ListChannels(ctx, "Team1").
+		ListChannels(ctx, "team1-id").
 		Return(nil, expectedError)
 
 	retriever := NewRetriever(mockTeamsService, mockChannelsService, formatterInstance)
@@ -271,17 +276,17 @@ func TestGetMessages_MessagesServiceError(t *testing.T) {
 	}
 
 	teams := []*models.Team{
-		{DisplayName: "Team1", IsArchived: false},
+		{ID: "team1-id", DisplayName: "Team1", IsArchived: false},
 	}
 	mockTeamsService.EXPECT().
 		ListMyJoined(ctx).
 		Return(teams, nil)
 
 	channels := []*models.Channel{
-		{Name: "General"},
+		{ID: "channel1-id", Name: "General"},
 	}
 	mockChannelsService.EXPECT().
-		ListChannels(ctx, "Team1").
+		ListChannels(ctx, "team1-id").
 		Return(channels, nil)
 
 	expectedError := errors.New("messages API error")
@@ -291,7 +296,7 @@ func TestGetMessages_MessagesServiceError(t *testing.T) {
 		ExpandReplies: true,
 	}
 	mockChannelsService.EXPECT().
-		ListMessages(ctx, "Team1", "General", opts, true).
+		ListMessages(ctx, "team1-id", "channel1-id", opts, false).
 		Return(nil, expectedError)
 
 	retriever := NewRetriever(mockTeamsService, mockChannelsService, formatterInstance)
@@ -318,17 +323,17 @@ func TestGetMessages_403ErrorIgnored(t *testing.T) {
 	}
 
 	teams := []*models.Team{
-		{DisplayName: "Team1", IsArchived: false},
+		{ID: "team1-id", DisplayName: "Team1", IsArchived: false},
 	}
 	mockTeamsService.EXPECT().
 		ListMyJoined(ctx).
 		Return(teams, nil)
 
 	channels := []*models.Channel{
-		{Name: "General"},
+		{ID: "channel1-id", Name: "General"},
 	}
 	mockChannelsService.EXPECT().
-		ListChannels(ctx, "Team1").
+		ListChannels(ctx, "team1-id").
 		Return(channels, nil)
 
 	forbiddenError := errors.New("403 Forbidden")
@@ -338,7 +343,7 @@ func TestGetMessages_403ErrorIgnored(t *testing.T) {
 		ExpandReplies: true,
 	}
 	mockChannelsService.EXPECT().
-		ListMessages(ctx, "Team1", "General", opts, true).
+		ListMessages(ctx, "team1-id", "channel1-id", opts, false).
 		Return(nil, forbiddenError)
 
 	retriever := NewRetriever(mockTeamsService, mockChannelsService, formatterInstance)
@@ -363,17 +368,17 @@ func TestGetMessages_TimeRangeFiltering(t *testing.T) {
 	}
 
 	teams := []*models.Team{
-		{DisplayName: "Team1", IsArchived: false},
+		{ID: "team1-id", DisplayName: "Team1", IsArchived: false},
 	}
 	mockTeamsService.EXPECT().
 		ListMyJoined(ctx).
 		Return(teams, nil)
 
 	channels := []*models.Channel{
-		{Name: "General"},
+		{ID: "channel1-id", Name: "General"},
 	}
 	mockChannelsService.EXPECT().
-		ListChannels(ctx, "Team1").
+		ListChannels(ctx, "team1-id").
 		Return(channels, nil)
 
 	messages := []*models.Message{
@@ -408,7 +413,7 @@ func TestGetMessages_TimeRangeFiltering(t *testing.T) {
 		ExpandReplies: true,
 	}
 	mockChannelsService.EXPECT().
-		ListMessages(ctx, "Team1", "General", opts, true).
+		ListMessages(ctx, "team1-id", "channel1-id", opts, false).
 		Return(messages, nil)
 
 	retriever := NewRetriever(mockTeamsService, mockChannelsService, formatterInstance)
@@ -417,11 +422,11 @@ func TestGetMessages_TimeRangeFiltering(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, result, 2) // Only messages in range
 
-	assert.Equal(t, "msg2", result[0].ID)
-	assert.Equal(t, "In range 1", result[0].Content)
+	assert.Equal(t, "msg2", result[0].Message.ID)
+	assert.Equal(t, "In range 1", result[0].Message.Content)
 
-	assert.Equal(t, "msg3", result[1].ID)
-	assert.Equal(t, "In range 2", result[1].Content)
+	assert.Equal(t, "msg3", result[1].Message.ID)
+	assert.Equal(t, "In range 2", result[1].Message.Content)
 }
 
 func TestGetMessages_MultipleTeamsAndChannels(t *testing.T) {
@@ -439,8 +444,8 @@ func TestGetMessages_MultipleTeamsAndChannels(t *testing.T) {
 	}
 
 	teams := []*models.Team{
-		{DisplayName: "Team1", IsArchived: false},
-		{DisplayName: "Team2", IsArchived: false},
+		{ID: "team1-id", DisplayName: "Team1", IsArchived: false},
+		{ID: "team2-id", DisplayName: "Team2", IsArchived: false},
 	}
 	mockTeamsService.EXPECT().
 		ListMyJoined(ctx).
@@ -448,18 +453,18 @@ func TestGetMessages_MultipleTeamsAndChannels(t *testing.T) {
 
 	// Team1 channels
 	team1Channels := []*models.Channel{
-		{Name: "General"},
-		{Name: "Random"},
+		{ID: "general-id", Name: "General"},
+		{ID: "random-id", Name: "Random"},
 	}
 	mockChannelsService.EXPECT().
-		ListChannels(ctx, "Team1").
+		ListChannels(ctx, "team1-id").
 		Return(team1Channels, nil)
 
 	team2Channels := []*models.Channel{
-		{Name: "Announcements"},
+		{ID: "announcements-id", Name: "Announcements"},
 	}
 	mockChannelsService.EXPECT().
-		ListChannels(ctx, "Team2").
+		ListChannels(ctx, "team2-id").
 		Return(team2Channels, nil)
 
 	top := int32(30)
@@ -477,7 +482,7 @@ func TestGetMessages_MultipleTeamsAndChannels(t *testing.T) {
 		},
 	}
 	mockChannelsService.EXPECT().
-		ListMessages(ctx, "Team1", "General", opts, true).
+		ListMessages(ctx, "team1-id", "general-id", opts, false).
 		Return(team1GeneralMessages, nil)
 
 	team1RandomMessages := []*models.Message{
@@ -489,7 +494,7 @@ func TestGetMessages_MultipleTeamsAndChannels(t *testing.T) {
 		},
 	}
 	mockChannelsService.EXPECT().
-		ListMessages(ctx, "Team1", "Random", opts, true).
+		ListMessages(ctx, "team1-id", "random-id", opts, false).
 		Return(team1RandomMessages, nil)
 
 	team2AnnouncementsMessages := []*models.Message{
@@ -501,7 +506,7 @@ func TestGetMessages_MultipleTeamsAndChannels(t *testing.T) {
 		},
 	}
 	mockChannelsService.EXPECT().
-		ListMessages(ctx, "Team2", "Announcements", opts, true).
+		ListMessages(ctx, "team2-id", "announcements-id", opts, false).
 		Return(team2AnnouncementsMessages, nil)
 
 	retriever := NewRetriever(mockTeamsService, mockChannelsService, formatterInstance)
@@ -512,7 +517,7 @@ func TestGetMessages_MultipleTeamsAndChannels(t *testing.T) {
 
 	messageIDs := make([]string, len(result))
 	for i, msg := range result {
-		messageIDs[i] = msg.ID
+		messageIDs[i] = msg.Message.ID
 	}
 	assert.Contains(t, messageIDs, "t1g1")
 	assert.Contains(t, messageIDs, "t1r1")

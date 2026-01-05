@@ -9,7 +9,6 @@ import (
 	"github.com/pzsp-teams/cli/internal/core/formatter"
 	coreretriever "github.com/pzsp-teams/cli/internal/core/retriever"
 	"github.com/pzsp-teams/lib/channels"
-	"github.com/pzsp-teams/lib/models"
 	"github.com/pzsp-teams/lib/teams"
 )
 
@@ -42,6 +41,6 @@ func (c *Client) Create(ctx context.Context, teamRef string, request map[string]
 }
 
 // GetMessages retrieves messages from all channels within the specified time range
-func (c *Client) GetMessages(ctx context.Context, timeRange coreretriever.TimeRange) ([]*models.Message, error) {
+func (c *Client) GetMessages(ctx context.Context, timeRange coreretriever.TimeRange) ([]*retriever.ChannelMessageWithContext, error) {
 	return c.retriever.GetMessages(ctx, timeRange)
 }

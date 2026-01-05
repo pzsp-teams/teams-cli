@@ -63,7 +63,7 @@ func runChannelsMessagesGet(cmd *cobra.Command, args []string) error {
 	}
 
 	log.Info("Retrieved messages", "count", len(messages))
-	printMessages(messages, "channel")
+	printChannelMessages(messages)
 
 	return nil
 }
