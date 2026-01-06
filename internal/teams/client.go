@@ -35,9 +35,9 @@ func (c *Client) Delete(ctx context.Context, teamRef string) error {
 }
 
 // CreateFromTemplate creates a team from a template
-func (c *Client) CreateFromTemplate(ctx context.Context, displayName, description string, owners []string) (string, error) {
-	return c.teamsService.CreateFromTemplate(ctx, displayName, description, owners)
-}
+// func (c *Client) CreateFromTemplate(ctx context.Context, displayName, description string, owners []string) (string, error) {
+// 	return c.teamsService.CreateFromTemplate(ctx, displayName, description, owners)
+// }
 
 // Get retrieves a team
 func (c *Client) Get(ctx context.Context, teamRef string) (*models.Team, error) {

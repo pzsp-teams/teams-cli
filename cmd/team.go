@@ -118,15 +118,6 @@ var (
 )
 
 func runTeamCreate(cmd *cobra.Command, args []string) error {
-	c, err := GetOrCreateTeamsClient(cmd.Context())
-	if err != nil {
-		return err
-	}
-	_, err = c.Teams.CreateFromTemplate(cmd.Context(), newTeamDisplayName, newTeamDescription, nil)
-	if err != nil {
-		return err
-	}
-	fmt.Println("Team creation initiated. The team will be available once creation is complete.")
 	return nil
 }
 
