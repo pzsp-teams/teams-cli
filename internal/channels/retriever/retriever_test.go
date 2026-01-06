@@ -42,19 +42,22 @@ func TestGetMessages_Success(t *testing.T) {
 		ListChannels(ctx, "team1-id").
 		Return(channels, nil)
 
-	messages := []*models.Message{
-		{
-			ID:              "msg1",
-			Content:         "<p>Hello from channel</p>",
-			ContentType:     models.MessageContentTypeHTML,
-			CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
+	messages := &models.MessageCollection{
+		Messages: []*models.Message{
+			{
+				ID:              "msg1",
+				Content:         "<p>Hello from channel</p>",
+				ContentType:     models.MessageContentTypeHTML,
+				CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
+			},
+			{
+				ID:              "msg2",
+				Content:         "Plain text",
+				ContentType:     models.MessageContentTypeText,
+				CreatedDateTime: time.Date(2024, 1, 1, 13, 0, 0, 0, time.UTC),
+			},
 		},
-		{
-			ID:              "msg2",
-			Content:         "Plain text",
-			ContentType:     models.MessageContentTypeText,
-			CreatedDateTime: time.Date(2024, 1, 1, 13, 0, 0, 0, time.UTC),
-		},
+		NextLink: nil,
 	}
 	top := int32(30)
 	opts := &models.ListMessagesOptions{
@@ -62,7 +65,7 @@ func TestGetMessages_Success(t *testing.T) {
 		ExpandReplies: true,
 	}
 	mockChannelsService.EXPECT().
-		ListMessages(ctx, "team1-id", "channel1-id", opts, false).
+		ListMessages(ctx, "team1-id", "channel1-id", opts, false, nil).
 		Return(messages, nil)
 
 	retriever := NewRetriever(mockTeamsService, mockChannelsService, formatterInstance)
@@ -139,13 +142,16 @@ func TestGetMessages_ArchivedTeamsFiltered(t *testing.T) {
 		ListChannels(ctx, "active-team-id").
 		Return(channels, nil)
 
-	messages := []*models.Message{
-		{
-			ID:              "msg1",
-			Content:         "Active team message",
-			ContentType:     models.MessageContentTypeText,
-			CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
+	messages := &models.MessageCollection{
+		Messages: []*models.Message{
+			{
+				ID:              "msg1",
+				Content:         "Active team message",
+				ContentType:     models.MessageContentTypeText,
+				CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
+			},
 		},
+		NextLink: nil,
 	}
 	top := int32(30)
 	opts := &models.ListMessagesOptions{
@@ -153,7 +159,7 @@ func TestGetMessages_ArchivedTeamsFiltered(t *testing.T) {
 		ExpandReplies: true,
 	}
 	mockChannelsService.EXPECT().
-		ListMessages(ctx, "active-team-id", "channel1-id", opts, false).
+		ListMessages(ctx, "active-team-id", "channel1-id", opts, false, nil).
 		Return(messages, nil)
 
 	retriever := NewRetriever(mockTeamsService, mockChannelsService, formatterInstance)
@@ -296,7 +302,7 @@ func TestGetMessages_MessagesServiceError(t *testing.T) {
 		ExpandReplies: true,
 	}
 	mockChannelsService.EXPECT().
-		ListMessages(ctx, "team1-id", "channel1-id", opts, false).
+		ListMessages(ctx, "team1-id", "channel1-id", opts, false, nil).
 		Return(nil, expectedError)
 
 	retriever := NewRetriever(mockTeamsService, mockChannelsService, formatterInstance)
@@ -343,7 +349,7 @@ func TestGetMessages_403ErrorIgnored(t *testing.T) {
 		ExpandReplies: true,
 	}
 	mockChannelsService.EXPECT().
-		ListMessages(ctx, "team1-id", "channel1-id", opts, false).
+		ListMessages(ctx, "team1-id", "channel1-id", opts, false, nil).
 		Return(nil, forbiddenError)
 
 	retriever := NewRetriever(mockTeamsService, mockChannelsService, formatterInstance)
@@ -381,31 +387,34 @@ func TestGetMessages_TimeRangeFiltering(t *testing.T) {
 		ListChannels(ctx, "team1-id").
 		Return(channels, nil)
 
-	messages := []*models.Message{
-		{
-			ID:              "msg1",
-			Content:         "Before range",
-			ContentType:     models.MessageContentTypeText,
-			CreatedDateTime: time.Date(2023, 12, 31, 23, 0, 0, 0, time.UTC), // Before start
+	messages := &models.MessageCollection{
+		Messages: []*models.Message{
+			{
+				ID:              "msg1",
+				Content:         "Before range",
+				ContentType:     models.MessageContentTypeText,
+				CreatedDateTime: time.Date(2023, 12, 31, 23, 0, 0, 0, time.UTC),
+			},
+			{
+				ID:              "msg2",
+				Content:         "In range 1",
+				ContentType:     models.MessageContentTypeText,
+				CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
+			},
+			{
+				ID:              "msg3",
+				Content:         "In range 2",
+				ContentType:     models.MessageContentTypeText,
+				CreatedDateTime: time.Date(2024, 1, 1, 18, 0, 0, 0, time.UTC),
+			},
+			{
+				ID:              "msg4",
+				Content:         "After range",
+				ContentType:     models.MessageContentTypeText,
+				CreatedDateTime: time.Date(2024, 1, 2, 1, 0, 0, 0, time.UTC),
+			},
 		},
-		{
-			ID:              "msg2",
-			Content:         "In range 1",
-			ContentType:     models.MessageContentTypeText,
-			CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC), // In range
-		},
-		{
-			ID:              "msg3",
-			Content:         "In range 2",
-			ContentType:     models.MessageContentTypeText,
-			CreatedDateTime: time.Date(2024, 1, 1, 18, 0, 0, 0, time.UTC), // In range
-		},
-		{
-			ID:              "msg4",
-			Content:         "After range",
-			ContentType:     models.MessageContentTypeText,
-			CreatedDateTime: time.Date(2024, 1, 2, 1, 0, 0, 0, time.UTC), // After end
-		},
+		NextLink: nil,
 	}
 	top := int32(30)
 	opts := &models.ListMessagesOptions{
@@ -413,7 +422,7 @@ func TestGetMessages_TimeRangeFiltering(t *testing.T) {
 		ExpandReplies: true,
 	}
 	mockChannelsService.EXPECT().
-		ListMessages(ctx, "team1-id", "channel1-id", opts, false).
+		ListMessages(ctx, "team1-id", "channel1-id", opts, false, nil).
 		Return(messages, nil)
 
 	retriever := NewRetriever(mockTeamsService, mockChannelsService, formatterInstance)
@@ -473,40 +482,49 @@ func TestGetMessages_MultipleTeamsAndChannels(t *testing.T) {
 		ExpandReplies: true,
 	}
 
-	team1GeneralMessages := []*models.Message{
-		{
-			ID:              "t1g1",
-			Content:         "Team1 General",
-			ContentType:     models.MessageContentTypeText,
-			CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
+	team1GeneralMessages := &models.MessageCollection{
+		Messages: []*models.Message{
+			{
+				ID:              "t1g1",
+				Content:         "Team1 General",
+				ContentType:     models.MessageContentTypeText,
+				CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
+			},
 		},
+		NextLink: nil,
 	}
 	mockChannelsService.EXPECT().
-		ListMessages(ctx, "team1-id", "general-id", opts, false).
+		ListMessages(ctx, "team1-id", "general-id", opts, false, nil).
 		Return(team1GeneralMessages, nil)
 
-	team1RandomMessages := []*models.Message{
-		{
-			ID:              "t1r1",
-			Content:         "Team1 Random",
-			ContentType:     models.MessageContentTypeText,
-			CreatedDateTime: time.Date(2024, 1, 1, 13, 0, 0, 0, time.UTC),
+	team1RandomMessages := &models.MessageCollection{
+		Messages: []*models.Message{
+			{
+				ID:              "t1r1",
+				Content:         "Team1 Random",
+				ContentType:     models.MessageContentTypeText,
+				CreatedDateTime: time.Date(2024, 1, 1, 13, 0, 0, 0, time.UTC),
+			},
 		},
+		NextLink: nil,
 	}
 	mockChannelsService.EXPECT().
-		ListMessages(ctx, "team1-id", "random-id", opts, false).
+		ListMessages(ctx, "team1-id", "random-id", opts, false, nil).
 		Return(team1RandomMessages, nil)
 
-	team2AnnouncementsMessages := []*models.Message{
-		{
-			ID:              "t2a1",
-			Content:         "Team2 Announcements",
-			ContentType:     models.MessageContentTypeText,
-			CreatedDateTime: time.Date(2024, 1, 1, 14, 0, 0, 0, time.UTC),
+	team2AnnouncementsMessages := &models.MessageCollection{
+		Messages: []*models.Message{
+			{
+				ID:              "t2a1",
+				Content:         "Team2 Announcements",
+				ContentType:     models.MessageContentTypeText,
+				CreatedDateTime: time.Date(2024, 1, 1, 14, 0, 0, 0, time.UTC),
+			},
 		},
+		NextLink: nil,
 	}
 	mockChannelsService.EXPECT().
-		ListMessages(ctx, "team2-id", "announcements-id", opts, false).
+		ListMessages(ctx, "team2-id", "announcements-id", opts, false, nil).
 		Return(team2AnnouncementsMessages, nil)
 
 	retriever := NewRetriever(mockTeamsService, mockChannelsService, formatterInstance)

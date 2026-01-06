@@ -48,30 +48,36 @@ func TestGetMessages_Success_BothChatTypes(t *testing.T) {
 		},
 	}
 
-	messagesChat1 := []*models.Message{
-		{
-			ID:              "msg1",
-			Content:         "<p>Hello</p>",
-			ContentType:     models.MessageContentTypeHTML,
-			CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
-			From: &models.MessageFrom{
-				DisplayName: "User 1",
-				UserID:      "user1",
+	messagesChat1 := &models.MessageCollection{
+		Messages: []*models.Message{
+			{
+				ID:              "msg1",
+				Content:         "<p>Hello</p>",
+				ContentType:     models.MessageContentTypeHTML,
+				CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
+				From: &models.MessageFrom{
+					DisplayName: "User 1",
+					UserID:      "user1",
+				},
 			},
 		},
+		NextLink: nil,
 	}
 
-	messagesChat2 := []*models.Message{
-		{
-			ID:              "msg2",
-			Content:         "Plain text message",
-			ContentType:     models.MessageContentTypeText,
-			CreatedDateTime: time.Date(2024, 1, 1, 13, 0, 0, 0, time.UTC),
-			From: &models.MessageFrom{
-				DisplayName: "User 2",
-				UserID:      "user2",
+	messagesChat2 := &models.MessageCollection{
+		Messages: []*models.Message{
+			{
+				ID:              "msg2",
+				Content:         "Plain text message",
+				ContentType:     models.MessageContentTypeText,
+				CreatedDateTime: time.Date(2024, 1, 1, 13, 0, 0, 0, time.UTC),
+				From: &models.MessageFrom{
+					DisplayName: "User 2",
+					UserID:      "user2",
+				},
 			},
 		},
+		NextLink: nil,
 	}
 
 	mockService.EXPECT().
@@ -79,11 +85,11 @@ func TestGetMessages_Success_BothChatTypes(t *testing.T) {
 		Return(chatList, nil)
 
 	mockService.EXPECT().
-		ListMessages(ctx, chats.OneOnOneChatRef{Ref: "chat1-id"}, false).
+		ListMessages(ctx, chats.OneOnOneChatRef{Ref: "chat1-id"}, false, nil).
 		Return(messagesChat1, nil)
 
 	mockService.EXPECT().
-		ListMessages(ctx, chats.GroupChatRef{Ref: "chat2-id"}, false).
+		ListMessages(ctx, chats.GroupChatRef{Ref: "chat2-id"}, false, nil).
 		Return(messagesChat2, nil)
 
 	retriever := NewRetriever(mockService, formatterInstance)
@@ -126,25 +132,28 @@ func TestGetMessages_TimeRangeFiltering(t *testing.T) {
 		},
 	}
 
-	messages := []*models.Message{
-		{
-			ID:              "msg-before",
-			Content:         "Before range",
-			ContentType:     models.MessageContentTypeText,
-			CreatedDateTime: time.Date(2024, 1, 1, 9, 0, 0, 0, time.UTC),
+	messages := &models.MessageCollection{
+		Messages: []*models.Message{
+			{
+				ID:              "msg-before",
+				Content:         "Before range",
+				ContentType:     models.MessageContentTypeText,
+				CreatedDateTime: time.Date(2024, 1, 1, 9, 0, 0, 0, time.UTC),
+			},
+			{
+				ID:              "msg-inside",
+				Content:         "Inside range",
+				ContentType:     models.MessageContentTypeText,
+				CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
+			},
+			{
+				ID:              "msg-after",
+				Content:         "After range",
+				ContentType:     models.MessageContentTypeText,
+				CreatedDateTime: time.Date(2024, 1, 1, 15, 0, 0, 0, time.UTC),
+			},
 		},
-		{
-			ID:              "msg-inside",
-			Content:         "Inside range",
-			ContentType:     models.MessageContentTypeText,
-			CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
-		},
-		{
-			ID:              "msg-after",
-			Content:         "After range",
-			ContentType:     models.MessageContentTypeText,
-			CreatedDateTime: time.Date(2024, 1, 1, 15, 0, 0, 0, time.UTC),
-		},
+		NextLink: nil,
 	}
 
 	mockService.EXPECT().
@@ -152,7 +161,7 @@ func TestGetMessages_TimeRangeFiltering(t *testing.T) {
 		Return(chatList, nil)
 
 	mockService.EXPECT().
-		ListMessages(ctx, chats.GroupChatRef{Ref: "chat1-id"}, false).
+		ListMessages(ctx, chats.GroupChatRef{Ref: "chat1-id"}, false, nil).
 		Return(messages, nil)
 
 	retriever := NewRetriever(mockService, formatterInstance)
@@ -242,7 +251,7 @@ func TestGetMessages_ListMessagesFailed(t *testing.T) {
 		Return(chatList, nil)
 
 	mockService.EXPECT().
-		ListMessages(ctx, chats.GroupChatRef{Ref: "chat1-id"}, false).
+		ListMessages(ctx, chats.GroupChatRef{Ref: "chat1-id"}, false, nil).
 		Return(nil, expectedError)
 
 	retriever := NewRetriever(mockService, formatterInstance)
@@ -280,13 +289,16 @@ func TestGetMessages_403ErrorIgnored(t *testing.T) {
 		},
 	}
 
-	messagesChat1 := []*models.Message{
-		{
-			ID:              "msg1",
-			Content:         "Accessible message",
-			ContentType:     models.MessageContentTypeText,
-			CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
+	messagesChat1 := &models.MessageCollection{
+		Messages: []*models.Message{
+			{
+				ID:              "msg1",
+				Content:         "Accessible message",
+				ContentType:     models.MessageContentTypeText,
+				CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
+			},
 		},
+		NextLink: nil,
 	}
 
 	mockService.EXPECT().
@@ -294,11 +306,11 @@ func TestGetMessages_403ErrorIgnored(t *testing.T) {
 		Return(chatList, nil)
 
 	mockService.EXPECT().
-		ListMessages(ctx, chats.GroupChatRef{Ref: "chat1-id"}, false).
+		ListMessages(ctx, chats.GroupChatRef{Ref: "chat1-id"}, false, nil).
 		Return(messagesChat1, nil)
 
 	mockService.EXPECT().
-		ListMessages(ctx, chats.GroupChatRef{Ref: "chat2-id"}, false).
+		ListMessages(ctx, chats.GroupChatRef{Ref: "chat2-id"}, false, nil).
 		Return(nil, fmt.Errorf("403 Forbidden"))
 
 	retriever := NewRetriever(mockService, formatterInstance)
@@ -330,25 +342,28 @@ func TestGetMessages_OnlyHTMLMessagesFormatted(t *testing.T) {
 		},
 	}
 
-	messages := []*models.Message{
-		{
-			ID:              "msg1",
-			Content:         "<p>HTML</p>",
-			ContentType:     models.MessageContentTypeHTML,
-			CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
+	messages := &models.MessageCollection{
+		Messages: []*models.Message{
+			{
+				ID:              "msg1",
+				Content:         "<p>HTML</p>",
+				ContentType:     models.MessageContentTypeHTML,
+				CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
+			},
+			{
+				ID:              "msg2",
+				Content:         "Plain",
+				ContentType:     models.MessageContentTypeText,
+				CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
+			},
+			{
+				ID:              "msg3",
+				Content:         "<b>More HTML</b>",
+				ContentType:     models.MessageContentTypeHTML,
+				CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
+			},
 		},
-		{
-			ID:              "msg2",
-			Content:         "Plain",
-			ContentType:     models.MessageContentTypeText,
-			CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
-		},
-		{
-			ID:              "msg3",
-			Content:         "<b>More HTML</b>",
-			ContentType:     models.MessageContentTypeHTML,
-			CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
-		},
+		NextLink: nil,
 	}
 
 	mockService.EXPECT().
@@ -356,7 +371,7 @@ func TestGetMessages_OnlyHTMLMessagesFormatted(t *testing.T) {
 		Return(chatList, nil)
 
 	mockService.EXPECT().
-		ListMessages(ctx, chats.GroupChatRef{Ref: "chat1-id"}, false).
+		ListMessages(ctx, chats.GroupChatRef{Ref: "chat1-id"}, false, nil).
 		Return(messages, nil)
 
 	retriever := NewRetriever(mockService, formatterInstance)
@@ -391,13 +406,16 @@ func TestGetMessages_ChatWithoutTopic(t *testing.T) {
 		},
 	}
 
-	messages := []*models.Message{
-		{
-			ID:              "msg1",
-			Content:         "Test message",
-			ContentType:     models.MessageContentTypeText,
-			CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
+	messages := &models.MessageCollection{
+		Messages: []*models.Message{
+			{
+				ID:              "msg1",
+				Content:         "Test message",
+				ContentType:     models.MessageContentTypeText,
+				CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
+			},
 		},
+		NextLink: nil,
 	}
 
 	mockService.EXPECT().
@@ -405,7 +423,7 @@ func TestGetMessages_ChatWithoutTopic(t *testing.T) {
 		Return(chatList, nil)
 
 	mockService.EXPECT().
-		ListMessages(ctx, chats.OneOnOneChatRef{Ref: "chat1-id"}, false).
+		ListMessages(ctx, chats.OneOnOneChatRef{Ref: "chat1-id"}, false, nil).
 		Return(messages, nil)
 
 	retriever := NewRetriever(mockService, formatterInstance)
@@ -442,8 +460,8 @@ func TestGetMessages_EmptyMessagesInChat(t *testing.T) {
 		Return(chatList, nil)
 
 	mockService.EXPECT().
-		ListMessages(ctx, chats.GroupChatRef{Ref: "chat1-id"}, false).
-		Return([]*models.Message{}, nil)
+		ListMessages(ctx, chats.GroupChatRef{Ref: "chat1-id"}, false, nil).
+		Return(&models.MessageCollection{Messages: []*models.Message{}, NextLink: nil}, nil)
 
 	retriever := NewRetriever(mockService, formatterInstance)
 	messages, err := retriever.GetMessages(ctx, timeRange)

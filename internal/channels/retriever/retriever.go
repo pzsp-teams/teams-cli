@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	f "github.com/pzsp-teams/cli/internal/core/formatter"
 	coreretriever "github.com/pzsp-teams/cli/internal/core/retriever"
@@ -110,29 +111,50 @@ func (r *retriever) processChannelMessages(ctx context.Context, job channelJob, 
 		ExpandReplies: true,
 	}
 
-	messages, err := r.channelsService.ListMessages(ctx, job.Team.ID, job.Channel.ID, opts, false)
-	if err != nil {
-		if strings.Contains(err.Error(), "403") {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("%w: team=%s channel=%s: %v",
-			ErrListingMessagesFailed, job.Team.DisplayName, job.Channel.Name, err)
-	}
-
+	var messageCollection *models.MessageCollection
+	var err error
 	var filteredMessages []*ChannelMessageWithContext
-	for _, message := range messages {
-		if message.CreatedDateTime.After(timeRange.Start) && message.CreatedDateTime.Before(timeRange.End) {
-			if message.ContentType == models.MessageContentTypeHTML {
-				message.Content = r.formatter.Format(message.Content)
-			}
+	var oldestMessage time.Time
+	var nextLink *string
 
-			filteredMessages = append(filteredMessages, &ChannelMessageWithContext{
-				TeamName:    job.Team.DisplayName,
-				TeamID:      job.Team.ID,
-				ChannelName: job.Channel.Name,
-				ChannelID:   job.Channel.ID,
-				Message:     message,
-			})
+	for {
+		messageCollection, err = r.channelsService.ListMessages(ctx, job.Team.ID, job.Channel.ID, opts, false, nextLink)
+		if err != nil {
+			if strings.Contains(err.Error(), "403") {
+				return nil, nil
+			}
+			return nil, fmt.Errorf("%w: team=%s channel=%s: %v",
+				ErrListingMessagesFailed, job.Team.DisplayName, job.Channel.Name, err)
+		}
+
+		if len(messageCollection.Messages) == 0 {
+			break
+		}
+
+		for _, message := range messageCollection.Messages {
+			if message.CreatedDateTime.After(timeRange.Start) && message.CreatedDateTime.Before(timeRange.End) {
+				if message.ContentType == models.MessageContentTypeHTML {
+					message.Content = r.formatter.Format(message.Content)
+				}
+
+				filteredMessages = append(filteredMessages, &ChannelMessageWithContext{
+					TeamName:    job.Team.DisplayName,
+					TeamID:      job.Team.ID,
+					ChannelName: job.Channel.Name,
+					ChannelID:   job.Channel.ID,
+					Message:     message,
+				})
+			}
+		}
+
+		oldestMessage = messageCollection.Messages[len(messageCollection.Messages)-1].CreatedDateTime
+		if oldestMessage.Before(timeRange.Start) {
+			break
+		}
+
+		nextLink = messageCollection.NextLink
+		if nextLink == nil || *nextLink == "" {
+			break
 		}
 	}
 
