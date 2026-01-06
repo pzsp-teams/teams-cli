@@ -191,33 +191,33 @@ func (mr *MockChannelsServiceMockRecorder) ListMembers(ctx, teamRef, channelRef 
 }
 
 // ListMessages mocks base method.
-func (m *MockChannelsService) ListMessages(ctx context.Context, teamRef, channelRef string, opts *models.ListMessagesOptions, includeSystem bool) ([]*models.Message, error) {
+func (m *MockChannelsService) ListMessages(ctx context.Context, teamRef, channelRef string, opts *models.ListMessagesOptions, includeSystem bool, nextLink *string) (*models.MessageCollection, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListMessages", ctx, teamRef, channelRef, opts, includeSystem)
-	ret0, _ := ret[0].([]*models.Message)
+	ret := m.ctrl.Call(m, "ListMessages", ctx, teamRef, channelRef, opts, includeSystem, nextLink)
+	ret0, _ := ret[0].(*models.MessageCollection)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListMessages indicates an expected call of ListMessages.
-func (mr *MockChannelsServiceMockRecorder) ListMessages(ctx, teamRef, channelRef, opts, includeSystem any) *gomock.Call {
+func (mr *MockChannelsServiceMockRecorder) ListMessages(ctx, teamRef, channelRef, opts, includeSystem, nextLink any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListMessages", reflect.TypeOf((*MockChannelsService)(nil).ListMessages), ctx, teamRef, channelRef, opts, includeSystem)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListMessages", reflect.TypeOf((*MockChannelsService)(nil).ListMessages), ctx, teamRef, channelRef, opts, includeSystem, nextLink)
 }
 
 // ListReplies mocks base method.
-func (m *MockChannelsService) ListReplies(ctx context.Context, teamRef, channelRef, messageID string, top *int32, includeSystem bool) ([]*models.Message, error) {
+func (m *MockChannelsService) ListReplies(ctx context.Context, teamRef, channelRef, messageID string, top *int32, includeSystem bool, nextLink *string) (*models.MessageCollection, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListReplies", ctx, teamRef, channelRef, messageID, top, includeSystem)
-	ret0, _ := ret[0].([]*models.Message)
+	ret := m.ctrl.Call(m, "ListReplies", ctx, teamRef, channelRef, messageID, top, includeSystem, nextLink)
+	ret0, _ := ret[0].(*models.MessageCollection)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListReplies indicates an expected call of ListReplies.
-func (mr *MockChannelsServiceMockRecorder) ListReplies(ctx, teamRef, channelRef, messageID, top, includeSystem any) *gomock.Call {
+func (mr *MockChannelsServiceMockRecorder) ListReplies(ctx, teamRef, channelRef, messageID, top, includeSystem, nextLink any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListReplies", reflect.TypeOf((*MockChannelsService)(nil).ListReplies), ctx, teamRef, channelRef, messageID, top, includeSystem)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListReplies", reflect.TypeOf((*MockChannelsService)(nil).ListReplies), ctx, teamRef, channelRef, messageID, top, includeSystem, nextLink)
 }
 
 // RemoveMember mocks base method.

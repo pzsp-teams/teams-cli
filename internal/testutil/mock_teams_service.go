@@ -71,18 +71,18 @@ func (mr *MockTeamsServiceMockRecorder) Archive(ctx, teamRef, spoReadOnlyForMemb
 }
 
 // CreateFromTemplate mocks base method.
-func (m *MockTeamsService) CreateFromTemplate(ctx context.Context, displayName, description string, owners []string) (string, error) {
+func (m *MockTeamsService) CreateFromTemplate(ctx context.Context, displayName, description string, owners, members []string, visibility string, includeMe bool) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateFromTemplate", ctx, displayName, description, owners)
+	ret := m.ctrl.Call(m, "CreateFromTemplate", ctx, displayName, description, owners, members, visibility, includeMe)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateFromTemplate indicates an expected call of CreateFromTemplate.
-func (mr *MockTeamsServiceMockRecorder) CreateFromTemplate(ctx, displayName, description, owners any) *gomock.Call {
+func (mr *MockTeamsServiceMockRecorder) CreateFromTemplate(ctx, displayName, description, owners, members, visibility, includeMe any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateFromTemplate", reflect.TypeOf((*MockTeamsService)(nil).CreateFromTemplate), ctx, displayName, description, owners)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateFromTemplate", reflect.TypeOf((*MockTeamsService)(nil).CreateFromTemplate), ctx, displayName, description, owners, members, visibility, includeMe)
 }
 
 // CreateViaGroup mocks base method.
