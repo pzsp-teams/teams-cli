@@ -104,6 +104,8 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/pzsp-teams/lib v0.0.0-20260105203922-9c2dbfdf6761 h1:fOJW+GQ0dz6FPPz1skvfHR51Zp37pfj2YY+nUQF5v9c=
 github.com/pzsp-teams/lib v0.0.0-20260105203922-9c2dbfdf6761/go.mod h1:OUTZq+jo2AAzjV5p0w7c9VVuOKiHVWxuZhdzOhjOq5s=
+github.com/pzsp-teams/lib v0.0.0-20260106211215-dfe0bf55ef1b h1:QyEmKGQ0a8g4+rapXg61L0lgsuurhIF4nOmP4KFaBSw=
+github.com/pzsp-teams/lib v0.0.0-20260106211215-dfe0bf55ef1b/go.mod h1:BQwULf+u8TtbKR0U23MlZXgm2CVcLBJn2cS5gmR7L8M=
 github.com/rivo/uniseg v0.1.0/go.mod h1:J6wj4VEh+S6ZtnVlnTBMWIodfgj8LQOQFoIToxlJtxc=
 github.com/rivo/uniseg v0.2.0/go.mod h1:J6wj4VEh+S6ZtnVlnTBMWIodfgj8LQOQFoIToxlJtxc=
 github.com/rivo/uniseg v0.4.7 h1:WUdvkW8uEhrYfLC4ZzdpI2ztxP1I582+49Oc5Mq64VQ=
