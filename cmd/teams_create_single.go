@@ -40,9 +40,9 @@ func newCreateSingleTeamCommand() *cobra.Command {
 		RunE: c.run,
 	}
 
-	cmd.Flags().StringVarP(&c.teamName, "team-name", "n", "", "Name of the team to create")
-	cmd.Flags().StringVarP(&c.description, "description", "d", "", "Description of the team")
-	cmd.Flags().StringVarP(&c.visibility, "visibility", "v", "private", "Visibility of the team (e.g., 'private', 'public')")
+	cmd.Flags().StringVarP(&c.teamName, "team-name", "", "", "Name of the team to create")
+	cmd.Flags().StringVarP(&c.description, "description", "", "", "Description of the team")
+	cmd.Flags().StringVarP(&c.visibility, "visibility", "", "private", "Visibility of the team (e.g., 'private', 'public')")
 	cmd.Flags().StringVarP(&c.file, "file", "f", "", "Path to the simplified data file (CSV, YAML, JSON, TOML)")
 	cmd.Flags().BoolVarP(&c.includeMe, "include-me", "i", false, "Include current user as a member of the team")
 	cmd.Flags().BoolVarP(&c.dryRun, "dry-run", "", false, "Perform a dry run without actually creating teams")
