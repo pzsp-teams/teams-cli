@@ -3,7 +3,6 @@ package creator
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	corecreator "github.com/pzsp-teams/cli/internal/core/creator"
 	"github.com/pzsp-teams/cli/internal/initializers"
@@ -78,25 +77,11 @@ func (tc *teamCreator) planActions(ctx context.Context, bodies []createTeamBody)
 	return corecreator.PlanActions(
 		ctx,
 		bodies,
-		tc.planActionForBody,
+		tc.createTeamAction,
 	)
 }
 
-func (tc *teamCreator) planActionForBody(ctx context.Context, body *createTeamBody) action {
-	exists, err := tc.checkTeamExists(ctx, body.DisplayName)
-	if err != nil {
-		errToShow := fmt.Errorf("failed to check existence of team %s: %w", body.DisplayName, err)
-		return staticAction(body, failedResult(errToShow, body))
-	}
-
-	if exists {
-		return staticAction(body, alreadyExistsResult(body))
-	}
-
-	return tc.createTeamAction(body)
-}
-
-func (tc *teamCreator) createTeamAction(body *createTeamBody) action {
+func (tc *teamCreator) createTeamAction(ctx context.Context, body *createTeamBody) action {
 	return action{
 		Body: *body,
 		Run: func(ctx context.Context, body createTeamBody) *TeamCreateResult {
@@ -157,19 +142,6 @@ func (tc *teamCreator) transformRequestToCreateTeamBody(data map[string]TeamData
 	return out
 }
 
-func (tc *teamCreator) checkTeamExists(ctx context.Context, displayName string) (bool, error) {
-	_, err := tc.ts.Get(ctx, displayName)
-	if err == nil {
-		return true, nil
-	}
-
-	if strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "not found") {
-		return false, nil
-	}
-
-	return false, err
-}
-
 func extractDescription(teamData TeamData) string {
 	if desc, ok := teamData["description"]; ok {
 		if s, ok := desc.(string); ok {
@@ -219,28 +191,4 @@ func logDryRunResult(result *TeamCreateResult) {
 	case corecreator.StatusFailed:
 		logger.Error("Dry run: Team creation would fail", "team", result.TeamName, "error", result.Error)
 	}
-}
-
-func failedResult(err error, body *createTeamBody) *TeamCreateResult {
-	return &TeamCreateResult{
-		TeamName:    body.DisplayName,
-		TeamID:      "",
-		Error:       err,
-		Status:      corecreator.StatusFailed,
-		Description: body.Description,
-	}
-}
-
-func alreadyExistsResult(body *createTeamBody) *TeamCreateResult {
-	return &TeamCreateResult{
-		TeamName:    body.DisplayName,
-		TeamID:      "",
-		Error:       nil,
-		Status:      corecreator.StatusAlreadyExists,
-		Description: body.Description,
-	}
-}
-
-func staticAction(body *createTeamBody, result *TeamCreateResult) action {
-	return corecreator.StaticAction(*body, *result)
 }
