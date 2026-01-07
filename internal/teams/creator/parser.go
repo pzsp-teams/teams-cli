@@ -56,27 +56,21 @@ func transformCSVRowsToTeamData(rows []map[string]string) map[string]TeamData {
 	result := make(map[string]TeamData, len(grouped))
 	for teamRef, teamRows := range grouped {
 		teamData := TeamData{
-			"members":     []string{},
-			"owners":      []string{},
-			"description": "",
+			Members:     []string{},
+			Owners:      []string{},
+			Description: "",        // Default for CSV
+			Visibility:  "private", // Default for CSV
+			IncludeMe:   false,     // Default for CSV, will be populated if present in YAML/JSON/TOML
 		}
 
-		for i, row := range teamRows {
-			if i == 0 {
-				teamData["description"] = row["description"]
-			} else if row["description"] != "" && row["description"] != teamData["description"].(string) {
-				initializers.Logger.Warn("Inconsistent description for team", "team", teamRef, "first", teamData["description"], "row", row["description"])
-			}
-
+		for _, row := range teamRows {
 			role := row["role"]
 			userRef := row["user_ref"]
 			switch role {
 			case "member":
-				members := teamData["members"].([]string)
-				teamData["members"] = append(members, userRef)
+				teamData.Members = append(teamData.Members, userRef)
 			case "owner":
-				owners := teamData["owners"].([]string)
-				teamData["owners"] = append(owners, userRef)
+				teamData.Owners = append(teamData.Owners, userRef)
 			}
 		}
 		result[teamRef] = teamData

@@ -5,14 +5,21 @@ import (
 )
 
 // TeamData represents raw team data parsed from input files (YAML/JSON/CSV).
-// Map keys include "description", "owners", and "members".
-type TeamData map[string]any
+type TeamData struct {
+	Description string   `yaml:"description" json:"description" toml:"description"`
+	Owners      []string `yaml:"owners" json:"owners" toml:"owners"`
+	Members     []string `yaml:"members" json:"members" toml:"members"`
+	Visibility  string   `yaml:"visibility" json:"visibility" toml:"visibility"`
+	IncludeMe   bool     `yaml:"includeMe" json:"includeMe" toml:"includeMe"`
+}
 
 type createTeamBody struct {
 	DisplayName string
 	Description string
 	OwnerRefs   []string
 	MemberRefs  []string
+	Visibility  string
+	IncludeMe   bool
 }
 
 // TeamCreateResult represents the outcome of a team creation attempt.
@@ -24,6 +31,7 @@ type TeamCreateResult struct {
 	MemberRefs  []string
 	OwnerRefs   []string
 	Description string
+	Visibility  string
 }
 
 type action = corecreator.Action[createTeamBody, TeamCreateResult]
