@@ -2,20 +2,20 @@
   "template-json1": {
     "description": "First JSON template team",
     "owners": [
-      "kmarsza@teamspzsp.onmicrosoft.com"
+      "kmarsza@pzsp2z1teams.onmicrosoft.com"
     ],
     "members": [
-      "ddsouza@teamspzsp.onmicrosoft.com"
+      "ddsouza@pzsp2z1teams.onmicrosoft.com"
     ]
   },
   "template-json2": {
     "description": "Second JSON template team",
     "visibility": "public",
     "owners": [
-      "msuski@teamspzsp.onmicrosoft.com"
+      "msuski@pzsp2z1teams.onmicrosoft.com"
     ],
     "members": [
-      "kmarsza@teamspzsp.onmicrosoft.com"
+      "kmarsza@pzsp2z1teams.onmicrosoft.com"
     ]
   }
 }
