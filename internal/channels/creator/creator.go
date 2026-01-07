@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	corecreator "github.com/pzsp-teams/cli/internal/core/creator"
 	"github.com/pzsp-teams/cli/internal/initializers"
 	"github.com/pzsp-teams/lib/channels"
 	"github.com/pzsp-teams/lib/teams"
@@ -58,55 +59,53 @@ func (cc *channelCreator) Create(ctx context.Context, teamRef string, request ma
 	return results
 }
 
-func (cc *channelCreator) executeActions(ctx context.Context, actions []*action) []CreateResult {
+func (cc *channelCreator) executeActions(ctx context.Context, actions []action) []CreateResult {
+	return corecreator.ExecuteActions(
+		ctx,
+		actions,
+		cc.nilResultFactory,
+		cc.logExecutionResultWrapper,
+	)
+}
+
+func (cc *channelCreator) nilResultFactory(act corecreator.Action[createChannelBody, CreateResult]) CreateResult {
 	logger := initializers.Logger
-	results := make([]CreateResult, 0, len(actions))
-	for _, act := range actions {
-		result := act.run(ctx, act.createChannelBody)
-		if result == nil {
-			logger.Error("Action returned nil result", "channel", act.ChannelRef, "team", act.TeamRef)
-			result = &CreateResult{
-				ChannelName: act.ChannelRef,
-				ChannelID:   "",
-				Error:       fmt.Errorf("action returned nil result"),
-				Status:      StatusFailed,
-			}
-		}
-		logExecutionResult(result, act.TeamRef)
-		results = append(results, *result)
+	logger.Error("Action returned nil result", "channel", act.Body.ChannelRef, "team", act.Body.TeamRef)
+	return CreateResult{
+		ChannelName: act.Body.ChannelRef,
+		ChannelID:   "",
+		Error:       fmt.Errorf("action returned nil result"),
+		Status:      StatusFailed,
 	}
-	return results
 }
 
-func (cc *channelCreator) dryRunActions(actions []*action) []CreateResult {
-	results := make([]CreateResult, 0, len(actions))
-	for _, act := range actions {
-		res := act.result
-		if res == nil {
-			initializers.Logger.Error("Action has nil result in dry run", "channel", act.ChannelRef, "team", act.TeamRef)
-			res = &CreateResult{
-				ChannelName: act.ChannelRef,
-				ChannelID:   "",
-				Error:       fmt.Errorf("action has nil result in dry run"),
-				Status:      StatusFailed,
-			}
-		}
-		results = append(results, *res)
-		logDryRunResult(res, act.TeamRef)
-	}
-	return results
+func (cc *channelCreator) logExecutionResultWrapper(result *CreateResult) {
+	logExecutionResult(result, "")
 }
 
-func (cc *channelCreator) planActions(ctx context.Context, bodies []createChannelBody, ensureMembersInChannel bool, teamSnap *teamEnsureSnapshot) []*action {
-	actions := make([]*action, 0, len(bodies))
-	for i := range bodies {
-		act := cc.planActionForBody(ctx, &bodies[i], ensureMembersInChannel, teamSnap)
-		actions = append(actions, act)
-	}
-	return actions
+func (cc *channelCreator) dryRunActions(actions []action) []CreateResult {
+	return corecreator.DryRunActions(
+		actions,
+		cc.nilResultFactory,
+		cc.logDryRunResultWrapper,
+	)
 }
 
-func (cc *channelCreator) planActionForBody(ctx context.Context, body *createChannelBody, ensureMembers bool, teamSnap *teamEnsureSnapshot) *action {
+func (cc *channelCreator) logDryRunResultWrapper(result *CreateResult) {
+	logDryRunResult(result, "")
+}
+
+func (cc *channelCreator) planActions(ctx context.Context, bodies []createChannelBody, ensureMembersInChannel bool, teamSnap *teamEnsureSnapshot) []action {
+	return corecreator.PlanActions(
+		ctx,
+		bodies,
+		func(ctx context.Context, body *createChannelBody) corecreator.Action[createChannelBody, CreateResult] {
+			return cc.planActionForBody(ctx, body, ensureMembersInChannel, teamSnap)
+		},
+	)
+}
+
+func (cc *channelCreator) planActionForBody(ctx context.Context, body *createChannelBody, ensureMembers bool, teamSnap *teamEnsureSnapshot) action {
 	exists, err := cc.checkChannelExists(ctx, body.TeamRef, body.ChannelRef)
 	if err != nil {
 		errToShow := fmt.Errorf("failed to check existence of channel %s in team %s: %w", body.ChannelRef, body.TeamRef, err)
@@ -127,10 +126,10 @@ func (cc *channelCreator) planActionForBody(ctx context.Context, body *createCha
 	return cc.createChannelAction(body)
 }
 
-func (cc *channelCreator) createChannelAction(body *createChannelBody) *action {
-	return &action{
-		createChannelBody: *body,
-		run: func(ctx context.Context, body createChannelBody) *CreateResult {
+func (cc *channelCreator) createChannelAction(body *createChannelBody) action {
+	return action{
+		Body: *body,
+		Run: func(ctx context.Context, body createChannelBody) *CreateResult {
 			channel, err := cc.chans.CreatePrivateChannel(ctx, body.TeamRef, body.ChannelRef, body.MemberRefs, body.OwnerRefs)
 			if err != nil {
 				err = fmt.Errorf("failed to create channel %s in team %s: %w", body.ChannelRef, body.TeamRef, err)
@@ -150,7 +149,7 @@ func (cc *channelCreator) createChannelAction(body *createChannelBody) *action {
 				OwnerRefs:   body.OwnerRefs,
 			}
 		},
-		result: &CreateResult{
+		Result: &CreateResult{
 			ChannelName: body.ChannelRef,
 			ChannelID:   "",
 			Error:       nil,
@@ -169,7 +168,7 @@ func (cc *channelCreator) ensureMembersInTeamSnapshot(ctx context.Context, teamR
 		all = append(all, bodies[i].MemberRefs...)
 		all = append(all, bodies[i].OwnerRefs...)
 	}
-	uniqueRefs := uniqueNonEmpty(all)
+	uniqueRefs := corecreator.UniqueNonEmpty(all)
 
 	snapshot := &teamEnsureSnapshot{
 		planned: uniqueRefs,
@@ -198,10 +197,10 @@ func (cc *channelCreator) ensureMembersInTeamSnapshot(ctx context.Context, teamR
 	return snapshot
 }
 
-func (cc *channelCreator) ensureMembersAction(body *createChannelBody, teamSnap *teamEnsureSnapshot) *action {
-	return &action{
-		createChannelBody: *body,
-		run: func(ctx context.Context, body createChannelBody) *CreateResult {
+func (cc *channelCreator) ensureMembersAction(body *createChannelBody, teamSnap *teamEnsureSnapshot) action {
+	return action{
+		Body: *body,
+		Run: func(ctx context.Context, body createChannelBody) *CreateResult {
 			ensureMembersResult := cc.ensureMembersInChannel(ctx, &body, teamSnap)
 			if len(ensureMembersResult.MembersRefsFailed) > 0 || len(ensureMembersResult.OwnerRefsFailed) > 0 {
 				return &CreateResult{
@@ -222,7 +221,7 @@ func (cc *channelCreator) ensureMembersAction(body *createChannelBody, teamSnap 
 				OwnerRefs:   ensureMembersResult.OwnerRefsEnsured,
 			}
 		},
-		result: &CreateResult{
+		Result: &CreateResult{
 			ChannelName: body.ChannelRef,
 			ChannelID:   "",
 			Error:       nil,
@@ -281,14 +280,8 @@ func alreadyExistsResult(body *createChannelBody) *CreateResult {
 	}
 }
 
-func staticAction(body *createChannelBody, result *CreateResult) *action {
-	return &action{
-		createChannelBody: *body,
-		result:            result,
-		run: func(ctx context.Context, body createChannelBody) *CreateResult {
-			return result
-		},
-	}
+func staticAction(body *createChannelBody, result *CreateResult) action {
+	return corecreator.StaticAction(*body, *result)
 }
 
 func (cc *channelCreator) transformRequestToCreateChannelBody(teamRef string, data map[string]ChannelData) []createChannelBody {

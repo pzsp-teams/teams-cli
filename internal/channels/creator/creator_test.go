@@ -483,13 +483,13 @@ func TestChannelCreator_executeActions_handlesNilReturnedResult(t *testing.T) {
 	t.Parallel()
 
 	cc := &channelCreator{}
-	actions := []*action{
+	actions := []action{
 		{
-			createChannelBody: createChannelBody{
+			Body: createChannelBody{
 				TeamRef:    "TeamA",
 				ChannelRef: "ChanA",
 			},
-			run: func(ctx context.Context, body createChannelBody) *CreateResult {
+			Run: func(ctx context.Context, body createChannelBody) *CreateResult {
 				return nil
 			},
 		},
@@ -509,14 +509,14 @@ func TestChannelCreator_dryRunActions_handlesNilStaticResult(t *testing.T) {
 	t.Parallel()
 
 	cc := &channelCreator{}
-	actions := []*action{
+	actions := []action{
 		{
-			createChannelBody: createChannelBody{
+			Body: createChannelBody{
 				TeamRef:    "TeamA",
 				ChannelRef: "ChanA",
 			},
-			result: nil,
-			run: func(ctx context.Context, body createChannelBody) *CreateResult {
+			Result: nil,
+			Run: func(ctx context.Context, body createChannelBody) *CreateResult {
 				return nil
 			},
 		},
@@ -529,7 +529,7 @@ func TestChannelCreator_dryRunActions_handlesNilStaticResult(t *testing.T) {
 	assert.Equal(t, "", got[0].ChannelID)
 	assert.Equal(t, StatusFailed, got[0].Status)
 	require.Error(t, got[0].Error)
-	assert.Contains(t, got[0].Error.Error(), "action has nil result in dry run")
+	assert.Contains(t, got[0].Error.Error(), "action returned nil result")
 }
 
 func Test_failedResult(t *testing.T) {
@@ -582,11 +582,11 @@ func Test_staticAction(t *testing.T) {
 
 	act := staticAction(body, res)
 	require.NotNil(t, act)
-	require.NotNil(t, act.run)
-	assert.Same(t, res, act.result)
+	require.NotNil(t, act.Run)
+	assert.Equal(t, res, act.Result)
 
-	got := act.run(context.Background(), act.createChannelBody)
-	assert.Same(t, res, got)
+	got := act.Run(context.Background(), act.Body)
+	assert.Equal(t, res, got)
 }
 
 func Test_channelCreator_transformRequestToCreateChannelBody(t *testing.T) {
@@ -872,12 +872,12 @@ func Test_channelCreator_planActionForBody_branches(t *testing.T) {
 
 			act := cc.planActionForBody(context.Background(), body, tt.ensureMembers, tt.teamSnap)
 			require.NotNil(t, act)
-			require.NotNil(t, act.result)
+			require.NotNil(t, act.Result)
 
-			assert.Equal(t, tt.wantStatus, act.result.Status)
+			assert.Equal(t, tt.wantStatus, act.Result.Status)
 			if tt.wantErrContains != "" {
-				require.Error(t, act.result.Error)
-				assert.Contains(t, act.result.Error.Error(), tt.wantErrContains)
+				require.Error(t, act.Result.Error)
+				assert.Contains(t, act.Result.Error.Error(), tt.wantErrContains)
 			}
 		})
 	}

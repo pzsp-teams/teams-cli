@@ -3,6 +3,7 @@ package teams
 import (
 	"context"
 
+	"github.com/pzsp-teams/cli/internal/teams/creator"
 	"github.com/pzsp-teams/lib/models"
 	"github.com/pzsp-teams/lib/teams"
 )
@@ -11,12 +12,14 @@ import (
 func NewClient(teamsService teams.Service) *Client {
 	return &Client{
 		teamsService,
+		creator.NewTeamCreator(teamsService),
 	}
 }
 
 // Client provides all team-related operations
 type Client struct {
 	teamsService teams.Service
+	teamCreator  creator.TeamCreator
 }
 
 // Unarchive restores an archived team
@@ -34,11 +37,6 @@ func (c *Client) Delete(ctx context.Context, teamRef string) error {
 	return c.teamsService.Delete(ctx, teamRef)
 }
 
-// CreateFromTemplate creates a team from a template
-// func (c *Client) CreateFromTemplate(ctx context.Context, displayName, description string, owners []string) (string, error) {
-// 	return c.teamsService.CreateFromTemplate(ctx, displayName, description, owners)
-// }
-
 // Get retrieves a team
 func (c *Client) Get(ctx context.Context, teamRef string) (*models.Team, error) {
 	return c.teamsService.Get(ctx, teamRef)
@@ -47,4 +45,9 @@ func (c *Client) Get(ctx context.Context, teamRef string) (*models.Team, error) 
 // ListMyJoined lists teams the current user has joined
 func (c *Client) ListMyJoined(ctx context.Context) ([]*models.Team, error) {
 	return c.teamsService.ListMyJoined(ctx)
+}
+
+// Create creates teams based on the provided request data
+func (c *Client) Create(ctx context.Context, request map[string]creator.TeamData, dryRun bool) []creator.TeamCreateResult {
+	return c.teamCreator.Create(ctx, request, dryRun)
 }
