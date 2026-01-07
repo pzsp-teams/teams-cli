@@ -10,6 +10,7 @@
   },
   "template-json2": {
     "description": "Second JSON template team",
+    "visibility": "public",
     "owners": [
       "msuski@teamspzsp.onmicrosoft.com"
     ],
