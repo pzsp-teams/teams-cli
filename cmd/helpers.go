@@ -20,6 +20,10 @@ var (
 	clientInitError     error
 )
 
+func getFileExtension(filename string) string {
+	return strings.TrimPrefix(filepath.Ext(filename), ".")
+}
+
 func getDecodeFunc(extension string) (file_readers.DecodeFunc, error) {
 	return file_readers.GetDecoderByExtension(extension)
 }
