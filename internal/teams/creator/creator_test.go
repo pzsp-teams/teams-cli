@@ -38,10 +38,7 @@ func sortedKeys(m map[string]TeamCreateResult) []string {
 	return keys
 }
 
-var (
-	errNotFound = errors.New("[CODE: 404] not found")
-	errBoom     = errors.New("boom")
-)
+var errBoom = errors.New("boom")
 
 type wantResult struct {
 	status      corecreator.Status
@@ -52,6 +49,7 @@ type wantResult struct {
 	members     []string
 	owners      []string
 	description string
+	visibility  string
 }
 
 func assertResult(t *testing.T, gotMap map[string]TeamCreateResult, name string, w *wantResult) {
@@ -84,6 +82,9 @@ func assertResult(t *testing.T, gotMap map[string]TeamCreateResult, name string,
 	if w.description != "" {
 		assert.Equal(t, w.description, r.Description)
 	}
+	if w.visibility != "" {
+		assert.Equal(t, w.visibility, r.Visibility)
+	}
 }
 
 func TestTeamCreator_Create_dryRun_teamMissing_wouldCreate(t *testing.T) {
@@ -93,17 +94,12 @@ func TestTeamCreator_Create_dryRun_teamMissing_wouldCreate(t *testing.T) {
 	ctrl, ts := newMocks(t)
 	defer ctrl.Finish()
 
-	ts.EXPECT().
-		Get(gomock.Any(), "Team Alpha").
-		Return(nil, errNotFound).
-		Times(1)
-
 	sut := NewTeamCreator(ts)
 	got := sut.Create(ctx, map[string]TeamData{
 		"Team Alpha": {
-			"description": "Alpha team description",
-			"members":     []string{"u1"},
-			"owners":      []string{"o1"},
+			Description: "Alpha team description",
+			Members:     []string{"u1"},
+			Owners:      []string{"o1"},
 		},
 	}, true)
 
@@ -115,6 +111,7 @@ func TestTeamCreator_Create_dryRun_teamMissing_wouldCreate(t *testing.T) {
 		members:     []string{"u1"},
 		owners:      []string{"o1"},
 		description: "Alpha team description",
+		visibility:  "private",
 	})
 }
 
@@ -126,11 +123,6 @@ func TestTeamCreator_Create_teamMissing_createsTeam(t *testing.T) {
 	defer ctrl.Finish()
 
 	ts.EXPECT().
-		Get(gomock.Any(), "Team Alpha").
-		Return(nil, errNotFound).
-		Times(1)
-
-	ts.EXPECT().
 		CreateFromTemplate(gomock.Any(), "Team Alpha", "Alpha description", []string{"o1"}, []string{"u1"}, "private", false).
 		Return("team-id-123", nil).
 		Times(1)
@@ -138,9 +130,9 @@ func TestTeamCreator_Create_teamMissing_createsTeam(t *testing.T) {
 	sut := NewTeamCreator(ts)
 	got := sut.Create(ctx, map[string]TeamData{
 		"Team Alpha": {
-			"description": "Alpha description",
-			"members":     []string{"u1"},
-			"owners":      []string{"o1"},
+			Description: "Alpha description",
+			Members:     []string{"u1"},
+			Owners:      []string{"o1"},
 		},
 	}, false)
 
@@ -153,96 +145,7 @@ func TestTeamCreator_Create_teamMissing_createsTeam(t *testing.T) {
 		members:     []string{"u1"},
 		owners:      []string{"o1"},
 		description: "Alpha description",
-	})
-}
-
-func TestTeamCreator_Create_teamExists_skipsCreation(t *testing.T) {
-	t.Parallel()
-
-	ctx := context.Background()
-	ctrl, ts := newMocks(t)
-	defer ctrl.Finish()
-
-	ts.EXPECT().
-		Get(gomock.Any(), "Team Alpha").
-		Return(nil, nil).
-		Times(1)
-
-	sut := NewTeamCreator(ts)
-	got := sut.Create(ctx, map[string]TeamData{
-		"Team Alpha": {
-			"description": "Alpha description",
-			"members":     []string{"u1"},
-			"owners":      []string{"o1"},
-		},
-	}, false)
-
-	require.Len(t, got, 1)
-	gotMap := resultsByName(got)
-	assertResult(t, gotMap, "Team Alpha", &wantResult{
-		status:      corecreator.StatusAlreadyExists,
-		errNil:      true,
-		description: "Alpha description",
-	})
-}
-
-func TestTeamCreator_Create_dryRun_teamExists_returnsAlreadyExists(t *testing.T) {
-	t.Parallel()
-
-	ctx := context.Background()
-	ctrl, ts := newMocks(t)
-	defer ctrl.Finish()
-
-	ts.EXPECT().
-		Get(gomock.Any(), "Team Alpha").
-		Return(nil, nil).
-		Times(1)
-
-	sut := NewTeamCreator(ts)
-	got := sut.Create(ctx, map[string]TeamData{
-		"Team Alpha": {
-			"description": "Alpha description",
-			"members":     []string{"u1"},
-			"owners":      []string{"o1"},
-		},
-	}, true)
-
-	require.Len(t, got, 1)
-	gotMap := resultsByName(got)
-	assertResult(t, gotMap, "Team Alpha", &wantResult{
-		status: corecreator.StatusAlreadyExists,
-		errNil: true,
-	})
-}
-
-func TestTeamCreator_Create_existenceCheckFails_returnsFailed(t *testing.T) {
-	t.Parallel()
-
-	ctx := context.Background()
-	ctrl, ts := newMocks(t)
-	defer ctrl.Finish()
-
-	ts.EXPECT().
-		Get(gomock.Any(), "Team Alpha").
-		Return(nil, errBoom).
-		Times(1)
-
-	sut := NewTeamCreator(ts)
-	got := sut.Create(ctx, map[string]TeamData{
-		"Team Alpha": {
-			"description": "Alpha description",
-			"members":     []string{"u1"},
-			"owners":      []string{"o1"},
-		},
-	}, false)
-
-	require.Len(t, got, 1)
-	gotMap := resultsByName(got)
-	assertResult(t, gotMap, "Team Alpha", &wantResult{
-		status:      corecreator.StatusFailed,
-		errNil:      false,
-		errIs:       errBoom,
-		errContains: "failed to check existence",
+		visibility:  "private",
 	})
 }
 
@@ -254,11 +157,6 @@ func TestTeamCreator_Create_createFromTemplateFails_returnsFailed(t *testing.T) 
 	defer ctrl.Finish()
 
 	ts.EXPECT().
-		Get(gomock.Any(), "Team Alpha").
-		Return(nil, errNotFound).
-		Times(1)
-
-	ts.EXPECT().
 		CreateFromTemplate(gomock.Any(), "Team Alpha", "Alpha description", []string{"o1"}, []string{"u1"}, "private", false).
 		Return("", errBoom).
 		Times(1)
@@ -266,9 +164,9 @@ func TestTeamCreator_Create_createFromTemplateFails_returnsFailed(t *testing.T) 
 	sut := NewTeamCreator(ts)
 	got := sut.Create(ctx, map[string]TeamData{
 		"Team Alpha": {
-			"description": "Alpha description",
-			"members":     []string{"u1"},
-			"owners":      []string{"o1"},
+			Description: "Alpha description",
+			Members:     []string{"u1"},
+			Owners:      []string{"o1"},
 		},
 	}, false)
 
@@ -279,6 +177,8 @@ func TestTeamCreator_Create_createFromTemplateFails_returnsFailed(t *testing.T) 
 		errNil:      false,
 		errIs:       errBoom,
 		errContains: "failed to create team",
+		description: "Alpha description",
+		visibility:  "private",
 	})
 }
 
@@ -288,10 +188,6 @@ func TestTeamCreator_Create_multipleTeams_processesAll(t *testing.T) {
 	ctx := context.Background()
 	ctrl, ts := newMocks(t)
 	defer ctrl.Finish()
-
-	ts.EXPECT().Get(gomock.Any(), "Team Alpha").Return(nil, errNotFound)
-	ts.EXPECT().Get(gomock.Any(), "Team Beta").Return(nil, nil)
-	ts.EXPECT().Get(gomock.Any(), "Team Gamma").Return(nil, errNotFound)
 
 	ts.EXPECT().
 		CreateFromTemplate(gomock.Any(), "Team Alpha", "Alpha desc", []string{"o1"}, []string{"u1"}, "private", false).
@@ -304,23 +200,18 @@ func TestTeamCreator_Create_multipleTeams_processesAll(t *testing.T) {
 	sut := NewTeamCreator(ts)
 	got := sut.Create(ctx, map[string]TeamData{
 		"Team Alpha": {
-			"description": "Alpha desc",
-			"members":     []string{"u1"},
-			"owners":      []string{"o1"},
-		},
-		"Team Beta": {
-			"description": "Beta desc",
-			"members":     []string{"u2"},
-			"owners":      []string{"o2"},
+			Description: "Alpha desc",
+			Members:     []string{"u1"},
+			Owners:      []string{"o1"},
 		},
 		"Team Gamma": {
-			"description": "Gamma desc",
-			"members":     []string{},
-			"owners":      []string{"o3"},
+			Description: "Gamma desc",
+			Members:     []string{},
+			Owners:      []string{"o3"},
 		},
 	}, false)
 
-	require.Len(t, got, 3)
+	require.Len(t, got, 2)
 	gotMap := resultsByName(got)
 
 	assertResult(t, gotMap, "Team Alpha", &wantResult{
@@ -330,11 +221,7 @@ func TestTeamCreator_Create_multipleTeams_processesAll(t *testing.T) {
 		members:     []string{"u1"},
 		owners:      []string{"o1"},
 		description: "Alpha desc",
-	})
-
-	assertResult(t, gotMap, "Team Beta", &wantResult{
-		status: corecreator.StatusAlreadyExists,
-		errNil: true,
+		visibility:  "private",
 	})
 
 	assertResult(t, gotMap, "Team Gamma", &wantResult{
@@ -344,6 +231,7 @@ func TestTeamCreator_Create_multipleTeams_processesAll(t *testing.T) {
 		members:     []string{},
 		owners:      []string{"o3"},
 		description: "Gamma desc",
+		visibility:  "private",
 	})
 }
 
@@ -367,7 +255,6 @@ func TestTeamCreator_Create_teamWithoutDescription_usesEmptyString(t *testing.T)
 	ctrl, ts := newMocks(t)
 	defer ctrl.Finish()
 
-	ts.EXPECT().Get(gomock.Any(), "Team Alpha").Return(nil, errNotFound)
 	ts.EXPECT().
 		CreateFromTemplate(gomock.Any(), "Team Alpha", "", []string{"o1"}, []string{"u1"}, "private", false).
 		Return("team-id", nil)
@@ -375,8 +262,8 @@ func TestTeamCreator_Create_teamWithoutDescription_usesEmptyString(t *testing.T)
 	sut := NewTeamCreator(ts)
 	got := sut.Create(ctx, map[string]TeamData{
 		"Team Alpha": {
-			"members": []string{"u1"},
-			"owners":  []string{"o1"},
+			Members: []string{"u1"},
+			Owners:  []string{"o1"},
 		},
 	}, false)
 
@@ -387,47 +274,6 @@ func TestTeamCreator_Create_teamWithoutDescription_usesEmptyString(t *testing.T)
 		teamID:      "team-id",
 		errNil:      true,
 		description: "",
+		visibility:  "private",
 	})
-}
-
-func TestExtractDescription_returnsStringValue(t *testing.T) {
-	teamData := TeamData{"description": "My description"}
-	got := extractDescription(teamData)
-	require.Equal(t, "My description", got)
-}
-
-func TestExtractDescription_missingKey_returnsEmpty(t *testing.T) {
-	teamData := TeamData{"other": "value"}
-	got := extractDescription(teamData)
-	require.Equal(t, "", got)
-}
-
-func TestExtractDescription_nonStringValue_returnsEmpty(t *testing.T) {
-	teamData := TeamData{"description": 123}
-	got := extractDescription(teamData)
-	require.Equal(t, "", got)
-}
-
-func TestExtractStringSlice_interfaceSlice(t *testing.T) {
-	teamData := TeamData{"members": []any{"u1", "u2"}}
-	got := extractStringSlice(teamData, "members")
-	require.Equal(t, []string{"u1", "u2"}, got)
-}
-
-func TestExtractStringSlice_stringSlice(t *testing.T) {
-	teamData := TeamData{"members": []string{"u1", "u2"}}
-	got := extractStringSlice(teamData, "members")
-	require.Equal(t, []string{"u1", "u2"}, got)
-}
-
-func TestExtractStringSlice_missingKey_returnsEmpty(t *testing.T) {
-	teamData := TeamData{"other": []string{"u1"}}
-	got := extractStringSlice(teamData, "members")
-	require.Equal(t, []string{}, got)
-}
-
-func TestExtractStringSlice_nonSliceValue_returnsEmpty(t *testing.T) {
-	teamData := TeamData{"members": "not a slice"}
-	got := extractStringSlice(teamData, "members")
-	require.Equal(t, []string{}, got)
 }

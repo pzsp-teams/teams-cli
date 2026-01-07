@@ -91,8 +91,8 @@ func (tc *teamCreator) createTeamAction(ctx context.Context, body *createTeamBod
 				body.Description,
 				body.OwnerRefs,
 				body.MemberRefs,
-				"private",
-				false,
+				body.Visibility,
+				body.IncludeMe,
 			)
 			if err != nil {
 				err = fmt.Errorf("failed to create team %s: %w", body.DisplayName, err)
@@ -102,6 +102,7 @@ func (tc *teamCreator) createTeamAction(ctx context.Context, body *createTeamBod
 					Error:       err,
 					Status:      corecreator.StatusFailed,
 					Description: body.Description,
+					Visibility:  body.Visibility,
 				}
 			}
 			return &TeamCreateResult{
@@ -112,6 +113,7 @@ func (tc *teamCreator) createTeamAction(ctx context.Context, body *createTeamBod
 				MemberRefs:  body.MemberRefs,
 				OwnerRefs:   body.OwnerRefs,
 				Description: body.Description,
+				Visibility:  body.Visibility,
 			}
 		},
 		Result: &TeamCreateResult{
@@ -122,6 +124,7 @@ func (tc *teamCreator) createTeamAction(ctx context.Context, body *createTeamBod
 			MemberRefs:  body.MemberRefs,
 			OwnerRefs:   body.OwnerRefs,
 			Description: body.Description,
+			Visibility:  body.Visibility,
 		},
 	}
 }
@@ -130,11 +133,17 @@ func (tc *teamCreator) transformRequestToCreateTeamBody(data map[string]TeamData
 	out := make([]createTeamBody, 0, len(data))
 
 	for displayName, teamData := range data {
+		visibility := teamData.Visibility
+		if visibility == "" {
+			visibility = "private"
+		}
 		body := createTeamBody{
 			DisplayName: displayName,
-			Description: extractDescription(teamData),
-			MemberRefs:  extractStringSlice(teamData, "members"),
-			OwnerRefs:   extractStringSlice(teamData, "owners"),
+			Description: teamData.Description,
+			MemberRefs:  teamData.Members,
+			OwnerRefs:   teamData.Owners,
+			Visibility:  visibility,
+			IncludeMe:   teamData.IncludeMe,
 		}
 		out = append(out, body)
 	}
@@ -142,40 +151,11 @@ func (tc *teamCreator) transformRequestToCreateTeamBody(data map[string]TeamData
 	return out
 }
 
-func extractDescription(teamData TeamData) string {
-	if desc, ok := teamData["description"]; ok {
-		if s, ok := desc.(string); ok {
-			return s
-		}
-	}
-	return ""
-}
-
-func extractStringSlice(teamData TeamData, key string) []string {
-	if val, ok := teamData[key]; ok {
-		if slice, ok := val.([]any); ok {
-			result := make([]string, 0, len(slice))
-			for _, item := range slice {
-				if s, ok := item.(string); ok {
-					result = append(result, s)
-				}
-			}
-			return result
-		}
-		if slice, ok := val.([]string); ok {
-			return slice
-		}
-	}
-	return []string{}
-}
-
 func logExecutionResult(result *TeamCreateResult) {
 	logger := initializers.Logger
 	switch result.Status {
 	case corecreator.StatusCreated:
 		logger.Info("Team created successfully", "team", result.TeamName, "team_id", result.TeamID, "status", result.Status, "members_refs", result.MemberRefs, "owner_refs", result.OwnerRefs)
-	case corecreator.StatusAlreadyExists:
-		logger.Info("Team already exists", "team", result.TeamName, "status", result.Status)
 	case corecreator.StatusFailed:
 		logger.Error("Team operation failed", "team", result.TeamName, "error", result.Error, "status", result.Status)
 	}
@@ -186,8 +166,6 @@ func logDryRunResult(result *TeamCreateResult) {
 	switch result.Status {
 	case corecreator.StatusWouldCreate:
 		logger.Info("Dry run: Team would be created", "team", result.TeamName, "members_refs", result.MemberRefs, "owner_refs", result.OwnerRefs)
-	case corecreator.StatusAlreadyExists:
-		logger.Info("Dry run: Team already exists", "team", result.TeamName)
 	case corecreator.StatusFailed:
 		logger.Error("Dry run: Team creation would fail", "team", result.TeamName, "error", result.Error)
 	}
