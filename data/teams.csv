@@ -1,0 +1,5 @@
+team_ref,description,role,user_ref
+template-csv1,First CSV template team,owner,kmarsza@pzsp2z1teams.onmicrosoft.com
+template-csv1,First CSV template team,member,ddsouza@pzsp2z1teams.onmicrosoft.com
+template-csv2,Second CSV template team,owner,msuski@pzsp2z1teams.onmicrosoft.com
+template-csv2,Second CSV template team,member,kmarsza@pzsp2z1teams.onmicrosoft.com

@@ -1,0 +1,20 @@
+{
+  "template-json1": {
+    "description": "First JSON template team",
+    "owners": [
+      "kmarsza@teamspzsp.onmicrosoft.com"
+    ],
+    "members": [
+      "ddsouza@teamspzsp.onmicrosoft.com"
+    ]
+  },
+  "template-json2": {
+    "description": "Second JSON template team",
+    "owners": [
+      "msuski@teamspzsp.onmicrosoft.com"
+    ],
+    "members": [
+      "kmarsza@teamspzsp.onmicrosoft.com"
+    ]
+  }
+}
