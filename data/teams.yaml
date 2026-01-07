@@ -7,6 +7,7 @@ template-yaml1:
 
 template-yaml2:
   description: "Second YAML template team"
+  visibility: "public"
   owners:
     - msuski@teamspzsp.onmicrosoft.com
     - kmarsza@teamspzsp.onmicrosoft.com
