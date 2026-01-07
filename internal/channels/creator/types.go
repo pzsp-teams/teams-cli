@@ -1,6 +1,8 @@
 package creator
 
-import "context"
+import (
+	corecreator "github.com/pzsp-teams/cli/internal/core/creator"
+)
 
 // ChannelData represents lists of members and owners for new channels
 type ChannelData map[string][]string
@@ -13,17 +15,17 @@ type createChannelBody struct {
 }
 
 // Status represents the result status of a channel creation attempt
-type Status string
+type Status = corecreator.Status
 
 // Possible statuses for channel operations
 const (
-	StatusCreated            Status = "Created"
-	StatusWouldCreate        Status = "WouldCreate"
-	StatusAlreadyExists      Status = "AlreadyExists"
-	StatusMembersEnsured     Status = "MembersEnsured"
-	StatusWouldEnsureMembers Status = "WouldEnsureMembers"
-	StatusFailed             Status = "Failed"
-	StatusPartiallyEnsured   Status = "PartiallyEnsured"
+	StatusCreated            = corecreator.StatusCreated
+	StatusWouldCreate        = corecreator.StatusWouldCreate
+	StatusAlreadyExists      = corecreator.StatusAlreadyExists
+	StatusMembersEnsured     = corecreator.StatusMembersEnsured
+	StatusWouldEnsureMembers = corecreator.StatusWouldEnsureMembers
+	StatusFailed             = corecreator.StatusFailed
+	StatusPartiallyEnsured   = corecreator.StatusPartiallyEnsured
 )
 
 // CreateResult includes the result of a channel creation attempt
@@ -43,8 +45,4 @@ type ensureMembersResult struct {
 	OwnerRefsFailed    []string
 }
 
-type action struct {
-	createChannelBody
-	run    func(ctx context.Context, body createChannelBody) *CreateResult
-	result *CreateResult
-}
+type action = corecreator.Action[createChannelBody, CreateResult]

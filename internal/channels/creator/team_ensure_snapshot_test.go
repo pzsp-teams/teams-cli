@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	corecreator "github.com/pzsp-teams/cli/internal/core/creator"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -137,7 +138,7 @@ func Test_uniqueNonEmpty(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := uniqueNonEmpty(tt.in)
+			got := corecreator.UniqueNonEmpty(tt.in)
 
 			assert.Equal(t, tt.want, got)
 		})
