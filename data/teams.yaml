@@ -1,0 +1,13 @@
+template-yaml1:
+  description: "First YAML template team"
+  owners:
+    - kmarsza@teamspzsp.onmicrosoft.com
+  members:
+    - ddsouza@teamspzsp.onmicrosoft.com
+
+template-yaml2:
+  description: "Second YAML template team"
+  owners:
+    - msuski@teamspzsp.onmicrosoft.com
+    - kmarsza@teamspzsp.onmicrosoft.com
+  members: []
