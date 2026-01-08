@@ -6,6 +6,8 @@ import (
 
 	"github.com/spf13/cobra"
 
+	chatsretriever "github.com/pzsp-teams/cli/internal/chats/retriever"
+	"github.com/pzsp-teams/cli/internal/formatters"
 	"github.com/pzsp-teams/cli/internal/initializers"
 )
 
@@ -32,16 +34,24 @@ Examples:
 var (
 	chatsMessagesStartTime string
 	chatsMessagesEndTime   string
+	chatMessagesFormat     formatFlags
 )
 
 func init() {
 	chatsMessagesGetCmd.Flags().StringVar(&chatsMessagesStartTime, "start", "", "Start time (optional, defaults to 24h ago)")
 	chatsMessagesGetCmd.Flags().StringVar(&chatsMessagesEndTime, "end", "", "End time (optional, defaults to now)")
+	chatsMessagesGetCmd.Flags().BoolVar(&chatMessagesFormat.Plain, "plain", false, "Use plain format")
+	chatsMessagesGetCmd.Flags().BoolVar(&chatMessagesFormat.MarkDown, "markdown", false, "Use Markdown format")
+	chatsMessagesGetCmd.MarkFlagsMutuallyExclusive("plain", "markdown")
 }
 
 func runChatsMessagesGet(cmd *cobra.Command, args []string) error {
 	log := initializers.Logger
 	ctx := context.TODO()
+	formatter, err := chatMessagesFormat.getFormatter()
+	if err != nil {
+		return err
+	}
 
 	timeRange, err := ParseTimeRange(chatsMessagesStartTime, chatsMessagesEndTime)
 	if err != nil {

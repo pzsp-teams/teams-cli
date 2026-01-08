@@ -6,6 +6,8 @@ import (
 
 	"github.com/spf13/cobra"
 
+	channelsretriever "github.com/pzsp-teams/cli/internal/channels/retriever"
+	"github.com/pzsp-teams/cli/internal/formatters"
 	"github.com/pzsp-teams/cli/internal/initializers"
 )
 
@@ -32,16 +34,24 @@ Examples:
 var (
 	channelsMessagesStartTime string
 	channelsMessagesEndTime   string
+	channelMessagesFormat     formatFlags
 )
 
 func init() {
 	channelsMessagesGetCmd.Flags().StringVar(&channelsMessagesStartTime, "start", "", "Start time (optional, defaults to 24h ago)")
 	channelsMessagesGetCmd.Flags().StringVar(&channelsMessagesEndTime, "end", "", "End time (optional, defaults to now)")
+	channelsMessagesGetCmd.Flags().BoolVar(&channelMessagesFormat.Plain, "plain", false, "Use plain format")
+	channelsMessagesGetCmd.Flags().BoolVar(&channelMessagesFormat.MarkDown, "markdown", false, "Use Markdown format")
+	channelsMessagesGetCmd.MarkFlagsMutuallyExclusive("plain", "markdown")
 }
 
 func runChannelsMessagesGet(cmd *cobra.Command, args []string) error {
 	log := initializers.Logger
 	ctx := context.TODO()
+	formatter, err := channelMessagesFormat.getFormatter()
+	if err != nil {
+		return err
+	}
 
 	timeRange, err := ParseTimeRange(channelsMessagesStartTime, channelsMessagesEndTime)
 	if err != nil {
