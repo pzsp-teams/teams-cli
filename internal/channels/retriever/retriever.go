@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	f "github.com/pzsp-teams/cli/internal/formatters"
 	coreretriever "github.com/pzsp-teams/cli/internal/core/retriever"
+	f "github.com/pzsp-teams/cli/internal/formatters"
 	lib_channels "github.com/pzsp-teams/lib/channels"
 	"github.com/pzsp-teams/lib/models"
 	lib_teams "github.com/pzsp-teams/lib/teams"
