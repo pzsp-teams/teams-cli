@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pzsp-teams/cli/internal/core/formatter"
+	"github.com/pzsp-teams/cli/internal/formatters"
 	coreretriever "github.com/pzsp-teams/cli/internal/core/retriever"
 	"github.com/pzsp-teams/cli/internal/testutil"
 	"github.com/pzsp-teams/lib/models"

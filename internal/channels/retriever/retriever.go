@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	f "github.com/pzsp-teams/cli/internal/core/formatter"
+	f "github.com/pzsp-teams/cli/internal/formatters"
 	coreretriever "github.com/pzsp-teams/cli/internal/core/retriever"
 	lib_channels "github.com/pzsp-teams/lib/channels"
 	"github.com/pzsp-teams/lib/models"

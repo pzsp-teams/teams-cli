@@ -6,8 +6,8 @@ import (
 	"github.com/pzsp-teams/cli/internal/channels/creator"
 	"github.com/pzsp-teams/cli/internal/channels/retriever"
 	"github.com/pzsp-teams/cli/internal/channels/sender"
-	"github.com/pzsp-teams/cli/internal/core/formatter"
 	coreretriever "github.com/pzsp-teams/cli/internal/core/retriever"
+	"github.com/pzsp-teams/cli/internal/formatters"
 	"github.com/pzsp-teams/lib/channels"
 	"github.com/pzsp-teams/lib/teams"
 )

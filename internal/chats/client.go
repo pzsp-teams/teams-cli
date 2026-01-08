@@ -5,7 +5,7 @@ import (
 
 	"github.com/pzsp-teams/cli/internal/chats/retriever"
 	"github.com/pzsp-teams/cli/internal/chats/sender"
-	"github.com/pzsp-teams/cli/internal/core/formatter"
+	"github.com/pzsp-teams/cli/internal/formatters"
 	coreretriever "github.com/pzsp-teams/cli/internal/core/retriever"
 	"github.com/pzsp-teams/lib/chats"
 	"github.com/pzsp-teams/lib/models"

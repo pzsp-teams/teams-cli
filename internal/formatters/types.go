@@ -8,8 +8,6 @@ const (
 	FormatPlainText Format = "plain"
 	// FormatMarkdown converts HTML to Markdown (future)
 	FormatMarkdown Format = "markdown"
-	// FormatANSI converts HTML to ANSI-colored terminal output (future)
-	FormatANSI Format = "ansi"
 )
 
 // Formatter provides content formatting capabilities
