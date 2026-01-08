@@ -14,10 +14,12 @@ var (
 	linkPattern = regexp.MustCompile(`<a\s+href="([^"]+)">(.+?)</a>`)
 
 	// Bold: <b>text</b> or <strong>text</strong>
-	boldPattern = regexp.MustCompile(`<(?:b|strong)>(.+?)</(?:b|strong)>`)
+	boldPattern      = regexp.MustCompile(`<(?:b|strong)>(.+?)</(?:b|strong)>`)
+	boldEmptyPattern = regexp.MustCompile(`<(?:b|strong)></(?:b|strong)>`)
 
 	// Italic: <i>text</i> or <em>text</em>
-	italicPattern = regexp.MustCompile(`<(?:i|em)>(.+?)</(?:i|em)>`)
+	italicPattern      = regexp.MustCompile(`<(?:i|em)>(.+?)</(?:i|em)>`)
+	italicEmptyPattern = regexp.MustCompile(`<(?:i|em)></(?:i|em)>`)
 
 	// Underline: <u>text</u>
 	underlinePattern = regexp.MustCompile(`<u>(.+?)</u>`)
