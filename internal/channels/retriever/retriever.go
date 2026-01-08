@@ -7,7 +7,6 @@ import (
 	"time"
 
 	coreretriever "github.com/pzsp-teams/cli/internal/core/retriever"
-	f "github.com/pzsp-teams/cli/internal/formatters"
 	lib_channels "github.com/pzsp-teams/lib/channels"
 	"github.com/pzsp-teams/lib/models"
 	lib_teams "github.com/pzsp-teams/lib/teams"
@@ -27,15 +26,13 @@ type Retriever interface {
 type retriever struct {
 	teamsService    lib_teams.Service
 	channelsService lib_channels.Service
-	formatter       f.Formatter
 }
 
 // NewRetriever creates a new channel message retriever
-func NewRetriever(teamsService lib_teams.Service, channelsService lib_channels.Service, formatter f.Formatter) Retriever {
+func NewRetriever(teamsService lib_teams.Service, channelsService lib_channels.Service) Retriever {
 	return &retriever{
 		teamsService:    teamsService,
 		channelsService: channelsService,
-		formatter:       formatter,
 	}
 }
 
@@ -133,10 +130,6 @@ func (r *retriever) processChannelMessages(ctx context.Context, job channelJob, 
 
 		for _, message := range messageCollection.Messages {
 			if message.CreatedDateTime.After(timeRange.Start) && message.CreatedDateTime.Before(timeRange.End) {
-				if message.ContentType == models.MessageContentTypeHTML {
-					message.Content = r.formatter.Format(message.Content)
-				}
-
 				filteredMessages = append(filteredMessages, &ChannelMessageWithContext{
 					TeamName:    job.Team.DisplayName,
 					TeamID:      job.Team.ID,

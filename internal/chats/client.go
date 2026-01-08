@@ -5,7 +5,6 @@ import (
 
 	"github.com/pzsp-teams/cli/internal/chats/retriever"
 	"github.com/pzsp-teams/cli/internal/chats/sender"
-	"github.com/pzsp-teams/cli/internal/formatters"
 	coreretriever "github.com/pzsp-teams/cli/internal/core/retriever"
 	"github.com/pzsp-teams/lib/chats"
 	"github.com/pzsp-teams/lib/models"
@@ -20,11 +19,9 @@ type Client struct {
 
 // NewClient creates a new chats client
 func NewClient(chatsService chats.Service) *Client {
-	formatterInstance := formatter.NewPlainTextFormatter()
-
 	return &Client{
 		sender:       sender.NewChatSender(chatsService),
-		retriever:    retriever.NewRetriever(chatsService, formatterInstance),
+		retriever:    retriever.NewRetriever(chatsService),
 		chatsService: chatsService,
 	}
 }

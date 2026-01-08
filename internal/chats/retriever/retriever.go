@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	f "github.com/pzsp-teams/cli/internal/formatters"
 	coreretriever "github.com/pzsp-teams/cli/internal/core/retriever"
 	"github.com/pzsp-teams/lib/chats"
 	"github.com/pzsp-teams/lib/models"
@@ -14,14 +13,12 @@ import (
 
 type retriever struct {
 	chatService chats.Service
-	formatter   f.Formatter
 }
 
 // NewRetriever creates a new chat message retriever
-func NewRetriever(chatService chats.Service, formatter f.Formatter) Retriever {
+func NewRetriever(chatService chats.Service) Retriever {
 	return &retriever{
 		chatService: chatService,
-		formatter:   formatter,
 	}
 }
 
@@ -84,10 +81,6 @@ func (r *retriever) processChatMessages(ctx context.Context, job chatJob, timeRa
 
 		for _, msg := range messageCollection.Messages {
 			if msg.CreatedDateTime.After(timeRange.Start) && msg.CreatedDateTime.Before(timeRange.End) {
-				if msg.ContentType == models.MessageContentTypeHTML {
-					msg.Content = r.formatter.Format(msg.Content)
-				}
-
 				chatName := job.Chat.ID
 				if job.Chat.Topic != nil && *job.Chat.Topic != "" {
 					chatName = *job.Chat.Topic

@@ -7,7 +7,6 @@ import (
 	"github.com/pzsp-teams/cli/internal/channels/retriever"
 	"github.com/pzsp-teams/cli/internal/channels/sender"
 	coreretriever "github.com/pzsp-teams/cli/internal/core/retriever"
-	"github.com/pzsp-teams/cli/internal/formatters"
 	"github.com/pzsp-teams/lib/channels"
 	"github.com/pzsp-teams/lib/teams"
 )
@@ -21,12 +20,10 @@ type Client struct {
 
 // NewClient creates a new channels client
 func NewClient(channelsService channels.Service, teamsService teams.Service) *Client {
-	formatterInstance := formatter.NewPlainTextFormatter()
-
 	return &Client{
 		sender:    sender.NewChannelSender(channelsService),
 		creator:   creator.NewChannelCreator(channelsService, teamsService),
-		retriever: retriever.NewRetriever(teamsService, channelsService, formatterInstance),
+		retriever: retriever.NewRetriever(teamsService, channelsService),
 	}
 }
 

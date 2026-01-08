@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pzsp-teams/cli/internal/formatters"
 	coreretriever "github.com/pzsp-teams/cli/internal/core/retriever"
 	"github.com/pzsp-teams/cli/internal/testutil"
 	"github.com/pzsp-teams/lib/chats"
@@ -25,7 +24,6 @@ func TestGetMessages_Success_BothChatTypes(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockService := testutil.NewMockChatsService(ctrl)
-	formatterInstance := formatter.NewPlainTextFormatter()
 
 	ctx := context.Background()
 	timeRange := coreretriever.TimeRange{
@@ -92,14 +90,14 @@ func TestGetMessages_Success_BothChatTypes(t *testing.T) {
 		ListMessages(ctx, chats.GroupChatRef{Ref: "chat2-id"}, false, nil).
 		Return(messagesChat2, nil)
 
-	retriever := NewRetriever(mockService, formatterInstance)
+	retriever := NewRetriever(mockService)
 	messages, err := retriever.GetMessages(ctx, timeRange)
 
 	assert.NoError(t, err)
 	assert.Len(t, messages, 2)
 
 	assert.Equal(t, "msg1", messages[0].Message.ID)
-	assert.Equal(t, "Hello", messages[0].Message.Content)
+	assert.Equal(t, "<p>Hello</p>", messages[0].Message.Content)
 	assert.Equal(t, "One on One Chat", messages[0].ChatName)
 	assert.Equal(t, "chat1-id", messages[0].ChatID)
 	assert.Equal(t, "one-on-one", messages[0].ChatType)
@@ -116,7 +114,6 @@ func TestGetMessages_TimeRangeFiltering(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockService := testutil.NewMockChatsService(ctrl)
-	formatterInstance := formatter.NewPlainTextFormatter()
 
 	ctx := context.Background()
 	timeRange := coreretriever.TimeRange{
@@ -164,7 +161,7 @@ func TestGetMessages_TimeRangeFiltering(t *testing.T) {
 		ListMessages(ctx, chats.GroupChatRef{Ref: "chat1-id"}, false, nil).
 		Return(messages, nil)
 
-	retriever := NewRetriever(mockService, formatterInstance)
+	retriever := NewRetriever(mockService)
 	result, err := retriever.GetMessages(ctx, timeRange)
 
 	assert.NoError(t, err)
@@ -177,7 +174,6 @@ func TestGetMessages_NoChatsFound(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockService := testutil.NewMockChatsService(ctrl)
-	formatterInstance := formatter.NewPlainTextFormatter()
 
 	ctx := context.Background()
 	timeRange := coreretriever.TimeRange{
@@ -189,7 +185,7 @@ func TestGetMessages_NoChatsFound(t *testing.T) {
 		ListChats(ctx, nil).
 		Return([]*models.Chat{}, nil)
 
-	retriever := NewRetriever(mockService, formatterInstance)
+	retriever := NewRetriever(mockService)
 	messages, err := retriever.GetMessages(ctx, timeRange)
 
 	assert.Error(t, err)
@@ -202,7 +198,6 @@ func TestGetMessages_ListChatsFailed(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockService := testutil.NewMockChatsService(ctrl)
-	formatterInstance := formatter.NewPlainTextFormatter()
 
 	ctx := context.Background()
 	timeRange := coreretriever.TimeRange{
@@ -215,7 +210,7 @@ func TestGetMessages_ListChatsFailed(t *testing.T) {
 		ListChats(ctx, nil).
 		Return(nil, expectedError)
 
-	retriever := NewRetriever(mockService, formatterInstance)
+	retriever := NewRetriever(mockService)
 	messages, err := retriever.GetMessages(ctx, timeRange)
 
 	assert.Error(t, err)
@@ -229,7 +224,6 @@ func TestGetMessages_ListMessagesFailed(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockService := testutil.NewMockChatsService(ctrl)
-	formatterInstance := formatter.NewPlainTextFormatter()
 
 	ctx := context.Background()
 	timeRange := coreretriever.TimeRange{
@@ -254,7 +248,7 @@ func TestGetMessages_ListMessagesFailed(t *testing.T) {
 		ListMessages(ctx, chats.GroupChatRef{Ref: "chat1-id"}, false, nil).
 		Return(nil, expectedError)
 
-	retriever := NewRetriever(mockService, formatterInstance)
+	retriever := NewRetriever(mockService)
 	messages, err := retriever.GetMessages(ctx, timeRange)
 
 	assert.Error(t, err)
@@ -268,7 +262,6 @@ func TestGetMessages_403ErrorIgnored(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockService := testutil.NewMockChatsService(ctrl)
-	formatterInstance := formatter.NewPlainTextFormatter()
 
 	ctx := context.Background()
 	timeRange := coreretriever.TimeRange{
@@ -313,7 +306,7 @@ func TestGetMessages_403ErrorIgnored(t *testing.T) {
 		ListMessages(ctx, chats.GroupChatRef{Ref: "chat2-id"}, false, nil).
 		Return(nil, fmt.Errorf("403 Forbidden"))
 
-	retriever := NewRetriever(mockService, formatterInstance)
+	retriever := NewRetriever(mockService)
 	messages, err := retriever.GetMessages(ctx, timeRange)
 
 	assert.NoError(t, err)
@@ -321,12 +314,11 @@ func TestGetMessages_403ErrorIgnored(t *testing.T) {
 	assert.Equal(t, "msg1", messages[0].Message.ID)
 }
 
-func TestGetMessages_OnlyHTMLMessagesFormatted(t *testing.T) {
+func TestGetMessages_MixedContentTypes(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	mockService := testutil.NewMockChatsService(ctrl)
-	formatterInstance := formatter.NewPlainTextFormatter()
 
 	ctx := context.Background()
 	timeRange := coreretriever.TimeRange{
@@ -374,15 +366,15 @@ func TestGetMessages_OnlyHTMLMessagesFormatted(t *testing.T) {
 		ListMessages(ctx, chats.GroupChatRef{Ref: "chat1-id"}, false, nil).
 		Return(messages, nil)
 
-	retriever := NewRetriever(mockService, formatterInstance)
+	retriever := NewRetriever(mockService)
 	result, err := retriever.GetMessages(ctx, timeRange)
 
 	assert.NoError(t, err)
 	assert.Len(t, result, 3)
 
-	assert.Equal(t, "HTML", result[0].Message.Content)
+	assert.Equal(t, "<p>HTML</p>", result[0].Message.Content)
 	assert.Equal(t, "Plain", result[1].Message.Content)
-	assert.Equal(t, "More HTML", result[2].Message.Content)
+	assert.Equal(t, "<b>More HTML</b>", result[2].Message.Content)
 }
 
 func TestGetMessages_ChatWithoutTopic(t *testing.T) {
@@ -390,7 +382,6 @@ func TestGetMessages_ChatWithoutTopic(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockService := testutil.NewMockChatsService(ctrl)
-	formatterInstance := formatter.NewPlainTextFormatter()
 
 	ctx := context.Background()
 	timeRange := coreretriever.TimeRange{
@@ -426,7 +417,7 @@ func TestGetMessages_ChatWithoutTopic(t *testing.T) {
 		ListMessages(ctx, chats.OneOnOneChatRef{Ref: "chat1-id"}, false, nil).
 		Return(messages, nil)
 
-	retriever := NewRetriever(mockService, formatterInstance)
+	retriever := NewRetriever(mockService)
 	result, err := retriever.GetMessages(ctx, timeRange)
 
 	assert.NoError(t, err)
@@ -439,7 +430,6 @@ func TestGetMessages_EmptyMessagesInChat(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockService := testutil.NewMockChatsService(ctrl)
-	formatterInstance := formatter.NewPlainTextFormatter()
 
 	ctx := context.Background()
 	timeRange := coreretriever.TimeRange{
@@ -463,7 +453,7 @@ func TestGetMessages_EmptyMessagesInChat(t *testing.T) {
 		ListMessages(ctx, chats.GroupChatRef{Ref: "chat1-id"}, false, nil).
 		Return(&models.MessageCollection{Messages: []*models.Message{}, NextLink: nil}, nil)
 
-	retriever := NewRetriever(mockService, formatterInstance)
+	retriever := NewRetriever(mockService)
 	messages, err := retriever.GetMessages(ctx, timeRange)
 
 	assert.NoError(t, err)

@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pzsp-teams/cli/internal/formatters"
 	coreretriever "github.com/pzsp-teams/cli/internal/core/retriever"
 	"github.com/pzsp-teams/cli/internal/testutil"
 	"github.com/pzsp-teams/lib/models"
@@ -20,7 +19,6 @@ func TestGetMessages_Success(t *testing.T) {
 
 	mockTeamsService := testutil.NewMockTeamsService(ctrl)
 	mockChannelsService := testutil.NewMockChannelsService(ctrl)
-	formatterInstance := formatter.NewPlainTextFormatter()
 
 	ctx := context.Background()
 	timeRange := coreretriever.TimeRange{
@@ -68,21 +66,21 @@ func TestGetMessages_Success(t *testing.T) {
 		ListMessages(ctx, "team1-id", "channel1-id", opts, false, nil).
 		Return(messages, nil)
 
-	retriever := NewRetriever(mockTeamsService, mockChannelsService, formatterInstance)
+	retriever := NewRetriever(mockTeamsService, mockChannelsService)
 	result, err := retriever.GetMessages(ctx, timeRange)
 
 	assert.NoError(t, err)
 	assert.Len(t, result, 2)
 
-	// First message should be formatted with context
+	// First message should have raw content
 	assert.Equal(t, "Team1", result[0].TeamName)
 	assert.Equal(t, "team1-id", result[0].TeamID)
 	assert.Equal(t, "General", result[0].ChannelName)
 	assert.Equal(t, "channel1-id", result[0].ChannelID)
 	assert.Equal(t, "msg1", result[0].Message.ID)
-	assert.Equal(t, "Hello from channel", result[0].Message.Content)
+	assert.Equal(t, "<p>Hello from channel</p>", result[0].Message.Content)
 
-	// Second message should not be formatted (plain text)
+	// Second message should be raw text
 	assert.Equal(t, "msg2", result[1].Message.ID)
 	assert.Equal(t, "Plain text", result[1].Message.Content)
 }
@@ -93,7 +91,6 @@ func TestGetMessages_NoTeamsFound(t *testing.T) {
 
 	mockTeamsService := testutil.NewMockTeamsService(ctrl)
 	mockChannelsService := testutil.NewMockChannelsService(ctrl)
-	formatterInstance := formatter.NewPlainTextFormatter()
 
 	ctx := context.Background()
 	timeRange := coreretriever.TimeRange{
@@ -105,7 +102,7 @@ func TestGetMessages_NoTeamsFound(t *testing.T) {
 		ListMyJoined(ctx).
 		Return([]*models.Team{}, nil)
 
-	retriever := NewRetriever(mockTeamsService, mockChannelsService, formatterInstance)
+	retriever := NewRetriever(mockTeamsService, mockChannelsService)
 	result, err := retriever.GetMessages(ctx, timeRange)
 
 	assert.Error(t, err)
@@ -119,7 +116,6 @@ func TestGetMessages_ArchivedTeamsFiltered(t *testing.T) {
 
 	mockTeamsService := testutil.NewMockTeamsService(ctrl)
 	mockChannelsService := testutil.NewMockChannelsService(ctrl)
-	formatterInstance := formatter.NewPlainTextFormatter()
 
 	ctx := context.Background()
 	timeRange := coreretriever.TimeRange{
@@ -162,7 +158,7 @@ func TestGetMessages_ArchivedTeamsFiltered(t *testing.T) {
 		ListMessages(ctx, "active-team-id", "channel1-id", opts, false, nil).
 		Return(messages, nil)
 
-	retriever := NewRetriever(mockTeamsService, mockChannelsService, formatterInstance)
+	retriever := NewRetriever(mockTeamsService, mockChannelsService)
 	result, err := retriever.GetMessages(ctx, timeRange)
 
 	assert.NoError(t, err)
@@ -177,7 +173,6 @@ func TestGetMessages_NoChannelsFound(t *testing.T) {
 
 	mockTeamsService := testutil.NewMockTeamsService(ctrl)
 	mockChannelsService := testutil.NewMockChannelsService(ctrl)
-	formatterInstance := formatter.NewPlainTextFormatter()
 
 	ctx := context.Background()
 	timeRange := coreretriever.TimeRange{
@@ -196,7 +191,7 @@ func TestGetMessages_NoChannelsFound(t *testing.T) {
 		ListChannels(ctx, "team1-id").
 		Return([]*models.Channel{}, nil)
 
-	retriever := NewRetriever(mockTeamsService, mockChannelsService, formatterInstance)
+	retriever := NewRetriever(mockTeamsService, mockChannelsService)
 	result, err := retriever.GetMessages(ctx, timeRange)
 
 	assert.Error(t, err)
@@ -210,7 +205,6 @@ func TestGetMessages_TeamsServiceError(t *testing.T) {
 
 	mockTeamsService := testutil.NewMockTeamsService(ctrl)
 	mockChannelsService := testutil.NewMockChannelsService(ctrl)
-	formatterInstance := formatter.NewPlainTextFormatter()
 
 	ctx := context.Background()
 	timeRange := coreretriever.TimeRange{
@@ -223,7 +217,7 @@ func TestGetMessages_TeamsServiceError(t *testing.T) {
 		ListMyJoined(ctx).
 		Return(nil, expectedError)
 
-	retriever := NewRetriever(mockTeamsService, mockChannelsService, formatterInstance)
+	retriever := NewRetriever(mockTeamsService, mockChannelsService)
 	result, err := retriever.GetMessages(ctx, timeRange)
 
 	assert.Error(t, err)
@@ -238,7 +232,6 @@ func TestGetMessages_ChannelsServiceError(t *testing.T) {
 
 	mockTeamsService := testutil.NewMockTeamsService(ctrl)
 	mockChannelsService := testutil.NewMockChannelsService(ctrl)
-	formatterInstance := formatter.NewPlainTextFormatter()
 
 	ctx := context.Background()
 	timeRange := coreretriever.TimeRange{
@@ -258,7 +251,7 @@ func TestGetMessages_ChannelsServiceError(t *testing.T) {
 		ListChannels(ctx, "team1-id").
 		Return(nil, expectedError)
 
-	retriever := NewRetriever(mockTeamsService, mockChannelsService, formatterInstance)
+	retriever := NewRetriever(mockTeamsService, mockChannelsService)
 	result, err := retriever.GetMessages(ctx, timeRange)
 
 	assert.Error(t, err)
@@ -273,7 +266,6 @@ func TestGetMessages_MessagesServiceError(t *testing.T) {
 
 	mockTeamsService := testutil.NewMockTeamsService(ctrl)
 	mockChannelsService := testutil.NewMockChannelsService(ctrl)
-	formatterInstance := formatter.NewPlainTextFormatter()
 
 	ctx := context.Background()
 	timeRange := coreretriever.TimeRange{
@@ -305,7 +297,7 @@ func TestGetMessages_MessagesServiceError(t *testing.T) {
 		ListMessages(ctx, "team1-id", "channel1-id", opts, false, nil).
 		Return(nil, expectedError)
 
-	retriever := NewRetriever(mockTeamsService, mockChannelsService, formatterInstance)
+	retriever := NewRetriever(mockTeamsService, mockChannelsService)
 	result, err := retriever.GetMessages(ctx, timeRange)
 
 	assert.Error(t, err)
@@ -320,7 +312,6 @@ func TestGetMessages_403ErrorIgnored(t *testing.T) {
 
 	mockTeamsService := testutil.NewMockTeamsService(ctrl)
 	mockChannelsService := testutil.NewMockChannelsService(ctrl)
-	formatterInstance := formatter.NewPlainTextFormatter()
 
 	ctx := context.Background()
 	timeRange := coreretriever.TimeRange{
@@ -352,7 +343,7 @@ func TestGetMessages_403ErrorIgnored(t *testing.T) {
 		ListMessages(ctx, "team1-id", "channel1-id", opts, false, nil).
 		Return(nil, forbiddenError)
 
-	retriever := NewRetriever(mockTeamsService, mockChannelsService, formatterInstance)
+	retriever := NewRetriever(mockTeamsService, mockChannelsService)
 	result, err := retriever.GetMessages(ctx, timeRange)
 
 	assert.NoError(t, err)
@@ -365,7 +356,6 @@ func TestGetMessages_TimeRangeFiltering(t *testing.T) {
 
 	mockTeamsService := testutil.NewMockTeamsService(ctrl)
 	mockChannelsService := testutil.NewMockChannelsService(ctrl)
-	formatterInstance := formatter.NewPlainTextFormatter()
 
 	ctx := context.Background()
 	timeRange := coreretriever.TimeRange{
@@ -425,7 +415,7 @@ func TestGetMessages_TimeRangeFiltering(t *testing.T) {
 		ListMessages(ctx, "team1-id", "channel1-id", opts, false, nil).
 		Return(messages, nil)
 
-	retriever := NewRetriever(mockTeamsService, mockChannelsService, formatterInstance)
+	retriever := NewRetriever(mockTeamsService, mockChannelsService)
 	result, err := retriever.GetMessages(ctx, timeRange)
 
 	assert.NoError(t, err)
@@ -444,7 +434,6 @@ func TestGetMessages_MultipleTeamsAndChannels(t *testing.T) {
 
 	mockTeamsService := testutil.NewMockTeamsService(ctrl)
 	mockChannelsService := testutil.NewMockChannelsService(ctrl)
-	formatterInstance := formatter.NewPlainTextFormatter()
 
 	ctx := context.Background()
 	timeRange := coreretriever.TimeRange{
@@ -527,7 +516,7 @@ func TestGetMessages_MultipleTeamsAndChannels(t *testing.T) {
 		ListMessages(ctx, "team2-id", "announcements-id", opts, false, nil).
 		Return(team2AnnouncementsMessages, nil)
 
-	retriever := NewRetriever(mockTeamsService, mockChannelsService, formatterInstance)
+	retriever := NewRetriever(mockTeamsService, mockChannelsService)
 	result, err := retriever.GetMessages(ctx, timeRange)
 
 	assert.NoError(t, err)
