@@ -1,4 +1,4 @@
-package formatter
+package formatters
 
 // Format represents different output formats for message content
 type Format string
