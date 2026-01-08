@@ -158,7 +158,6 @@ func TestSendToChats_StopOnError(t *testing.T) {
 
 	sendErr := errors.New("network error")
 	callCount := 0
-	failedRef := ""
 
 	mockSvc := testutil.NewMockChatsService(ctrl)
 	mockSvc.EXPECT().
@@ -166,7 +165,6 @@ func TestSendToChats_StopOnError(t *testing.T) {
 		DoAndReturn(func(ctx context.Context, chatRef chats.ChatRef, body models.MessageBody) (*models.Message, error) {
 			callCount++
 			if callCount == 1 {
-				failedRef = "chat1" // First call fails
 				return nil, sendErr
 			}
 			return &models.Message{Content: body.Content}, nil
@@ -187,22 +185,17 @@ func TestSendToChats_StopOnError(t *testing.T) {
 
 	errorCount := 0
 	skippedCount := 0
-	failedCount := 0
 	for _, result := range results {
 		if result.Error != nil {
-			switch {
-			case errors.Is(result.Error, coresender.ErrMessageSkipped):
+			if errors.Is(result.Error, coresender.ErrMessageSkipped) {
 				skippedCount++
-			case result.ChatRef == failedRef:
-				failedCount++
-			default:
+			} else if errors.Is(result.Error, coresender.ErrMessageSendFailed) {
 				errorCount++
 			}
 		}
 	}
 
-	assert.Equal(t, 1, failedCount)
-	assert.Equal(t, 0, errorCount)
+	assert.Equal(t, 1, errorCount)
 	assert.Equal(t, 2, skippedCount)
 }
 
