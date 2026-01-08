@@ -34,12 +34,14 @@ Examples:
 var (
 	channelsMessagesStartTime string
 	channelsMessagesEndTime   string
+	channelMessagesFile       string
 	channelMessagesFormat     formatFlags
 )
 
 func init() {
 	channelsMessagesGetCmd.Flags().StringVar(&channelsMessagesStartTime, "start", "", "Start time (optional, defaults to 24h ago)")
 	channelsMessagesGetCmd.Flags().StringVar(&channelsMessagesEndTime, "end", "", "End time (optional, defaults to now)")
+	channelsMessagesGetCmd.Flags().StringVar(&channelMessagesFile, "file", "", "Name of file to save messages, will print to stdout if not given or apend to existing file if given")
 	channelsMessagesGetCmd.Flags().BoolVar(&channelMessagesFormat.Plain, "plain", false, "Use plain format")
 	channelsMessagesGetCmd.Flags().BoolVar(&channelMessagesFormat.MarkDown, "markdown", false, "Use Markdown format")
 	channelsMessagesGetCmd.MarkFlagsMutuallyExclusive("plain", "markdown")
@@ -48,6 +50,13 @@ func init() {
 func runChannelsMessagesGet(cmd *cobra.Command, args []string) error {
 	log := initializers.Logger
 	ctx := context.TODO()
+	dest := getDest(channelMessagesFile)
+	defer func() {
+		if err := dest.Close(); err != nil {
+			log.Error("Failed to close destination", "error", err)
+		}
+	}()
+
 	formatter, err := channelMessagesFormat.getFormatter()
 	if err != nil {
 		return err
