@@ -1,7 +1,10 @@
 package formatters
 
 import (
+	"bytes"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -227,4 +230,48 @@ func TestMarkdownFormatter_Format(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func TestMarkdownFormatter_WriteMessages(t *testing.T) {
+	formatter := NewMarkdownFormatter()
+	timestamp := time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
+
+	messages := []*MessageView{
+		{
+			ID:        "msg1",
+			Author:    "Alice",
+			Timestamp: timestamp,
+			Content:   "<p>Hello <b>World</b></p>",
+			Context: []ContextItem{
+				{Label: "Team", Value: "Team A"},
+				{Label: "Channel", Value: "General"},
+			},
+		},
+		{
+			ID:        "msg2",
+			Author:    "Bob",
+			Timestamp: timestamp.Add(time.Hour),
+			Content:   "Hi Alice",
+			Context: []ContextItem{
+				{Label: "Chat", Value: "OneOnOne"},
+			},
+		},
+	}
+
+	expected := "### From Alice\n\n" +
+		"**Team:** Team A<br>**Channel:** General<br>**Date:** 01 Jan 24 12:00 UTC<br>\n\n" +
+		"<p>Hello **World**</p>\n\n" +
+		"---\n\n" +
+		"### From Bob\n\n" +
+		"**Chat:** OneOnOne<br>**Date:** 01 Jan 24 13:00 UTC<br>\n\n" +
+		"Hi Alice\n\n" +
+		"---\n\n"
+
+	var buf bytes.Buffer
+	err := formatter.WriteMessages(&buf, messages)
+	assert.NoError(t, err)
+
+	// Normalize output for comparison (remove potential carriage returns)
+	got := strings.ReplaceAll(buf.String(), "\r\n", "\n")
+	assert.Equal(t, expected, got)
 }
