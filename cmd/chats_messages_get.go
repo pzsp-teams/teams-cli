@@ -82,7 +82,28 @@ func runChatsMessagesGet(cmd *cobra.Command, args []string) error {
 	}
 
 	log.Info("Retrieved messages", "count", len(messages))
-	printChatMessages(messages)
+
+	viewMessages := make([]*formatters.MessageView, 0, len(messages))
+	for _, m := range messages {
+		viewMessages = append(viewMessages, toChatMessageView(m))
+	}
+
+	if err := formatter.WriteMessages(dest, viewMessages); err != nil {
+		return fmt.Errorf("failed to write messages: %w", err)
+	}
 
 	return nil
+}
+
+func toChatMessageView(m *chatsretriever.ChatMessageWithContext) *formatters.MessageView {
+	return &formatters.MessageView{
+		ID:        m.Message.ID,
+		Author:    m.Message.From.DisplayName,
+		Timestamp: m.Message.CreatedDateTime,
+		Content:   m.Message.Content,
+		Context: []formatters.ContextItem{
+			{Label: "Chat", Value: m.ChatName},
+			{Label: "Type", Value: m.ChatType},
+		},
+	}
 }
