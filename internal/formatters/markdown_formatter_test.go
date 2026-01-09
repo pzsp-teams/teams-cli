@@ -30,17 +30,17 @@ func TestMarkdownFormatter_Format(t *testing.T) {
 		{
 			name:  "text with line break",
 			input: "Hello<br>World",
-			want:  "Hello\\\nWorld",
+			want:  "Hello \\\nWorld",
 		},
 		{
 			name:  "text with self-closing line break",
 			input: "Hello<br/>World",
-			want:  "Hello\\\nWorld",
+			want:  "Hello \\\nWorld",
 		},
 		{
 			name:  "text with multiple line breaks",
 			input: "Line 1<br>Line 2<br>Line 3",
-			want:  "Line 1\\\nLine 2\\\nLine 3",
+			want:  "Line 1 \\\nLine 2 \\\nLine 3",
 		},
 		{
 			name:  "text with bold tags",
@@ -130,7 +130,7 @@ func TestMarkdownFormatter_Format(t *testing.T) {
 		{
 			name:  "real Teams message example",
 			input: "Hello Alice!<br>This is a channel mention <at id=\"0\">General</at><br>This is a personal mention <at id=\"1\">Kamil</at><br>This is a duplicate channel mention <at id=\"2\">General</at><br>This is a team mention <at id=\"3\">pzsp2z1teams</at><br><br>Your order #12345 is ready.<br>Thank you!<br>",
-			want:  "Hello Alice!\\\nThis is a channel mention @General\\\nThis is a personal mention @Kamil\\\nThis is a duplicate channel mention @General\\\nThis is a team mention @pzsp2z1teams\\\nYour order #12345 is ready.\\\nThank you!",
+			want:  "Hello Alice! \\\nThis is a channel mention @General \\\nThis is a personal mention @Kamil \\\nThis is a duplicate channel mention @General \\\nThis is a team mention @pzsp2z1teams \\\nYour order #12345 is ready. \\\nThank you!",
 		},
 		{
 			name:  "message with paragraphs and links",
@@ -170,22 +170,22 @@ func TestMarkdownFormatter_Format(t *testing.T) {
 		{
 			name:  "consecutive breaks",
 			input: "Line 1<br><br><br>Line 2",
-			want:  "Line 1\\\nLine 2",
+			want:  "Line 1 \\\nLine 2",
 		},
 		{
 			name:  "br followed by literal newline",
 			input: "Line 1<br>\nLine 2",
-			want:  "Line 1\\\n\nLine 2",
+			want:  "Line 1\n\nLine 2",
 		},
 		{
 			name:  "literal newline followed by br",
 			input: "Line 1\n<br>Line 2",
-			want:  "Line 1\n\\\nLine 2",
+			want:  "Line 1\n \\\nLine 2",
 		},
 		{
 			name:  "multiple br and literal newlines mixed",
 			input: "Line 1<br>\n<br>\nLine 2",
-			want:  "Line 1\\\n\nLine 2",
+			want:  "Line 1\n\nLine 2",
 		},
 		{
 			name:  "paragraph with literal newlines",
@@ -195,7 +195,7 @@ func TestMarkdownFormatter_Format(t *testing.T) {
 		{
 			name:  "br with newline before paragraph",
 			input: "Line 1<br>\n<p>Para 1</p>",
-			want:  "Line 1\\\n\nPara 1",
+			want:  "Line 1\n\nPara 1",
 		},
 		{
 			name:  "empty paragraph",
@@ -210,12 +210,12 @@ func TestMarkdownFormatter_Format(t *testing.T) {
 		{
 			name:  "link with line break inside",
 			input: "<a href=\"https://example.com\">Click<br>here</a>",
-			want:  "[Click\\\nhere](https://example.com)",
+			want:  "[Click \\\nhere](https://example.com)",
 		},
 		{
 			name:  "mention with line break after",
 			input: "Hello <at id=\"0\">User</at><br>How are you?",
-			want:  "Hello @User\\\nHow are you?",
+			want:  "Hello @User \\\nHow are you?",
 		},
 		{
 			name:  "unclosed tag (malformed HTML)",
@@ -259,11 +259,11 @@ func TestMarkdownFormatter_WriteMessages(t *testing.T) {
 	}
 
 	expected := "### From Alice\n\n" +
-		"**Team:** Team A\\\n**Channel:** General\\\n**Date:** 01 Jan 24 12:00 UTC\\\n**ID:** msg1\n\n" +
+		"**Team:** Team A \\\n**Channel:** General \\\n**Date:** 01 Jan 24 12:00 UTC \\\n**ID:** msg1\n\n" +
 		"Hello **World**\n\n" +
 		"---\n\n" +
 		"### From Bob\n\n" +
-		"**Chat:** OneOnOne\\\n**Date:** 01 Jan 24 13:00 UTC\\\n**ID:** msg2\n\n" +
+		"**Chat:** OneOnOne \\\n**Date:** 01 Jan 24 13:00 UTC \\\n**ID:** msg2\n\n" +
 		"Hi Alice\n\n" +
 		"---\n\n"
 

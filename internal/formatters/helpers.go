@@ -76,6 +76,8 @@ func cleanupWhitespace(s string, maxNewlines int) string {
 
 	s = strings.TrimRight(s, "\\")
 
+	s = strings.TrimRight(s, " \t")
+
 	if strings.TrimSpace(s) == "" {
 		return ""
 	}
