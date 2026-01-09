@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -61,7 +60,7 @@ func init() {
 
 func runChannelsMessagesGet(cmd *cobra.Command, args []string) error {
 	log := initializers.Logger
-	ctx := context.TODO()
+	ctx := cmd.Context()
 	dest := getDest(channelMessagesFile)
 	defer func() {
 		if err := dest.Close(); err != nil {

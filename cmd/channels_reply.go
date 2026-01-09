@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -53,7 +52,7 @@ func init() {
 
 func runChannelsReply(cmd *cobra.Command, args []string) error {
 	log := initializers.Logger
-	ctx := context.TODO()
+	ctx := cmd.Context()
 
 	content, err := getMessageContent(replyMessage, replyFile)
 	if err != nil {
