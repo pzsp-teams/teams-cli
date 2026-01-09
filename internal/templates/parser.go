@@ -29,7 +29,6 @@ type TemplateParser struct {
 func NewMessageParser(templateReader, dataReader io.Reader, dataParser file_readers.DecodeFunc) (*TemplateParser, error) {
 	tmpl, err := readTemplate(templateReader)
 	if err != nil {
-		// readTemplate already logs and wraps the error
 		return nil, err
 	}
 
@@ -57,14 +56,17 @@ func (mp *TemplateParser) Parse() (map[string]string, error) {
 			initializers.Logger.Error(errTemplateRenderFailed.Error(), "recipient", recipientName, "error", err)
 			return nil, fmt.Errorf("%w for recipient %q: %w", errTemplateRenderFailed, recipientName, err)
 		}
-		messages[recipientName] = processContent(buf.Bytes())
+		messages[recipientName] = RawToHTML(buf.Bytes())
 	}
 
 	initializers.Logger.Info("Successfully rendered messages", "total_messages", len(messages))
 	return messages, nil
 }
 
-func processContent(data []byte) string {
+// RawToHTML converts given raw message and replaces \n with <br> to render properly in Teams
+// If message contains any of the supported html tags it will not be processed and only converted
+// to string
+func RawToHTML(data []byte) string {
 	if htmlTagRegex.Match(data) {
 		return string(data)
 	}
