@@ -10,8 +10,8 @@ var (
 	// Mention: <at id="X">Name</at>
 	mentionPattern = regexp.MustCompile(`<at\s+id="[^"]*">([^<]+)</at>`)
 
-	// Links: <a href="url">text</a>
-	linkPattern = regexp.MustCompile(`<a\s+href="([^"]+)">(.+?)</a>`)
+	// Links: <a href="url">text</a> - (?s) enables DOTALL mode so . matches newlines
+	linkPattern = regexp.MustCompile(`(?s)<a\s+href="([^"]+)">(.+?)</a>`)
 
 	// Bold: <b>text</b> or <strong>text</strong>
 	boldPattern      = regexp.MustCompile(`<(?:b|strong)>(.+?)</(?:b|strong)>`)
@@ -27,14 +27,20 @@ var (
 	// Strikethrough: <s>text</s> or <strike>text</strike>
 	strikePattern = regexp.MustCompile(`<(?:s|strike)>(.+?)</(?:s|strike)>`)
 
-	// Paragraphs: <p>text</p>
-	paragraphPattern = regexp.MustCompile(`<p>(.+?)</p>`)
+	// Paragraphs: <p>text</p> - (?s) enables DOTALL mode so . matches newlines
+	paragraphPattern = regexp.MustCompile(`(?s)<p>(.*?)</p>`)
 
 	// Line breaks: <br> or <br/>
 	brPattern = regexp.MustCompile(`<br\s*/?>`)
 
+	// Multiple consecutive line breaks (for collapsing)
+	multipleBrPattern = regexp.MustCompile(`(?:<br\s*/?>(?:\s*<br\s*/?>)+)`)
+
 	// Any remaining HTML tags (for cleanup) - must start with a letter
 	htmlTagPattern = regexp.MustCompile(`</?[a-zA-Z][^>]*>`)
+
+	// Unwanted HTML tags to remove (unclosed paragraphs, divs, spans, etc.)
+	unwantedTagPattern = regexp.MustCompile(`</?(?:p|div|span)[^>]*>`)
 )
 
 // reduceConsecutiveNewlines reduces consecutive newlines to a maximum count
@@ -67,6 +73,8 @@ func cleanupWhitespace(s string, maxNewlines int) string {
 	s = reduceConsecutiveNewlines(s, maxNewlines)
 
 	s = strings.TrimRight(s, "\n")
+
+	s = strings.TrimRight(s, "\\")
 
 	if strings.TrimSpace(s) == "" {
 		return ""

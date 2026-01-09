@@ -24,7 +24,26 @@ func (f *markdownFormatter) Format(htmlContent string) string {
 	content := htmlContent
 	content = html.UnescapeString(content)
 	content = strings.ReplaceAll(content, "\u00a0", " ")
+
+	content = paragraphPattern.ReplaceAllString(content, "\n\n$1\n\n")
+
+	content = multipleBrPattern.ReplaceAllString(content, "<br>")
+
+	content = brPattern.ReplaceAllString(content, " \\\n")
+
+	content = reduceConsecutiveNewlines(content, 2)
+
+	content = strings.ReplaceAll(content, " \\\n\n", "\n\n")
+
+	content = boldPattern.ReplaceAllString(content, "**$1**")
+	content = italicPattern.ReplaceAllString(content, "*$1*")
+	content = strikePattern.ReplaceAllString(content, "--$1--")
+	content = italicEmptyPattern.ReplaceAllString(content, "")
+	content = boldEmptyPattern.ReplaceAllString(content, "")
+
 	content = mentionPattern.ReplaceAllString(content, "@$1")
+
+	content = unwantedTagPattern.ReplaceAllString(content, "")
 
 	content = linkPattern.ReplaceAllStringFunc(content, func(match string) string {
 		submatches := linkPattern.FindStringSubmatch(match)
@@ -39,12 +58,6 @@ func (f *markdownFormatter) Format(htmlContent string) string {
 		return match
 	})
 
-	content = reduceConsecutiveNewlines(content, 1)
-	content = boldPattern.ReplaceAllString(content, "**$1**")
-	content = italicPattern.ReplaceAllString(content, "*$1*")
-	content = strikePattern.ReplaceAllString(content, "--$1--")
-	content = italicEmptyPattern.ReplaceAllString(content, "")
-	content = boldEmptyPattern.ReplaceAllString(content, "")
 	content = cleanupWhitespace(content, 2)
 
 	return content
@@ -58,11 +71,14 @@ func (f *markdownFormatter) WriteMessages(w io.Writer, messages []*MessageView) 
 		}
 
 		for _, ctx := range msg.Context {
-			if _, err := fmt.Fprintf(w, "**%s:** %s<br>", ctx.Label, ctx.Value); err != nil {
+			if _, err := fmt.Fprintf(w, "**%s:** %s \\\n", ctx.Label, ctx.Value); err != nil {
 				return err
 			}
 		}
-		if _, err := fmt.Fprintf(w, "**Date:** %s<br>", msg.Timestamp.Format(time.RFC822)); err != nil {
+		if _, err := fmt.Fprintf(w, "**Date:** %s \\\n", msg.Timestamp.Format(time.RFC822)); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(w, "**ID:** %s", msg.ID); err != nil {
 			return err
 		}
 
