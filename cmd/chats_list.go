@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -22,7 +21,7 @@ Examples:
 
 func runChatsList(cmd *cobra.Command, args []string) error {
 	log := initializers.Logger
-	ctx := context.TODO()
+	ctx := cmd.Context()
 
 	log.Debug("Creating Teams client")
 	teamsClient, err := GetOrCreateTeamsClient(ctx)

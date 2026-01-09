@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -57,7 +56,7 @@ func init() {
 
 func runChatsSend(cmd *cobra.Command, args []string) error {
 	log := initializers.Logger
-	ctx := context.TODO()
+	ctx := cmd.Context()
 
 	messages, err := validateAndProcessChatsFlags()
 	if err != nil {

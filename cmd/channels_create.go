@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -64,7 +63,7 @@ func init() {
 
 func runCreateChannels(cmd *cobra.Command, args []string) error {
 	log := initializers.Logger
-	ctx := context.TODO()
+	ctx := cmd.Context()
 
 	dataFile, err := os.Open(createChannelsData)
 	if err != nil {

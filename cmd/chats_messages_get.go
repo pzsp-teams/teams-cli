@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -57,7 +56,7 @@ func init() {
 
 func runChatsMessagesGet(cmd *cobra.Command, args []string) error {
 	log := initializers.Logger
-	ctx := context.TODO()
+	ctx := cmd.Context()
 	dest := getDest(chatMessagesFile)
 	defer func() {
 		if err := dest.Close(); err != nil {
