@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -33,14 +34,14 @@ func init() {
 	teamCmd.AddCommand(teamGetCmd)
 	teamGetCmd.Flags().StringVar(&tRef, "team", "", "ID or display name of the team to get details for")
 	if err := teamGetCmd.MarkFlagRequired("team"); err != nil {
-		panic(fmt.Sprintf("failed to mark team flag as required: %v", err))
+		fmt.Fprintf(os.Stderr, "WARNING: failed to mark team flag as required: %v\n", err)
 	}
 
 	teamCmd.AddCommand(teamCreateCmd)
 	teamCreateCmd.Flags().StringVar(&createTeamsData, "data", "", "Path to teams data file (YAML/JSON/CSV)")
 	teamCreateCmd.Flags().BoolVar(&createTeamsDryRun, "dry-run", false, "Preview without creating teams")
 	if err := teamCreateCmd.MarkFlagRequired("data"); err != nil {
-		panic(fmt.Sprintf("failed to mark data flag as required: %v", err))
+		fmt.Fprintf(os.Stderr, "WARNING: failed to mark data flag as required: %v\n", err)
 	}
 
 	teamCmd.AddCommand(newCreateSingleTeamCommand())
@@ -49,19 +50,19 @@ func init() {
 	teamArchiveCmd.Flags().StringVar(&tRef, "team", "", "ID or display name of the team to archive")
 	teamArchiveCmd.Flags().BoolVar(&spoReadOnly, "spo-read-only", false, "Set SharePoint Online site to read-only mode when archiving the team")
 	if err := teamArchiveCmd.MarkFlagRequired("team"); err != nil {
-		panic(fmt.Sprintf("failed to mark team flag as required: %v", err))
+		fmt.Fprintf(os.Stderr, "WARNING: failed to mark team flag as required: %v\n", err)
 	}
 
 	teamCmd.AddCommand(teamUnarchiveCmd)
 	teamUnarchiveCmd.Flags().StringVar(&tRef, "team", "", "ID or display name of the team to unarchive")
 	if err := teamUnarchiveCmd.MarkFlagRequired("team"); err != nil {
-		panic(fmt.Sprintf("failed to mark team flag as required: %v", err))
+		fmt.Fprintf(os.Stderr, "WARNING: failed to mark team flag as required: %v\n", err)
 	}
 
 	teamCmd.AddCommand(teamDeleteCmd)
 	teamDeleteCmd.Flags().StringVar(&tRef, "team", "", "ID or display name of the team to delete")
 	if err := teamDeleteCmd.MarkFlagRequired("team"); err != nil {
-		panic(fmt.Sprintf("failed to mark team flag as required: %v", err))
+		fmt.Fprintf(os.Stderr, "WARNING: failed to mark team flag as required: %v\n", err)
 	}
 }
 

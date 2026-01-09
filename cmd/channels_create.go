@@ -55,10 +55,10 @@ func init() {
 	createChannelsCmd.Flags().BoolVar(&ensureInTeam, "ensure-in-team", false, "Ensure members are members of the team")
 
 	if err := createChannelsCmd.MarkFlagRequired("data"); err != nil {
-		panic(fmt.Sprintf("failed to mark data flag as required: %v", err))
+		fmt.Fprintf(os.Stderr, "WARNING: failed to mark data flag as required: %v\n", err)
 	}
 	if err := createChannelsCmd.MarkFlagRequired("team"); err != nil {
-		panic(fmt.Sprintf("failed to mark team flag as required: %v", err))
+		fmt.Fprintf(os.Stderr, "WARNING: failed to mark team flag as required: %v\n", err)
 	}
 }
 

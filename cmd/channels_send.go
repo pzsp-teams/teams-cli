@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -56,7 +57,7 @@ func init() {
 	channelsSendCmd.Flags().BoolVar(&channelsIgnoreErrors, "ignore-errors", false, "Continue on errors")
 
 	if err := channelsSendCmd.MarkFlagRequired("team"); err != nil {
-		panic(fmt.Sprintf("failed to mark team flag as required: %v", err))
+		fmt.Fprintf(os.Stderr, "WARNING: failed to mark team flag as required: %v\n", err)
 	}
 }
 
