@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -39,13 +40,13 @@ func init() {
 	channelsReplyCmd.Flags().StringVar(&replyFile, "message-file", "", "Path to text file containing reply message")
 
 	if err := channelsReplyCmd.MarkFlagRequired("team"); err != nil {
-		panic(fmt.Sprintf("failed to mark team flag as required: %v", err))
+		fmt.Fprintf(os.Stderr, "WARNING: failed to mark team flag as required: %v\n", err)
 	}
 	if err := channelsReplyCmd.MarkFlagRequired("channel"); err != nil {
-		panic(fmt.Sprintf("failed to mark channel flag as required: %v", err))
+		fmt.Fprintf(os.Stderr, "WARNING: failed to mark channel flag as required: %v\n", err)
 	}
 	if err := channelsReplyCmd.MarkFlagRequired("message-id"); err != nil {
-		panic(fmt.Sprintf("failed to mark message-id flag as required: %v", err))
+		fmt.Fprintf(os.Stderr, "WARNING: failed to mark message-id flag as required: %v\n", err)
 	}
 
 	channelsReplyCmd.MarkFlagsMutuallyExclusive("message", "message-file")
