@@ -159,3 +159,25 @@ func createMessagesFromFile(filePath string, recipients []string) (map[string]st
 	}
 	return messages, nil
 }
+
+// getMessageContent reads message content from either a string or file and processes it with RawToHTML
+// Returns the processed message content or an error if file reading fails
+func getMessageContent(messageStr, messageFilePath string) (string, error) {
+	if messageStr != "" && messageFilePath != "" {
+		return "", fmt.Errorf("cannot specify both message and message-file")
+	}
+	if messageStr == "" && messageFilePath == "" {
+		return "", fmt.Errorf("must specify either message or message-file")
+	}
+
+	if messageStr != "" {
+		return templates.RawToHTML([]byte(messageStr)), nil
+	}
+
+	content, err := os.ReadFile(messageFilePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read message file: %w", err)
+	}
+
+	return templates.RawToHTML(content), nil
+}

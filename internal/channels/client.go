@@ -32,6 +32,11 @@ func (c *Client) Send(ctx context.Context, teamRef string, messages map[string]s
 	return c.sender.Send(ctx, teamRef, messages, dryRun, ignoreError)
 }
 
+// SendReply sends a reply to a specific message in a channel
+func (c *Client) SendReply(ctx context.Context, teamRef, channelRef, messageID, content string) sender.ChannelSendResult {
+	return c.sender.SendReply(ctx, teamRef, channelRef, messageID, content)
+}
+
 // Create creates channels based on the provided request data
 func (c *Client) Create(ctx context.Context, teamRef string, request map[string]creator.ChannelData, ensureMembersInChannel, ensureMembersInTeam, dryRun bool) []creator.CreateResult {
 	return c.creator.Create(ctx, teamRef, request, ensureMembersInChannel, ensureMembersInTeam, dryRun)

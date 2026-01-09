@@ -13,6 +13,7 @@ var channelsCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(channelsCmd)
 	channelsCmd.AddCommand(channelsSendCmd)
+	channelsCmd.AddCommand(channelsReplyCmd)
 	channelsCmd.AddCommand(createChannelsCmd)
 	channelsCmd.AddCommand(channelsMessagesCmd)
 }
