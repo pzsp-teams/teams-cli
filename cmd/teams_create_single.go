@@ -5,11 +5,13 @@ import (
 	"os"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/spf13/cobra"
+
+	"github.com/pzsp-teams/cli/cmd/common"
 	"github.com/pzsp-teams/cli/internal/core/creator"
 	"github.com/pzsp-teams/cli/internal/initializers"
 	tcreator "github.com/pzsp-teams/cli/internal/teams/creator"
 	"github.com/pzsp-teams/cli/internal/teams/creator/single"
-	"github.com/spf13/cobra"
 )
 
 type createSingleTeamCommand struct {
@@ -74,7 +76,7 @@ func (c *createSingleTeamCommand) run(cmd *cobra.Command, args []string) error {
 		IncludeMe:   c.includeMe,
 	}
 
-	teamsClient, err := GetOrCreateTeamsClient(cmd.Context())
+	teamsClient, err := common.GetTeamsClient(cmd)
 	if err != nil {
 		return err
 	}
