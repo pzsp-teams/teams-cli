@@ -45,7 +45,8 @@ func (s *channelSender) Send(ctx context.Context, teamRef string, messages map[s
 	return s.generic.Send(ctx, messages, dryRun, ignoreError)
 }
 
-// Send sends messages to multiple channels within a team
+// SendReply sends a reply to message with given ID
+// that was sent to given team and channel
 //
 // teamRef: team name or ID
 // channelRef: channel name or ID
