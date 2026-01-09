@@ -16,15 +16,15 @@ const (
 	FormatTOML ConfigFormat = "toml"
 )
 
-// FormatFlags represents the format flag values
-type FormatFlags struct {
+// ConfigFormatFlags represents the format flag values
+type ConfigFormatFlags struct {
 	JSON bool
 	YAML bool
 	TOML bool
 }
 
 // AddFormatFlags adds format flags to a cobra command
-func AddFormatFlags(cmd *cobra.Command, flags *FormatFlags) {
+func AddFormatFlags(cmd *cobra.Command, flags *ConfigFormatFlags) {
 	cmd.Flags().BoolVar(&flags.JSON, "json", false, "Use JSON format")
 	cmd.Flags().BoolVar(&flags.YAML, "yaml", false, "Use YAML format")
 	cmd.Flags().BoolVar(&flags.TOML, "toml", false, "Use TOML format")
@@ -32,7 +32,7 @@ func AddFormatFlags(cmd *cobra.Command, flags *FormatFlags) {
 }
 
 // GetFormat returns the selected format or an error if none/multiple are selected
-func (f *FormatFlags) GetFormat() (ConfigFormat, error) {
+func (f *ConfigFormatFlags) GetFormat() (ConfigFormat, error) {
 	count := 0
 	var format ConfigFormat
 
