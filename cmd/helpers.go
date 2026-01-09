@@ -139,6 +139,7 @@ func parseTemplateAndData(templatePath, dataPath string) (map[string]string, err
 
 func createMessagesFromString(message string, recipients []string) map[string]string {
 	messages := make(map[string]string, len(recipients))
+	message = templates.RawToHTML([]byte(message))
 	for _, recipient := range recipients {
 		messages[recipient] = message
 	}
@@ -151,7 +152,7 @@ func createMessagesFromFile(filePath string, recipients []string) (map[string]st
 		return nil, fmt.Errorf("failed to read message file: %w", err)
 	}
 
-	message := string(content)
+	message := templates.RawToHTML(content)
 	messages := make(map[string]string, len(recipients))
 	for _, recipient := range recipients {
 		messages[recipient] = message
