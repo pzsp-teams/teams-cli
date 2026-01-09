@@ -24,22 +24,22 @@ var configInitCmd = &cobra.Command{
 }
 
 var (
-	formatFlags FormatFlags
-	outputPath  string
+	configFormatFlags ConfigFormatFlags
+	outputPath        string
 )
 
 func init() {
 	RootCmd.AddCommand(configCmd)
 	configCmd.AddCommand(configInitCmd)
 
-	AddFormatFlags(configInitCmd, &formatFlags)
+	AddFormatFlags(configInitCmd, &configFormatFlags)
 	configInitCmd.Flags().StringVarP(&outputPath, "output", "o", "", "Output file path (default: teams_cli.<format>)")
 
 	RootCmd.PersistentFlags().StringP("config", "c", "", "Path to configuration file")
 }
 
 func runConfigInit(cmd *cobra.Command, args []string) error {
-	format, err := formatFlags.GetFormat()
+	format, err := configFormatFlags.GetFormat()
 	if err != nil {
 		return err
 	}
