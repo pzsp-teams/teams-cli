@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/pzsp-teams/cli/cmd/common"
 	"github.com/pzsp-teams/cli/internal/initializers"
 )
 
@@ -60,7 +61,7 @@ func runChannelsReply(cmd *cobra.Command, args []string) error {
 	}
 
 	log.Debug("Creating Teams client")
-	teamsClient, err := GetOrCreateTeamsClient(ctx)
+	teamsClient, err := common.GetTeamsClient(cmd)
 	if err != nil {
 		log.Error("Failed to create Teams client", "error", err)
 		return err

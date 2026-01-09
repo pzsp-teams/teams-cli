@@ -8,6 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/pzsp-teams/cli/cmd/common"
 	channelcreation "github.com/pzsp-teams/cli/internal/channels/creator"
 	"github.com/pzsp-teams/cli/internal/initializers"
 )
@@ -84,7 +85,7 @@ func runCreateChannels(cmd *cobra.Command, args []string) error {
 	log.Info("Parsed channels data", "channels", len(channelData))
 
 	log.Debug("Creating Teams client")
-	teamsClient, err := GetOrCreateTeamsClient(ctx)
+	teamsClient, err := common.GetTeamsClient(cmd)
 	if err != nil {
 		log.Error("Failed to create Teams client", "error", err)
 		return err

@@ -3,8 +3,10 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/pzsp-teams/lib/models"
 	"github.com/spf13/cobra"
+
+	"github.com/pzsp-teams/cli/cmd/common"
+	"github.com/pzsp-teams/lib/models"
 )
 
 var teamCmd = &cobra.Command{
@@ -64,7 +66,7 @@ func init() {
 }
 
 func runTeamList(cmd *cobra.Command, args []string) error {
-	c, err := GetOrCreateTeamsClient(cmd.Context())
+	c, err := common.GetTeamsClient(cmd)
 	if err != nil {
 		return err
 	}
@@ -95,7 +97,7 @@ var teamGetCmd = &cobra.Command{
 }
 
 func runTeamGet(cmd *cobra.Command, args []string) error {
-	c, err := GetOrCreateTeamsClient(cmd.Context())
+	c, err := common.GetTeamsClient(cmd)
 	if err != nil {
 		return err
 	}
@@ -126,7 +128,7 @@ var teamArchiveCmd = &cobra.Command{
 }
 
 func runTeamArchive(cmd *cobra.Command, args []string) error {
-	c, err := GetOrCreateTeamsClient(cmd.Context())
+	c, err := common.GetTeamsClient(cmd)
 	if err != nil {
 		return err
 	}
@@ -146,7 +148,7 @@ var teamUnarchiveCmd = &cobra.Command{
 }
 
 func runTeamUnarchive(cmd *cobra.Command, args []string) error {
-	c, err := GetOrCreateTeamsClient(cmd.Context())
+	c, err := common.GetTeamsClient(cmd)
 	if err != nil {
 		return err
 	}
@@ -166,7 +168,7 @@ var teamDeleteCmd = &cobra.Command{
 }
 
 func runTeamDelete(cmd *cobra.Command, args []string) error {
-	c, err := GetOrCreateTeamsClient(cmd.Context())
+	c, err := common.GetTeamsClient(cmd)
 	if err != nil {
 		return err
 	}
