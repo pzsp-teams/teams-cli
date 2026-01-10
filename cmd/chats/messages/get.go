@@ -1,22 +1,33 @@
-package cmd
+package messages
 
 import (
 	"fmt"
 
 	"github.com/spf13/cobra"
 
-	"github.com/pzsp-teams/cli/cmd/common"
+	cmdcommon "github.com/pzsp-teams/cli/cmd/common"
 	chatsretriever "github.com/pzsp-teams/cli/internal/chats/retriever"
 	"github.com/pzsp-teams/cli/internal/formatters"
 	"github.com/pzsp-teams/cli/internal/initializers"
-	"github.com/pzsp-teams/cli/internal/timeparse"
 	"github.com/pzsp-teams/cli/internal/utils"
 )
 
-var chatsMessagesGetCmd = &cobra.Command{
-	Use:   "get",
-	Short: "Retrieve messages from all chats within a time range",
-	Long: `Retrieve messages from all chats you have access to within the specified time range.
+type getFlags struct {
+	startTime string
+	endTime   string
+	file      string
+	plain     bool
+	markdown  bool
+	chatRef   string
+}
+
+func newGetCommand() *cobra.Command {
+	flags := &getFlags{}
+
+	cmd := &cobra.Command{
+		Use:   "get",
+		Short: "Retrieve messages from all chats within a time range",
+		Long: `Retrieve messages from all chats you have access to within the specified time range.
 
 Examples:
   # Last 24 hours (default)
@@ -34,56 +45,49 @@ Examples:
   # Filter by chat
   teams-cli chats messages get --chat-ref "<chat-reference>"
 `,
-	RunE: runChatsMessagesGet,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runGet(cmd, flags)
+		},
+	}
+
+	cmd.Flags().StringVar(&flags.startTime, "start", "", "Start time (optional, defaults to 24h ago)")
+	cmd.Flags().StringVar(&flags.endTime, "end", "", "End time (optional, defaults to now)")
+	cmd.Flags().StringVar(&flags.file, "file", "", "Name of file to save messages, will print to stdout if not given or apend to existing file if given")
+	cmd.Flags().BoolVar(&flags.plain, "plain", false, "Use plain format")
+	cmd.Flags().BoolVar(&flags.markdown, "markdown", false, "Use Markdown format")
+	cmd.Flags().StringVar(&flags.chatRef, "chat-ref", "", "Chat reference to filter messages")
+	cmd.MarkFlagsMutuallyExclusive("plain", "markdown")
+
+	return cmd
 }
 
-var (
-	chatsMessagesStartTime string
-	chatsMessagesEndTime   string
-	chatMessagesFile       string
-	chatMessagesFormat     formatFlags
-	chatRef                string
-)
-
-func init() {
-	chatsMessagesGetCmd.Flags().StringVar(&chatsMessagesStartTime, "start", "", "Start time (optional, defaults to 24h ago)")
-	chatsMessagesGetCmd.Flags().StringVar(&chatsMessagesEndTime, "end", "", "End time (optional, defaults to now)")
-	chatsMessagesGetCmd.Flags().StringVar(&chatMessagesFile, "file", "", "Name of file to save messages, will print to stdout if not given or apend to existing file if given")
-	chatsMessagesGetCmd.Flags().BoolVar(&chatMessagesFormat.Plain, "plain", false, "Use plain format")
-	chatsMessagesGetCmd.Flags().BoolVar(&chatMessagesFormat.MarkDown, "markdown", false, "Use Markdown format")
-	chatsMessagesGetCmd.Flags().StringVar(&chatRef, "chat-ref", "", "Chat reference to filter messages")
-	chatsMessagesGetCmd.MarkFlagsMutuallyExclusive("plain", "markdown")
-}
-
-func runChatsMessagesGet(cmd *cobra.Command, args []string) error {
+func runGet(cmd *cobra.Command, flags *getFlags) error {
 	log := initializers.Logger
 	ctx := cmd.Context()
-	dest := getDest(chatMessagesFile)
+	dest := cmdcommon.GetDest(flags.file)
 	defer func() {
 		if err := dest.Close(); err != nil {
 			log.Error("Failed to close destination", "error", err)
 		}
 	}()
 
-	formatter, err := chatMessagesFormat.getFormatter()
+	formatter, err := cmdcommon.GetFormatter(flags.plain, flags.markdown)
 	if err != nil {
 		return err
 	}
 
-	timeRange, err := timeparse.ParseTimeRange(chatsMessagesStartTime, chatsMessagesEndTime)
+	timeRange, err := cmdcommon.ParseTimeRange(flags.startTime, flags.endTime)
 	if err != nil {
 		return fmt.Errorf("failed to parse time range: %w", err)
 	}
 
-	log.Debug("Creating Teams client")
-	teamsClient, err := common.GetTeamsClient(cmd)
+	teamsClient, err := cmdcommon.GetTeamsClient(cmd)
 	if err != nil {
-		log.Error("Failed to create Teams client", "error", err)
 		return err
 	}
 
 	log.Info("Retrieving chat messages", "start", timeRange.Start, "end", timeRange.End)
-	messages, err := teamsClient.Chats.GetMessages(ctx, timeRange, utils.GetChatRef(chatRef))
+	messages, err := teamsClient.Chats.GetMessages(ctx, timeRange, utils.GetChatRef(flags.chatRef))
 	if err != nil {
 		log.Error("Failed to retrieve messages", "error", err)
 		return err
