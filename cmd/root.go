@@ -12,6 +12,7 @@ import (
 	"github.com/pzsp-teams/cli/cmd/teams"
 	"github.com/pzsp-teams/cli/internal/initializers"
 	"github.com/pzsp-teams/cli/internal/logger"
+	"github.com/pzsp-teams/cli/tui"
 )
 
 // RootCmd is the root command for the CLI
@@ -20,6 +21,7 @@ var RootCmd = &cobra.Command{
 	Short:            "Microsoft Teams CLI tool",
 	Long:             `A command-line tool for interacting with Microsoft Teams channels and chats`,
 	PersistentPreRun: initializeLogger,
+	Run:              runTUI,
 }
 
 // Execute runs the root command
@@ -73,5 +75,12 @@ func mapVerboseToLevel(count int) logger.Level {
 		return logger.LevelInfo
 	default:
 		return logger.LevelDebug
+	}
+}
+
+func runTUI(cmd *cobra.Command, args []string) {
+	if err := tui.Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error running TUI: %v\n", err)
+		os.Exit(1)
 	}
 }
