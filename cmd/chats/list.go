@@ -1,4 +1,4 @@
-package cmd
+package chats
 
 import (
 	"fmt"
@@ -9,25 +9,27 @@ import (
 	"github.com/pzsp-teams/cli/internal/initializers"
 )
 
-var chatsListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List all chats",
-	Long: `List all chats you have access to.
+func newListCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "list",
+		Short: "List all chats",
+		Long: `List all chats you have access to.
 
 Examples:
   # List all chats
   teams-cli chats list`,
-	RunE: runChatsList,
+		RunE: runList,
+	}
+
+	return cmd
 }
 
-func runChatsList(cmd *cobra.Command, args []string) error {
+func runList(cmd *cobra.Command, args []string) error {
 	log := initializers.Logger
 	ctx := cmd.Context()
 
-	log.Debug("Creating Teams client")
 	teamsClient, err := common.GetTeamsClient(cmd)
 	if err != nil {
-		log.Error("Failed to create Teams client", "error", err)
 		return err
 	}
 

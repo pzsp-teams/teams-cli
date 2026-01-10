@@ -7,11 +7,15 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/pzsp-teams/cli/cmd/channels"
+	"github.com/pzsp-teams/cli/cmd/chats"
+	"github.com/pzsp-teams/cli/cmd/teams"
 	"github.com/pzsp-teams/cli/internal/initializers"
 	"github.com/pzsp-teams/cli/internal/logger"
 )
 
-var rootCmd = &cobra.Command{
+// RootCmd is the root command for the CLI
+var RootCmd = &cobra.Command{
 	Use:              "teams-cli",
 	Short:            "Microsoft Teams CLI tool",
 	Long:             `A command-line tool for interacting with Microsoft Teams channels and chats`,
@@ -20,19 +24,23 @@ var rootCmd = &cobra.Command{
 
 // Execute runs the root command
 func Execute() {
-	err := rootCmd.Execute()
+	err := RootCmd.Execute()
 	if err != nil {
 		os.Exit(1)
 	}
 }
 
 func init() {
-	rootCmd.PersistentFlags().CountP("verbose", "v", "Increase verbosity (-v, -vv, -vvv)")
+	RootCmd.PersistentFlags().CountP("verbose", "v", "Increase verbosity (-v, -vv, -vvv)")
 
-	if err := viper.BindPFlag("verbose", rootCmd.PersistentFlags().Lookup("verbose")); err != nil {
+	if err := viper.BindPFlag("verbose", RootCmd.PersistentFlags().Lookup("verbose")); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to bind verbose flag: %v\n", err)
 		os.Exit(1)
 	}
+
+	RootCmd.AddCommand(teams.NewCommand())
+	RootCmd.AddCommand(channels.NewCommand())
+	RootCmd.AddCommand(chats.NewCommand())
 }
 
 func initializeLogger(cmd *cobra.Command, args []string) {

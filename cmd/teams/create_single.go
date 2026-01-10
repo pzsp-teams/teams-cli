@@ -1,4 +1,4 @@
-package cmd
+package teams
 
 import (
 	"fmt"
@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/pzsp-teams/cli/cmd/common"
+	internalcommon "github.com/pzsp-teams/cli/internal/common"
 	"github.com/pzsp-teams/cli/internal/core/creator"
 	"github.com/pzsp-teams/cli/internal/initializers"
 	tcreator "github.com/pzsp-teams/cli/internal/teams/creator"
@@ -23,7 +24,7 @@ type createSingleTeamCommand struct {
 	dryRun      bool
 }
 
-func newCreateSingleTeamCommand() *cobra.Command {
+func newCreateSingleCommand() *cobra.Command {
 	c := &createSingleTeamCommand{}
 	cmd := &cobra.Command{
 		Use:   "create-single",
@@ -60,7 +61,7 @@ func (c *createSingleTeamCommand) run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to open file %s: %w", c.file, err)
 	}
 
-	ext := getFileExtension(c.file)
+	ext := internalcommon.GetFileExtension(c.file)
 	singleTeamData, err := single.ParseSingleTeamDataByExtension(f, ext)
 	if err != nil {
 		return fmt.Errorf("failed to parse team data from %s: %w", c.file, err)

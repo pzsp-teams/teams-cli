@@ -1,4 +1,4 @@
-package cmd
+package teams
 
 import (
 	"fmt"
@@ -13,10 +13,17 @@ import (
 	teamcreator "github.com/pzsp-teams/cli/internal/teams/creator"
 )
 
-var teamCreateCmd = &cobra.Command{
-	Use:   "create",
-	Short: "Create teams from a data file",
-	Long: `Create multiple Teams from a data file (YAML/JSON/CSV).
+var (
+	createTeamsData   string
+	createTeamsDryRun bool
+)
+
+// newCreateCommand creates the teams create command
+func newCreateCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "create",
+		Short: "Create teams from a data file",
+		Long: `Create multiple Teams from a data file (YAML/JSON/CSV).
 
 The data file should contain team definitions with display names, descriptions, owners, and members.
 
@@ -30,13 +37,17 @@ Examples:
   # Dry run to preview
   cli team create --data teams.yaml --dry-run
 `,
-	RunE: runTeamCreate,
-}
+		RunE: runTeamCreate,
+	}
 
-var (
-	createTeamsData   string
-	createTeamsDryRun bool
-)
+	cmd.Flags().StringVar(&createTeamsData, "data", "", "Path to teams data file (YAML/JSON/CSV)")
+	cmd.Flags().BoolVar(&createTeamsDryRun, "dry-run", false, "Preview without creating teams")
+	if err := cmd.MarkFlagRequired("data"); err != nil {
+		fmt.Fprintf(os.Stderr, "WARNING: failed to mark data flag as required: %v\n", err)
+	}
+
+	return cmd
+}
 
 func runTeamCreate(cmd *cobra.Command, args []string) error {
 	log := initializers.Logger
@@ -61,10 +72,8 @@ func runTeamCreate(cmd *cobra.Command, args []string) error {
 
 	log.Info("Parsed teams data", "teams", len(teamData))
 
-	log.Debug("Creating Teams client")
 	teamsClient, err := common.GetTeamsClient(cmd)
 	if err != nil {
-		log.Error("Failed to create Teams client", "error", err)
 		return err
 	}
 

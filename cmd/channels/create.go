@@ -1,4 +1,4 @@
-package cmd
+package channels
 
 import (
 	"fmt"
@@ -13,10 +13,21 @@ import (
 	"github.com/pzsp-teams/cli/internal/initializers"
 )
 
-var createChannelsCmd = &cobra.Command{
-	Use:   "create",
-	Short: "Create Teams channels from a data file",
-	Long: `Create multiple Teams channels with members from a data file (YAML/JSON/TOML/CSV).
+type createFlags struct {
+	team             string
+	data             string
+	dryRun           bool
+	ensureInChannels bool
+	ensureInTeam     bool
+}
+
+func newCreateCommand() *cobra.Command {
+	flags := &createFlags{}
+
+	cmd := &cobra.Command{
+		Use:   "create",
+		Short: "Create Teams channels from a data file",
+		Long: `Create multiple Teams channels with members from a data file (YAML/JSON/TOML/CSV).
 
 The data file should contain channel definitions with team_ref, channel_ref, role, and user_ref.
 
@@ -29,52 +40,47 @@ Examples:
 
   # Dry run to preview
   cli channels create --team myteam --data channels.yaml --dry-run
-  
+
   # Ensure members are added to channels if they already exist
   cli channels create --team myteam --data channels.yaml --ensure-in-channels
 
   # Ensure members are memebers of the team
   cli channels create --team myteam --data channels.yaml --ensure-in-team
   `,
-	RunE: runCreateChannels,
-}
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runCreate(cmd, flags)
+		},
+	}
 
-var (
-	teamRef              string
-	createChannelsData   string
-	createChannelsDryRun bool
-	ensureInChannels     bool
-	ensureInTeam         bool
-)
+	cmd.Flags().StringVar(&flags.team, "team", "", "Name of the team in which to create channels")
+	cmd.Flags().StringVar(&flags.data, "data", "", "Path to channels data file (YAML/JSON/TOML/CSV)")
+	cmd.Flags().BoolVar(&flags.dryRun, "dry-run", false, "Preview without creating channels")
+	cmd.Flags().BoolVar(&flags.ensureInChannels, "ensure-in-channels", false, "Ensure members are added to channels if they already exist")
+	cmd.Flags().BoolVar(&flags.ensureInTeam, "ensure-in-team", false, "Ensure members are members of the team")
 
-func init() {
-	createChannelsCmd.Flags().StringVar(&teamRef, "team", "", "Name of the team in which to create channels")
-	createChannelsCmd.Flags().StringVar(&createChannelsData, "data", "", "Path to channels data file (YAML/JSON/TOML/CSV)")
-	createChannelsCmd.Flags().BoolVar(&createChannelsDryRun, "dry-run", false, "Preview without creating channels")
-	createChannelsCmd.Flags().BoolVar(&ensureInChannels, "ensure-in-channels", false, "Ensure members are added to channels if they already exist")
-	createChannelsCmd.Flags().BoolVar(&ensureInTeam, "ensure-in-team", false, "Ensure members are members of the team")
-
-	if err := createChannelsCmd.MarkFlagRequired("data"); err != nil {
+	if err := cmd.MarkFlagRequired("data"); err != nil {
 		fmt.Fprintf(os.Stderr, "WARNING: failed to mark data flag as required: %v\n", err)
 	}
-	if err := createChannelsCmd.MarkFlagRequired("team"); err != nil {
+	if err := cmd.MarkFlagRequired("team"); err != nil {
 		fmt.Fprintf(os.Stderr, "WARNING: failed to mark team flag as required: %v\n", err)
 	}
+
+	return cmd
 }
 
-func runCreateChannels(cmd *cobra.Command, args []string) error {
+func runCreate(cmd *cobra.Command, flags *createFlags) error {
 	log := initializers.Logger
 	ctx := cmd.Context()
 
-	dataFile, err := os.Open(createChannelsData)
+	dataFile, err := os.Open(flags.data)
 	if err != nil {
-		log.Error("Failed to open data file", "file", createChannelsData, "error", err)
+		log.Error("Failed to open data file", "file", flags.data, "error", err)
 		return fmt.Errorf("failed to open data file: %w", err)
 	}
 
-	extension := strings.TrimPrefix(filepath.Ext(createChannelsData), ".")
+	extension := strings.TrimPrefix(filepath.Ext(flags.data), ".")
 
-	log.Debug("Parsing channels data", "file", createChannelsData)
+	log.Debug("Parsing channels data", "file", flags.data)
 	channelData, err := channelcreation.ParseChannelsDataByExtension(dataFile, extension)
 	if err != nil {
 		log.Error("Failed to parse channels data", "error", err)
@@ -84,17 +90,15 @@ func runCreateChannels(cmd *cobra.Command, args []string) error {
 
 	log.Info("Parsed channels data", "channels", len(channelData))
 
-	log.Debug("Creating Teams client")
 	teamsClient, err := common.GetTeamsClient(cmd)
 	if err != nil {
-		log.Error("Failed to create Teams client", "error", err)
 		return err
 	}
 
-	log.Info("Creating channels", "count", len(channelData), "dryRun", createChannelsDryRun)
-	results := teamsClient.Channels.Create(ctx, teamRef, channelData, ensureInChannels, ensureInTeam, createChannelsDryRun)
+	log.Info("Creating channels", "count", len(channelData), "dryRun", flags.dryRun)
+	results := teamsClient.Channels.Create(ctx, flags.team, channelData, flags.ensureInChannels, flags.ensureInTeam, flags.dryRun)
 
-	printChannelCreationResults(results, createChannelsDryRun)
+	printChannelCreationResults(results, flags.dryRun)
 
 	return nil
 }
