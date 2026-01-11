@@ -17,42 +17,34 @@ func (nc *nopWriteCloser) Close() error {
 	return nil
 }
 
+// NopWriteCloser returns an io.WriteCloser that wraps the given io.Writer
+// and has a no-op Close method.
+func NopWriteCloser(w io.Writer) io.WriteCloser {
+	return &nopWriteCloser{w}
+}
+
 // GetDest returns an io.WriteCloser for the given filename
 // If filename is empty, returns stdout wrapped in a no-op closer
 // Otherwise opens/creates the file for appending
-func GetDest(filename string) io.WriteCloser {
+func GetDest(filename string) (io.WriteCloser, error) {
 	if filename == "" {
-		return &nopWriteCloser{os.Stdout}
+		return &nopWriteCloser{os.Stdout}, nil
 	}
 
 	file, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to create %s: %v\n", filename, err)
-		os.Exit(1)
+		return nil, fmt.Errorf("failed to create %s: %w", filename, err)
 	}
-	return file
+	return file, nil
 }
 
 // GetFormatter returns a formatter based on the plain and markdown flags
 // Returns plain text formatter by default
-func GetFormatter(plain, markdown bool) (formatters.Formatter, error) {
-	count := 0
-	var format formatters.Formatter
-
-	if markdown {
-		count++
-		format = formatters.NewMarkdownFormatter()
+func GetFormatter(format string) formatters.Formatter {
+	switch format {
+	case "markdown":
+		return formatters.NewMarkdownFormatter()
+	default:
+		return formatters.NewPlainTextFormatter()
 	}
-	if plain {
-		count++
-		format = formatters.NewPlainTextFormatter()
-	}
-	if count == 0 {
-		format = formatters.NewPlainTextFormatter()
-	}
-	if count > 1 {
-		return nil, fmt.Errorf("multiple formats specified, please choose only one")
-	}
-
-	return format, nil
 }
