@@ -13,6 +13,7 @@ type InputType int
 const (
 	InputNone InputType = iota
 	InputString
+	InputLongString
 	InputInt
 	InputBool
 	InputPassword
