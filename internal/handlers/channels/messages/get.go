@@ -18,6 +18,8 @@ func GetMessages(ctx context.Context, w io.Writer, flags map[string]any) (any, e
 	endTime, _ := flags["end"].(string)
 	file, _ := flags["file"].(string)
 	format, _ := flags["format"].(string)
+	team, _ := flags["team-ref"].(string)
+	channel, _ := flags["channel-ref"].(string)
 
 	log := initializers.Logger
 
@@ -53,7 +55,7 @@ func GetMessages(ctx context.Context, w io.Writer, flags map[string]any) (any, e
 	}
 
 	log.Info("Retrieving channel messages", "start", timeRange.Start, "end", timeRange.End)
-	messages, err := c.Channels.GetMessages(ctx, timeRange)
+	messages, err := c.Channels.GetMessages(ctx, timeRange, &team, &channel)
 	if err != nil {
 		log.Error("Failed to retrieve messages", "error", err)
 		return nil, err

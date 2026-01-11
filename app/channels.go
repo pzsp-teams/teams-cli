@@ -34,6 +34,18 @@ func init() {
 							{Name: "end", Usage: "End time", Type: InputDate},
 							{Name: "file", Usage: "Output file", Type: InputFile},
 							{
+								Name:       "team-ref",
+								Usage:      "Team reference to filter messages",
+								Type:       InputString,
+								DefaultVal: "",
+							},
+							{
+								Name:       "channel-ref",
+								Usage:      "Channel reference to filter messages",
+								Type:       InputString,
+								DefaultVal: "",
+							},
+							{
 								Name:       "format",
 								Usage:      "Output format",
 								Type:       InputChoice,

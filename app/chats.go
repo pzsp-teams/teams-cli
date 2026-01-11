@@ -27,6 +27,12 @@ func init() {
 							{Name: "end", Usage: "End time", Type: InputDate},
 							{Name: "file", Usage: "Output file", Type: InputFile},
 							{
+								Name:       "chat-ref",
+								Usage:      "Chat reference to filter messages",
+								Type:       InputString,
+								DefaultVal: "",
+							},
+							{
 								Name:       "format",
 								Usage:      "Output format",
 								Type:       InputChoice,
