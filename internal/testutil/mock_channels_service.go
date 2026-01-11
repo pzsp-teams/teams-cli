@@ -14,6 +14,7 @@ import (
 	reflect "reflect"
 
 	models "github.com/pzsp-teams/lib/models"
+	search "github.com/pzsp-teams/lib/search"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -232,6 +233,21 @@ func (m *MockChannelsService) RemoveMember(ctx context.Context, teamRef, channel
 func (mr *MockChannelsServiceMockRecorder) RemoveMember(ctx, teamRef, channelRef, userRef any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveMember", reflect.TypeOf((*MockChannelsService)(nil).RemoveMember), ctx, teamRef, channelRef, userRef)
+}
+
+// SearchMessages mocks base method.
+func (m *MockChannelsService) SearchMessages(ctx context.Context, teamRef, channelRef *string, opts *search.SearchMessagesOptions, searchConfig *search.SearchConfig) (*search.SearchResults, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SearchMessages", ctx, teamRef, channelRef, opts, searchConfig)
+	ret0, _ := ret[0].(*search.SearchResults)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SearchMessages indicates an expected call of SearchMessages.
+func (mr *MockChannelsServiceMockRecorder) SearchMessages(ctx, teamRef, channelRef, opts, searchConfig any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SearchMessages", reflect.TypeOf((*MockChannelsService)(nil).SearchMessages), ctx, teamRef, channelRef, opts, searchConfig)
 }
 
 // SendMessage mocks base method.
