@@ -67,7 +67,7 @@ func TestGetMessages_Success(t *testing.T) {
 		Return(messages, nil)
 
 	retriever := NewRetriever(mockTeamsService, mockChannelsService)
-	result, err := retriever.GetMessages(ctx, timeRange)
+	result, err := retriever.GetMessages(ctx, timeRange, nil, nil)
 
 	assert.NoError(t, err)
 	assert.Len(t, result, 2)
@@ -103,7 +103,7 @@ func TestGetMessages_NoTeamsFound(t *testing.T) {
 		Return([]*models.Team{}, nil)
 
 	retriever := NewRetriever(mockTeamsService, mockChannelsService)
-	result, err := retriever.GetMessages(ctx, timeRange)
+	result, err := retriever.GetMessages(ctx, timeRange, nil, nil)
 
 	assert.Error(t, err)
 	assert.Nil(t, result)
@@ -159,7 +159,7 @@ func TestGetMessages_ArchivedTeamsFiltered(t *testing.T) {
 		Return(messages, nil)
 
 	retriever := NewRetriever(mockTeamsService, mockChannelsService)
-	result, err := retriever.GetMessages(ctx, timeRange)
+	result, err := retriever.GetMessages(ctx, timeRange, nil, nil)
 
 	assert.NoError(t, err)
 	assert.Len(t, result, 1)
@@ -192,7 +192,7 @@ func TestGetMessages_NoChannelsFound(t *testing.T) {
 		Return([]*models.Channel{}, nil)
 
 	retriever := NewRetriever(mockTeamsService, mockChannelsService)
-	result, err := retriever.GetMessages(ctx, timeRange)
+	result, err := retriever.GetMessages(ctx, timeRange, nil, nil)
 
 	assert.Error(t, err)
 	assert.Nil(t, result)
@@ -218,7 +218,7 @@ func TestGetMessages_TeamsServiceError(t *testing.T) {
 		Return(nil, expectedError)
 
 	retriever := NewRetriever(mockTeamsService, mockChannelsService)
-	result, err := retriever.GetMessages(ctx, timeRange)
+	result, err := retriever.GetMessages(ctx, timeRange, nil, nil)
 
 	assert.Error(t, err)
 	assert.Nil(t, result)
@@ -252,7 +252,7 @@ func TestGetMessages_ChannelsServiceError(t *testing.T) {
 		Return(nil, expectedError)
 
 	retriever := NewRetriever(mockTeamsService, mockChannelsService)
-	result, err := retriever.GetMessages(ctx, timeRange)
+	result, err := retriever.GetMessages(ctx, timeRange, nil, nil)
 
 	assert.Error(t, err)
 	assert.Nil(t, result)
@@ -298,7 +298,7 @@ func TestGetMessages_MessagesServiceError(t *testing.T) {
 		Return(nil, expectedError)
 
 	retriever := NewRetriever(mockTeamsService, mockChannelsService)
-	result, err := retriever.GetMessages(ctx, timeRange)
+	result, err := retriever.GetMessages(ctx, timeRange, nil, nil)
 
 	assert.Error(t, err)
 	assert.Nil(t, result)
@@ -344,7 +344,7 @@ func TestGetMessages_403ErrorIgnored(t *testing.T) {
 		Return(nil, forbiddenError)
 
 	retriever := NewRetriever(mockTeamsService, mockChannelsService)
-	result, err := retriever.GetMessages(ctx, timeRange)
+	result, err := retriever.GetMessages(ctx, timeRange, nil, nil)
 
 	assert.NoError(t, err)
 	assert.Empty(t, result)
@@ -416,7 +416,7 @@ func TestGetMessages_TimeRangeFiltering(t *testing.T) {
 		Return(messages, nil)
 
 	retriever := NewRetriever(mockTeamsService, mockChannelsService)
-	result, err := retriever.GetMessages(ctx, timeRange)
+	result, err := retriever.GetMessages(ctx, timeRange, nil, nil)
 
 	assert.NoError(t, err)
 	assert.Len(t, result, 2) // Only messages in range
@@ -517,7 +517,7 @@ func TestGetMessages_MultipleTeamsAndChannels(t *testing.T) {
 		Return(team2AnnouncementsMessages, nil)
 
 	retriever := NewRetriever(mockTeamsService, mockChannelsService)
-	result, err := retriever.GetMessages(ctx, timeRange)
+	result, err := retriever.GetMessages(ctx, timeRange, nil, nil)
 
 	assert.NoError(t, err)
 	assert.Len(t, result, 3) // Messages from all channels

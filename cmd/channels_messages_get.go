@@ -36,6 +36,8 @@ var (
 	channelsMessagesEndTime   string
 	channelMessagesFile       string
 	channelMessagesFormat     formatFlags
+	teamReference             string
+	channelReference          string
 )
 
 func init() {
@@ -44,6 +46,8 @@ func init() {
 	channelsMessagesGetCmd.Flags().StringVar(&channelMessagesFile, "file", "", "Name of file to save messages, will print to stdout if not given or apend to existing file if given")
 	channelsMessagesGetCmd.Flags().BoolVar(&channelMessagesFormat.Plain, "plain", false, "Use plain format")
 	channelsMessagesGetCmd.Flags().BoolVar(&channelMessagesFormat.MarkDown, "markdown", false, "Use Markdown format")
+	channelsMessagesGetCmd.Flags().StringVar(&teamReference, "team", "", "Team ID or name to filter messages (optional)")
+	channelsMessagesGetCmd.Flags().StringVar(&channelReference, "channel", "", "Channel ID or name to filter messages (optional)")
 	channelsMessagesGetCmd.MarkFlagsMutuallyExclusive("plain", "markdown")
 }
 
@@ -75,7 +79,7 @@ func runChannelsMessagesGet(cmd *cobra.Command, args []string) error {
 	}
 
 	log.Info("Retrieving channel messages", "start", timeRange.Start, "end", timeRange.End)
-	messages, err := teamsClient.Channels.GetMessages(ctx, timeRange)
+	messages, err := teamsClient.Channels.GetMessages(ctx, timeRange, &teamReference, &channelReference)
 	if err != nil {
 		log.Error("Failed to retrieve messages", "error", err)
 		return err

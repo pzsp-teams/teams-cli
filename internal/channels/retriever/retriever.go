@@ -2,25 +2,12 @@ package retriever
 
 import (
 	"context"
-	"fmt"
-	"strings"
-	"time"
 
 	coreretriever "github.com/pzsp-teams/cli/internal/core/retriever"
 	lib_channels "github.com/pzsp-teams/lib/channels"
-	"github.com/pzsp-teams/lib/models"
+	"github.com/pzsp-teams/lib/search"
 	lib_teams "github.com/pzsp-teams/lib/teams"
 )
-
-type teamChannelMap struct {
-	Team     *models.Team
-	Channels []*models.Channel
-}
-
-// Retriever defines the interface for retrieving channel messages
-type Retriever interface {
-	GetMessages(ctx context.Context, timeRange coreretriever.TimeRange) ([]*ChannelMessageWithContext, error)
-}
 
 // retriever retrieves messages from channels within a time range
 type retriever struct {
@@ -36,135 +23,83 @@ func NewRetriever(teamsService lib_teams.Service, channelsService lib_channels.S
 	}
 }
 
-func (r *retriever) filterOutArchivedTeams(teams []*models.Team) []*models.Team {
-	activeTeams := teams[:0]
-	for _, team := range teams {
-		if !team.IsArchived {
-			activeTeams = append(activeTeams, team)
-		}
+func (r *retriever) getMessagesInTimeRange(ctx context.Context, timeRange coreretriever.TimeRange, teamRef, channelRef *string) ([]*ChannelMessageWithContext, error) {
+	var aggregatedSearchResults []*search.SearchResults
+	var from int32 = 0
+	var size int32 = 25
+	if teamRef != nil && *teamRef != "" {
+		teamRef = nil
 	}
-	return activeTeams
-}
-
-func (r *retriever) getActiveTeams(ctx context.Context) ([]*models.Team, error) {
-	teams, err := r.teamsService.ListMyJoined(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrListingTeamsFailed, err)
+	if channelRef != nil && *channelRef != "" {
+		channelRef = nil
 	}
-	teams = r.filterOutArchivedTeams(teams)
-	if len(teams) == 0 {
-		return nil, ErrNoTeamsFound
-	}
-	return teams, nil
-}
-
-func (r *retriever) getChannels(ctx context.Context, teams []*models.Team) ([]teamChannelMap, error) {
-	var result []teamChannelMap
-	for _, team := range teams {
-		channels, err := r.channelsService.ListChannels(ctx, team.ID)
-		if err != nil {
-			return nil, fmt.Errorf("%w: %s: %v", ErrListingChannelsFailed, team.DisplayName, err)
-		}
-		if len(channels) > 0 {
-			result = append(result, teamChannelMap{
-				Team:     team,
-				Channels: channels,
-			})
-		}
-	}
-	if len(result) == 0 {
-		return nil, ErrNoChannelsFound
-	}
-	return result, nil
-}
-
-type channelJob struct {
-	Team    *models.Team
-	Channel *models.Channel
-}
-
-func (r *retriever) getMessagesInTimeRange(ctx context.Context, teamChannelMaps []teamChannelMap, timeRange coreretriever.TimeRange) ([]*ChannelMessageWithContext, error) {
-	var jobs []channelJob
-	for _, tcm := range teamChannelMaps {
-		for _, channel := range tcm.Channels {
-			jobs = append(jobs, channelJob{
-				Team:    tcm.Team,
-				Channel: channel,
-			})
-		}
-	}
-
-	results := coreretriever.ExecuteJobs(jobs, coreretriever.WorkersCount, func(job channelJob) ([]*ChannelMessageWithContext, error) {
-		return r.processChannelMessages(ctx, job, timeRange)
-	})
-
-	return coreretriever.AggregateResults(results)
-}
-
-func (r *retriever) processChannelMessages(ctx context.Context, job channelJob, timeRange coreretriever.TimeRange) ([]*ChannelMessageWithContext, error) {
-	top := int32(30)
-	opts := &models.ListMessagesOptions{
-		Top:           &top,
-		ExpandReplies: true,
-	}
-
-	var messageCollection *models.MessageCollection
-	var err error
-	var filteredMessages []*ChannelMessageWithContext
-	var oldestMessage time.Time
-	var nextLink *string
-
 	for {
-		messageCollection, err = r.channelsService.ListMessages(ctx, job.Team.ID, job.Channel.ID, opts, false, nextLink)
+		searchOpts := &search.SearchMessagesOptions{
+			StartTime: &timeRange.Start,
+			EndTime:   &timeRange.End,
+			NotFromMe: true,
+			SearchPage: &search.SearchPage{
+				From: &from,
+				Size: &size,
+			},
+		}
+
+		searchResult, err := r.channelsService.SearchMessages(ctx, teamRef, channelRef, searchOpts, search.DefaultSearchConfig())
 		if err != nil {
-			if strings.Contains(err.Error(), "403") {
-				return nil, nil
+			return nil, err
+		}
+		aggregatedSearchResults = append(aggregatedSearchResults, searchResult)
+		if searchResult.NextFrom == nil {
+			break
+		}
+		from = *searchResult.NextFrom
+	}
+	return r.processChannelMessages(aggregatedSearchResults), nil
+}
+
+func (r *retriever) processChannelMessages(searchResults []*search.SearchResults) []*ChannelMessageWithContext {
+	var results []*ChannelMessageWithContext
+	var teamNameByID = make(map[string]string)
+	var channelNameByID = make(map[string]string)
+	for _, result := range searchResults {
+		for _, msg := range result.Messages {
+			if msg.TeamID == nil || msg.ChannelID == nil {
+				continue
 			}
-			return nil, fmt.Errorf("%w: team=%s channel=%s: %v",
-				ErrListingMessagesFailed, job.Team.DisplayName, job.Channel.Name, err)
-		}
-
-		if len(messageCollection.Messages) == 0 {
-			break
-		}
-
-		for _, message := range messageCollection.Messages {
-			if message.CreatedDateTime.After(timeRange.Start) && message.CreatedDateTime.Before(timeRange.End) {
-				filteredMessages = append(filteredMessages, &ChannelMessageWithContext{
-					TeamName:    job.Team.DisplayName,
-					TeamID:      job.Team.ID,
-					ChannelName: job.Channel.Name,
-					ChannelID:   job.Channel.ID,
-					Message:     message,
-				})
+			var teamName, channelName string
+			if name, ok := teamNameByID[*msg.TeamID]; ok {
+				teamName = name
+			} else if msg.TeamID != nil {
+				team, err := r.teamsService.Get(context.Background(), *msg.TeamID)
+				if err == nil {
+					teamName = team.DisplayName
+					teamNameByID[*msg.TeamID] = team.DisplayName
+				}
 			}
-		}
-
-		oldestMessage = messageCollection.Messages[len(messageCollection.Messages)-1].CreatedDateTime
-		if oldestMessage.Before(timeRange.Start) {
-			break
-		}
-
-		nextLink = messageCollection.NextLink
-		if nextLink == nil || *nextLink == "" {
-			break
+			if name, ok := channelNameByID[*msg.ChannelID]; ok {
+				channelName = name
+			} else if msg.ChannelID != nil {
+				channel, err := r.channelsService.Get(context.Background(), *msg.TeamID, *msg.ChannelID)
+				if err == nil {
+					channelName = channel.Name
+					channelNameByID[*msg.ChannelID] = channel.Name
+				}
+			}
+			results = append(results, &ChannelMessageWithContext{
+				TeamName:    teamName,
+				TeamID:      *msg.TeamID,
+				ChannelName: channelName,
+				ChannelID:   *msg.ChannelID,
+				Message:     msg.Message,
+			})
 		}
 	}
-
-	return filteredMessages, nil
+	return results
 }
 
 // GetMessages retrieves messages from all channels within the specified time range
-func (r *retriever) GetMessages(ctx context.Context, timeRange coreretriever.TimeRange) ([]*ChannelMessageWithContext, error) {
-	activeTeams, err := r.getActiveTeams(ctx)
-	if err != nil {
-		return nil, err
-	}
-	teamChannelMaps, err := r.getChannels(ctx, activeTeams)
-	if err != nil {
-		return nil, err
-	}
-	messages, err := r.getMessagesInTimeRange(ctx, teamChannelMaps, timeRange)
+func (r *retriever) GetMessages(ctx context.Context, timeRange coreretriever.TimeRange, teamRef, channelRef *string) ([]*ChannelMessageWithContext, error) {
+	messages, err := r.getMessagesInTimeRange(ctx, timeRange, teamRef, channelRef)
 	if err != nil {
 		return nil, err
 	}

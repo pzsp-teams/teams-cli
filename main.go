@@ -9,7 +9,7 @@ import (
 	"github.com/pzsp-teams/lib/setup"
 )
 
-func init() {
+func ensurePepper() {
 	if !setup.PepperExists() {
 		var pepper string
 		print("Set a pepper for hashing passwords: ")
@@ -27,6 +27,7 @@ func init() {
 }
 
 func main() {
+	ensurePepper()
 	defer lib.Close()
 	cmd.Execute()
 }

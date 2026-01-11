@@ -43,6 +43,6 @@ func (c *Client) Create(ctx context.Context, teamRef string, request map[string]
 }
 
 // GetMessages retrieves messages from all channels within the specified time range
-func (c *Client) GetMessages(ctx context.Context, timeRange coreretriever.TimeRange) ([]*retriever.ChannelMessageWithContext, error) {
-	return c.retriever.GetMessages(ctx, timeRange)
+func (c *Client) GetMessages(ctx context.Context, timeRange coreretriever.TimeRange, teamRef, channelRef *string) ([]*retriever.ChannelMessageWithContext, error) {
+	return c.retriever.GetMessages(ctx, timeRange, teamRef, channelRef)
 }
