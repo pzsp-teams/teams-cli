@@ -1,11 +1,29 @@
 package tui
 
 import (
+	"context"
 	"testing"
+
+	"github.com/pzsp-teams/cli/app"
 )
 
+var mockRegistry = []app.CommandDef{
+	{
+		Use:   "teams",
+		Short: "Teams - Manage teams",
+	},
+	{
+		Use:   "channels",
+		Short: "Channels - Manage channels",
+	},
+	{
+		Use:   "chats",
+		Short: "Chats - Manage chats",
+	},
+}
+
 func TestInitialModel(t *testing.T) {
-	m := initialModel()
+	m := initialModel(context.Background(), mockRegistry, "")
 
 	if m.list.Title != "Teams CLI - Main Menu" {
 		t.Errorf("Expected title 'Teams CLI - Main Menu', got '%s'", m.list.Title)
@@ -54,18 +72,18 @@ func TestItemDelegate(t *testing.T) {
 }
 
 func TestModelInit(t *testing.T) {
-	m := initialModel()
+	m := initialModel(context.Background(), mockRegistry, "")
 	cmd := m.Init()
 
-	if cmd != nil {
-		t.Errorf("Expected Init() to return nil, got %v", cmd)
+	if cmd == nil {
+		t.Errorf("Expected Init() to return a command, got nil")
 	}
 }
 
 func TestItemFilterValue(t *testing.T) {
 	testItem := item("Test Item")
 
-	if testItem.FilterValue() != "" {
-		t.Errorf("Expected FilterValue() to return empty string, got '%s'", testItem.FilterValue())
+	if testItem.FilterValue() != "Test Item" {
+		t.Errorf("Expected FilterValue() to return 'Test Item', got '%s'", testItem.FilterValue())
 	}
 }
