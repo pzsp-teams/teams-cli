@@ -10,6 +10,7 @@ import (
 	"github.com/pzsp-teams/cli/internal/client"
 	"github.com/pzsp-teams/cli/internal/formatters"
 	"github.com/pzsp-teams/cli/internal/initializers"
+	"github.com/pzsp-teams/cli/internal/utils"
 )
 
 // GetMessages handles retrieving messages from chats.
@@ -18,6 +19,7 @@ func GetMessages(ctx context.Context, w io.Writer, flags map[string]any) (any, e
 	endTime, _ := flags["end"].(string)
 	file, _ := flags["file"].(string)
 	format, _ := flags["format"].(string)
+	chat, _ := flags["chat-ref"].(string)
 
 	log := initializers.Logger
 
@@ -53,7 +55,7 @@ func GetMessages(ctx context.Context, w io.Writer, flags map[string]any) (any, e
 	}
 
 	log.Info("Retrieving chat messages", "start", timeRange.Start, "end", timeRange.End)
-	messages, err := c.Chats.GetMessages(ctx, timeRange)
+	messages, err := c.Chats.GetMessages(ctx, timeRange, utils.GetChatRef(chat))
 	if err != nil {
 		log.Error("Failed to retrieve messages", "error", err)
 		return nil, err
