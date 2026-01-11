@@ -60,27 +60,40 @@ func init() {
 						Short: "Send message",
 						Flags: []FlagDef{
 							{Name: "team", Usage: "Team name/ID", Type: InputString, Required: true},
-							{Name: "channels", Usage: "Channels list", Type: InputString}, // simplified for TUI
+							{
+								Name:          "channels",
+								Usage:         "Channels list",
+								Type:          InputString,
+								ConflictsWith: []string{"template", "data"},
+							},
 							{
 								Name:          "message",
 								Usage:         "Message content",
-								Type:          InputString,
-								ConflictsWith: []string{"message-file", "template"},
+								Type:          InputLongString,
+								ConflictsWith: []string{"message-file", "template", "data"},
+								RequiresFlags: []string{"channels"},
 							},
 							{
 								Name:          "message-file",
 								Usage:         "Message file",
 								Type:          InputFile,
-								ConflictsWith: []string{"message", "template"},
+								ConflictsWith: []string{"message", "template", "data"},
+								RequiresFlags: []string{"channels"},
 							},
 							{
 								Name:          "template",
 								Usage:         "Template file",
 								Type:          InputFile,
 								RequiresFlags: []string{"data"},
-								ConflictsWith: []string{"message", "message-file"},
+								ConflictsWith: []string{"message", "message-file", "channels"},
 							},
-							{Name: "data", Usage: "Template data", Type: InputFile},
+							{
+								Name:          "data",
+								Usage:         "Template data",
+								Type:          InputFile,
+								RequiresFlags: []string{"template"},
+								ConflictsWith: []string{"message", "message-file", "channels"},
+							},
 							{Name: "dry-run", Usage: "Preview only", Type: InputBool},
 							{Name: "ignore-errors", Usage: "Continue on error", Type: InputBool},
 						},
@@ -96,7 +109,7 @@ func init() {
 							{
 								Name:          "message",
 								Usage:         "Reply content",
-								Type:          InputString,
+								Type:          InputLongString,
 								ConflictsWith: []string{"message-file"},
 							},
 							{
