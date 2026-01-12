@@ -46,7 +46,7 @@ func init() {
 						Use:   "send",
 						Short: "Send message",
 						Flags: []FlagDef{
-							{Name: "chats", Usage: "Chats list", Type: InputString},
+							{Name: "chats", Usage: "Chats list", Type: InputList},
 							{
 								Name:          "message",
 								Usage:         "Message content",

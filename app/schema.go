@@ -14,6 +14,7 @@ const (
 	InputNone InputType = iota
 	InputString
 	InputLongString
+	InputList
 	InputInt
 	InputBool
 	InputPassword

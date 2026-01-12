@@ -63,7 +63,7 @@ func init() {
 							{
 								Name:          "channels",
 								Usage:         "Channels list",
-								Type:          InputString,
+								Type:          InputList,
 								ConflictsWith: []string{"template", "data"},
 							},
 							{
