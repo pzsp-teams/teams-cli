@@ -23,15 +23,6 @@ const (
 	InputChoice
 )
 
-// OutputType represents the type of data returned by the handler
-type OutputType int
-
-const (
-	OutputText        OutputType = iota
-	OutputList                   // Generic list
-	OutputMessageList            // List of messages (interactive)
-)
-
 // FlagDef defines a command argument/flag
 type FlagDef struct {
 	Name          string
@@ -57,7 +48,6 @@ type CommandDef struct {
 	Long        string
 	Flags       []FlagDef
 	Handler     HandlerFunc
-	OutputType  OutputType
 	SubCommands []CommandDef
 }
 
