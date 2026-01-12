@@ -23,8 +23,6 @@ func SendMessages(ctx context.Context, w io.Writer, flags map[string]any) (any, 
 	var chats []string
 	if val, ok := flags["chats"].([]string); ok {
 		chats = val
-	} else if val, ok := flags["chats"].(string); ok && val != "" {
-		// TODO: handle given channels better, handle list in tui somehow
 	}
 
 	dryRun, _ := flags["dry-run"].(bool)
