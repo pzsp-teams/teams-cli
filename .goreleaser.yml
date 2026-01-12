@@ -6,7 +6,19 @@ before:
     - go mod download
 
 builds:
-  - skip: true
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+    hooks:
+      post:
+        - upx "{{ .Path }}"
 
 changelog:
   sort: asc
