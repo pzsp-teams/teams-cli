@@ -21,91 +21,104 @@ func NewRetriever(chatService chats.Service) Retriever {
 }
 
 // GetMessages retrieves messages from all chats within the specified time range
-func (r *retriever) GetMessages(ctx context.Context, timeRange coreretriever.TimeRange, chatRef chats.ChatRef) ([]*ChatMessageWithContext, error) {
-	messages, err := r.getMessagesInTimeRange(ctx, timeRange, chatRef)
-	if err != nil {
-		return nil, err
-	}
-	return messages, nil
-}
-
-func (r *retriever) getMessagesInTimeRange(ctx context.Context, timeRange coreretriever.TimeRange, chatRef chats.ChatRef) ([]*ChatMessageWithContext, error) {
-	var aggregatedSearchResults []*search.SearchResults
-	var from int32 = 0
-	var size int32 = 25
-	var cRef chats.ChatRef
-	if chatRef != nil {
-		cRef = chatRef
-	}
+func (r *retriever) GetMessages(
+	ctx context.Context,
+	timeRange coreretriever.TimeRange,
+	chatRef chats.ChatRef,
+) ([]*ChatMessageWithContext, error) {
 	searchConfig := &search.SearchConfig{
 		MaxWorkers: coreretriever.WorkersCount,
 	}
-	for {
+
+	nameByChatID := make(map[string]string)
+	typeByChatID := make(map[string]string)
+
+	var out []*ChatMessageWithContext
+
+	from := int32(0)
+	size := int32(25)
+
+	for range 10_000 {
+		f := from
+		s := size
+
 		searchOpts := &search.SearchMessagesOptions{
 			StartTime: &timeRange.Start,
 			EndTime:   &timeRange.End,
 			NotFromMe: true,
 			SearchPage: &search.SearchPage{
-				From: &from,
-				Size: &size,
+				From: &f,
+				Size: &s,
 			},
 		}
 
-		searchResult, err := r.chatService.SearchMessages(ctx, cRef, searchOpts, searchConfig)
+		page, err := r.chatService.SearchMessages(ctx, chatRef, searchOpts, searchConfig)
 		if err != nil {
 			return nil, err
 		}
-		aggregatedSearchResults = append(aggregatedSearchResults, searchResult)
-		if searchResult.NextFrom == nil {
+
+		r.processPage(ctx, page, nameByChatID, typeByChatID, &out)
+
+		if page.NextFrom == nil || *page.NextFrom == from {
 			break
 		}
-		from = *searchResult.NextFrom
+		from = *page.NextFrom
 	}
-	return r.processChatMessages(ctx, aggregatedSearchResults), nil
+
+	return out, nil
 }
 
-func (r *retriever) processChatMessages(ctx context.Context, searchResults []*search.SearchResults) []*ChatMessageWithContext {
-	var results []*ChatMessageWithContext
-	var nameByChatID = make(map[string]string)
-	var chatTypeByChatID = make(map[string]string)
-	for _, searchResult := range searchResults {
-		for _, msg := range searchResult.Messages {
-			if msg.ChatID == nil {
-				continue
-			}
-			var chatName string
-			var chatType string
-			if name, exists := nameByChatID[*msg.ChatID]; exists {
-				chatName = name
-				chatType = chatTypeByChatID[*msg.ChatID]
-			} else if msg.ChatID != nil {
-				chatRef := utils.GetChatRef(*msg.ChatID)
-				switch cr := chatRef.(type) {
-				case chats.OneOnOneChatRef:
-					chatName = msg.Message.From.DisplayName
-					chatType = "OneOnOne"
-				case chats.GroupChatRef:
-					chat, err := r.chatService.GetChat(ctx, cr)
-					if err != nil {
-						continue
-					}
-					if chat.Topic != nil {
-						chatName = *chat.Topic
-					} else {
-						chatName = *msg.ChatID
-					}
-					chatType = "Group"
-				}
-				nameByChatID[*msg.ChatID] = chatName
-				chatTypeByChatID[*msg.ChatID] = chatType
-			}
-			results = append(results, &ChatMessageWithContext{
-				ChatName: chatName,
-				ChatID:   *msg.ChatID,
-				ChatType: chatType,
-				Message:  msg.Message,
-			})
+func (r *retriever) processPage(
+	ctx context.Context,
+	page *search.SearchResults,
+	nameByChatID map[string]string,
+	typeByChatID map[string]string,
+	out *[]*ChatMessageWithContext,
+) {
+	for _, msg := range page.Messages {
+		if msg.ChatID == nil {
+			continue
 		}
+		chatID := *msg.ChatID
+
+		chatName := nameByChatID[chatID]
+		chatType := typeByChatID[chatID]
+
+		if chatName == "" {
+			chatName, chatType = r.resolveChatMeta(ctx, chatID, msg)
+			nameByChatID[chatID] = chatName
+			typeByChatID[chatID] = chatType
+		}
+
+		*out = append(*out, &ChatMessageWithContext{
+			ChatName: chatName,
+			ChatID:   chatID,
+			ChatType: chatType,
+			Message:  msg.Message,
+		})
 	}
-	return results
+}
+
+func (r *retriever) resolveChatMeta(ctx context.Context, chatID string, msg *search.SearchResult) (chatName, chatType string) {
+	ref := utils.GetChatRef(chatID)
+
+	switch cr := ref.(type) {
+	case chats.OneOnOneChatRef:
+		if msg.Message != nil && msg.Message.From != nil && msg.Message.From.DisplayName != "" {
+			return msg.Message.From.DisplayName, "OneOnOne"
+		}
+		return chatID, "OneOnOne"
+
+	case chats.GroupChatRef:
+		chat, err := r.chatService.GetChat(ctx, cr)
+		if err != nil || chat == nil {
+			return chatID, "Group"
+		}
+		if chat.Topic != nil && *chat.Topic != "" {
+			return *chat.Topic, "Group"
+		}
+		return chatID, "Group"
+	}
+
+	return chatID, "Unknown"
 }
