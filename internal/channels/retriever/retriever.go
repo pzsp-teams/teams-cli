@@ -44,7 +44,7 @@ func (r *retriever) getMessagesInTimeRange(ctx context.Context, timeRange corere
 		cRef = channelRef
 	}
 	searchConfig := &search.SearchConfig{
-		MaxWorkers: 32,
+		MaxWorkers: coreretriever.WorkersCount,
 	}
 	for {
 		searchOpts := &search.SearchMessagesOptions{
