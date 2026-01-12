@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -101,7 +102,14 @@ func toCobraCommand(def *app.CommandDef) *cobra.Command {
 		}
 	} else {
 		cmd.Run = func(c *cobra.Command, args []string) {
-			startTUI(c.Context(), def.Use)
+			fullPath := c.CommandPath()
+			rootName := c.Root().Name()
+			startPath := fullPath
+			if after, ok := strings.CutPrefix(fullPath, rootName); ok {
+				startPath = after
+				startPath = strings.TrimSpace(startPath)
+			}
+			startTUI(c.Context(), startPath)
 		}
 	}
 

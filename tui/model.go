@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -339,20 +340,37 @@ func initialModel(ctx context.Context, registry []app.CommandDef, startPath stri
 	nav := newNavigationState()
 
 	if startPath != "" {
-		for i := range registry {
-			if registry[i].Use == startPath {
-				nav.navigateTo(&registry[i])
-				break
-			}
-		}
+		navigateByPath(nav, registry, startPath)
 	}
 
-	m := &model{
+	return &model{
 		registry:   registry,
 		mode:       modeMenu,
 		list:       CreateMenuList(registry, nav.getCurrentCommand()),
 		navigation: nav,
 		executor:   executor,
 	}
-	return m
+}
+
+func navigateByPath(nav *navigationState, registry []app.CommandDef, path string) {
+	current := registry
+
+	for part := range strings.FieldsSeq(path) {
+		cmd := findCommand(current, part)
+		if cmd == nil {
+			return
+		}
+
+		nav.navigateTo(cmd)
+		current = cmd.SubCommands
+	}
+}
+
+func findCommand(commands []app.CommandDef, use string) *app.CommandDef {
+	for i := range commands {
+		if commands[i].Use == use {
+			return &commands[i]
+		}
+	}
+	return nil
 }
