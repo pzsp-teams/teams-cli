@@ -36,6 +36,7 @@ var (
 	chatsMessagesEndTime   string
 	chatMessagesFile       string
 	chatMessagesFormat     formatFlags
+	chatRef                string
 )
 
 func init() {
@@ -44,6 +45,7 @@ func init() {
 	chatsMessagesGetCmd.Flags().StringVar(&chatMessagesFile, "file", "", "Name of file to save messages, will print to stdout if not given or apend to existing file if given")
 	chatsMessagesGetCmd.Flags().BoolVar(&chatMessagesFormat.Plain, "plain", false, "Use plain format")
 	chatsMessagesGetCmd.Flags().BoolVar(&chatMessagesFormat.MarkDown, "markdown", false, "Use Markdown format")
+	chatsMessagesGetCmd.Flags().StringVar(&chatRef, "chat-ref", "", "Chat reference to filter messages")
 	chatsMessagesGetCmd.MarkFlagsMutuallyExclusive("plain", "markdown")
 }
 
@@ -75,7 +77,7 @@ func runChatsMessagesGet(cmd *cobra.Command, args []string) error {
 	}
 
 	log.Info("Retrieving chat messages", "start", timeRange.Start, "end", timeRange.End)
-	messages, err := teamsClient.Chats.GetMessages(ctx, timeRange)
+	messages, err := teamsClient.Chats.GetMessages(ctx, timeRange, nil)
 	if err != nil {
 		log.Error("Failed to retrieve messages", "error", err)
 		return err
