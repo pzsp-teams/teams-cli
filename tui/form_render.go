@@ -39,6 +39,27 @@ func (m *formModel) renderChoice(choice choiceField, focused bool) string {
 	return b.String()
 }
 
+func (m *formModel) renderCheckbox(checkbox checkboxField, focused bool) string {
+	var b strings.Builder
+
+	checkMark := "[ ]"
+	if checkbox.checked {
+		checkMark = "[x]"
+	}
+
+	if focused {
+		b.WriteString(focusedStyle.Render(checkMark + " " + checkbox.flagDef.Name))
+	} else {
+		b.WriteString(noStyle.Render(checkMark + " " + checkbox.flagDef.Name))
+	}
+
+	if checkbox.flagDef.Usage != "" {
+		b.WriteString(blurredStyle.Render(" - " + checkbox.flagDef.Usage))
+	}
+
+	return b.String()
+}
+
 func (m *formModel) renderTextArea(ta *textarea.Model, name string, focused bool) string {
 	var b strings.Builder
 
@@ -129,6 +150,7 @@ func (m *formModel) renderDateTimePicker(dp *bubbledatetimepicker.DateAndHourMod
 
 func isTextInput(t app.InputType) bool {
 	return t != app.InputChoice &&
+		t != app.InputBool &&
 		t != app.InputLongString &&
 		t != app.InputList &&
 		t != app.InputFile &&

@@ -22,6 +22,12 @@ type choiceField struct {
 	selected int
 }
 
+// checkboxField represents a checkbox for InputBool
+type checkboxField struct {
+	flagDef *app.FlagDef
+	checked bool
+}
+
 func createChoiceField(flagDef *app.FlagDef) choiceField {
 	choice := choiceField{
 		flagDef:  flagDef,
@@ -42,6 +48,21 @@ func createChoiceField(flagDef *app.FlagDef) choiceField {
 	return choice
 }
 
+func createCheckbox(flagDef *app.FlagDef) checkboxField {
+	checkbox := checkboxField{
+		flagDef: flagDef,
+		checked: false,
+	}
+
+	if flagDef.DefaultVal != nil {
+		if defBool, ok := flagDef.DefaultVal.(bool); ok {
+			checkbox.checked = defBool
+		}
+	}
+
+	return checkbox
+}
+
 func createTextInput(flagDef *app.FlagDef) textinput.Model {
 	t := textinput.New()
 	t.CharLimit = 256
@@ -49,11 +70,8 @@ func createTextInput(flagDef *app.FlagDef) textinput.Model {
 	t.Prompt = flagDef.Name + ": "
 	t.Placeholder = flagDef.Usage
 
-	switch flagDef.Type {
-	case app.InputPassword:
+	if flagDef.Type == app.InputPassword {
 		t.EchoMode = textinput.EchoPassword
-	case app.InputBool:
-		t.Placeholder += " (true/false)"
 	}
 
 	return t
@@ -92,6 +110,7 @@ func createTextArea(flagDef *app.FlagDef) textarea.Model {
 type formComponents struct {
 	inputs      []textinput.Model
 	choices     []choiceField
+	checkboxes  []checkboxField
 	textAreas   []textarea.Model
 	filePickers []filepicker.Model
 	datePickers []*bubbledatetimepicker.DateAndHourModel
@@ -102,6 +121,7 @@ func buildFields(def *app.CommandDef) formComponents {
 	var (
 		inputs      []textinput.Model
 		choices     []choiceField
+		checkboxes  []checkboxField
 		textAreas   []textarea.Model
 		filePickers []filepicker.Model
 		datePickers []*bubbledatetimepicker.DateAndHourModel
@@ -115,6 +135,10 @@ func buildFields(def *app.CommandDef) formComponents {
 		case app.InputChoice:
 			choices = append(choices, createChoiceField(f))
 			fieldMap[i] = fieldInfo{app.InputChoice, len(choices) - 1}
+
+		case app.InputBool:
+			checkboxes = append(checkboxes, createCheckbox(f))
+			fieldMap[i] = fieldInfo{app.InputBool, len(checkboxes) - 1}
 
 		case app.InputLongString, app.InputList:
 			textAreas = append(textAreas, createTextArea(f))
@@ -137,6 +161,7 @@ func buildFields(def *app.CommandDef) formComponents {
 	return formComponents{
 		inputs:      inputs,
 		choices:     choices,
+		checkboxes:  checkboxes,
 		textAreas:   textAreas,
 		filePickers: filePickers,
 		datePickers: datePickers,

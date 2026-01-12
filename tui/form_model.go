@@ -38,6 +38,7 @@ type formModel struct {
 	def         *app.CommandDef
 	inputs      []textinput.Model
 	choices     []choiceField
+	checkboxes  []checkboxField
 	textAreas   []textarea.Model
 	filePickers []filepicker.Model
 	datePickers []*bubbledatetimepicker.DateAndHourModel
@@ -65,6 +66,7 @@ func NewFormModel(def *app.CommandDef) *formModel {
 		def:          def,
 		inputs:       components.inputs,
 		choices:      components.choices,
+		checkboxes:   components.checkboxes,
 		textAreas:    components.textAreas,
 		filePickers:  components.filePickers,
 		datePickers:  components.datePickers,
@@ -176,11 +178,19 @@ func (m *formModel) handleChoiceFieldUpdate(key tea.KeyMsg) bool {
 		return false
 	}
 	field := currentVariant[m.focused]
+
 	if field.fieldType == app.InputChoice {
 		if m.keys.isChoiceLeft(key) || m.keys.isChoiceRight(key) {
 			return m.handleChoiceSelection(key)
 		}
 	}
+
+	if field.fieldType == app.InputBool {
+		if m.keys.isSubmit(key) {
+			return m.handleCheckboxToggle()
+		}
+	}
+
 	return false
 }
 
@@ -206,7 +216,6 @@ func (m *formModel) isFocusedSpecialField() bool {
 		return false
 	}
 	field := currentVariant[m.focused]
-	// Special fields are textareas, file pickers, and date pickers
 	return field.fieldType == app.InputLongString ||
 		field.fieldType == app.InputList ||
 		field.fieldType == app.InputFile ||
@@ -229,6 +238,15 @@ func (m *formModel) handleChoiceSelection(key tea.KeyMsg) bool {
 			choice.selected = 0
 		}
 	}
+	return true
+}
+
+func (m *formModel) handleCheckboxToggle() bool {
+	currentVariant := m.variants[m.variantIndex]
+	field := currentVariant[m.focused]
+
+	checkbox := &m.checkboxes[field.index]
+	checkbox.checked = !checkbox.checked
 	return true
 }
 
@@ -334,8 +352,7 @@ func (m *formModel) updateInputs(msg tea.Msg) tea.Cmd {
 		m.textAreas[field.index], cmd = m.textAreas[field.index].Update(msg)
 		return cmd
 
-	case app.InputChoice:
-		// Choices don't need Update() calls, handled separately
+	case app.InputChoice, app.InputBool:
 		return nil
 
 	default:
@@ -383,6 +400,9 @@ func (m *formModel) collectFlags() map[string]any {
 			choice := m.choices[field.index]
 			selectedValue := choice.flagDef.Options[choice.selected]
 			flagMap[flagDef.Name] = selectedValue
+		case app.InputBool:
+			checkbox := m.checkboxes[field.index]
+			flagMap[flagDef.Name] = checkbox.checked
 		case app.InputFile:
 			selectedFile := m.filePickers[field.index].Path
 			if selectedFile != "" {
@@ -460,6 +480,9 @@ func (m *formModel) renderFields(b *strings.Builder) {
 		case app.InputChoice:
 			choice := m.choices[field.index]
 			b.WriteString(m.renderChoice(choice, isFocused))
+		case app.InputBool:
+			checkbox := m.checkboxes[field.index]
+			b.WriteString(m.renderCheckbox(checkbox, isFocused))
 		case app.InputFile:
 			flagName := m.def.Flags[field.flagIndex].Name
 			b.WriteString(m.renderFilePicker(&m.filePickers[field.index], flagName, isFocused))

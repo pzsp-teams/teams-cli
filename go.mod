@@ -12,6 +12,7 @@ require (
 	github.com/go-playground/validator/v10 v10.30.1
 	github.com/joho/godotenv v1.5.1
 	github.com/pzsp-teams/lib v0.0.0-20260112132712-1335fb93c11f
+	github.com/lcc/bubble-datetime-picker v1.0.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
@@ -51,7 +52,6 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/keybase/go-keychain v0.0.1 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
-	github.com/lcc/bubble-datetime-picker v1.0.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
