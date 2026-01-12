@@ -2,25 +2,49 @@ package pepper
 
 import (
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/pzsp-teams/lib/setup"
 )
 
-// EnsurePepper checks if a pepper is set, and if not, prompts the user to set one
+type deps struct {
+	PepperExists func() bool
+	SetPepper    func(string) error
+	In           io.Reader
+	Out          io.Writer
+	Exit         func(int)
+}
+
+// EnsurePepper checks if a pepper is set, and if not, prompts the user to set one.
 func EnsurePepper() {
-	if !setup.PepperExists() {
-		var pepper string
-		print("Set a pepper for hashing passwords: ")
-		_, err := fmt.Scanln(&pepper)
-		if err != nil {
-			fmt.Println("Error reading pepper:", err)
-			os.Exit(1)
-		}
-		err = setup.SetPepper(pepper)
-		if err != nil {
-			fmt.Println("Error setting pepper:", err)
-			os.Exit(1)
-		}
+	ensurePepper(deps{
+		PepperExists: setup.PepperExists,
+		SetPepper:    setup.SetPepper,
+		In:           os.Stdin,
+		Out:          os.Stdout,
+		Exit:         os.Exit,
+	})
+}
+
+func ensurePepper(d deps) {
+	if d.PepperExists() {
+		return
+	}
+
+	_, _ = fmt.Fprint(d.Out, "Set a pepper for hashing passwords: ")
+
+	var pepper string
+	_, err := fmt.Fscanln(d.In, &pepper)
+	if err != nil {
+		_, _ = fmt.Fprintln(d.Out, "Error reading pepper:", err)
+		d.Exit(1)
+		return
+	}
+
+	if err := d.SetPepper(pepper); err != nil {
+		_, _ = fmt.Fprintln(d.Out, "Error setting pepper:", err)
+		d.Exit(1)
+		return
 	}
 }
