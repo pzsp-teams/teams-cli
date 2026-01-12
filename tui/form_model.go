@@ -47,7 +47,6 @@ type formModel struct {
 	variantIndex int
 
 	focused       int // Index within the current variant
-	err           error
 	validationErr string
 
 	width  int
@@ -62,6 +61,9 @@ func NewFormModel(def *app.CommandDef) *formModel {
 	components := buildFields(def)
 	variants := buildVariants(def, components.fieldMap)
 
+	h := help.New()
+	h.Width = 80
+
 	m := &formModel{
 		def:          def,
 		inputs:       components.inputs,
@@ -74,7 +76,7 @@ func NewFormModel(def *app.CommandDef) *formModel {
 		variantIndex: 0,
 		focused:      0,
 		keys:         newFormKeyMap(),
-		help:         help.New(),
+		help:         h,
 	}
 
 	m.updateFocus()
@@ -93,7 +95,7 @@ func (m *formModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		m.help.Width = msg.Width
+		m.help.Width = max(1, msg.Width-2)
 		return m, nil
 	case datePickerDoneMsg:
 		m.focused++
@@ -448,11 +450,11 @@ func (m *formModel) View() string {
 	formContent := b.String()
 	helpView := m.renderHelp()
 
-	// Calculate lines used by form content
 	contentLines := strings.Count(formContent, "\n")
-	helpLines := strings.Count(helpView, "\n") + 1 // +1 for the help itself
+	helpLines := strings.Count(helpView, "\n") + 1 // +1 for the help content itself
+	styleExtraLines := 1
 
-	usedLines := 1 + contentLines + helpLines
+	usedLines := 1 + contentLines + helpLines + styleExtraLines
 	paddingLines := 0
 	if m.height > usedLines {
 		paddingLines = m.height - usedLines
@@ -520,8 +522,17 @@ func (m *formModel) renderSubmitButton(b *strings.Builder) {
 }
 
 func (m *formModel) renderHelp() string {
+	useFullHelp := m.width == 0 || m.width < 120
+
+	if useFullHelp {
+		if len(m.variants) > 1 {
+			return m.help.FullHelpView(m.keys.FullHelpWithVariants())
+		}
+		return m.help.FullHelpView(m.keys.FullHelp())
+	}
+
 	if len(m.variants) > 1 {
 		return m.help.ShortHelpView(m.keys.ShortHelpWithVariants())
 	}
-	return m.help.View(&m.keys)
+	return m.help.ShortHelpView(m.keys.ShortHelp())
 }
