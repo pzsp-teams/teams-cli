@@ -29,12 +29,12 @@ func newFormKeyMap() formKeyMap {
 			key.WithHelp("enter", "submit"),
 		),
 		NextField: key.NewBinding(
-			key.WithKeys("tab", "down", "ctrl+j"),
-			key.WithHelp("tab/↓", "next field"),
+			key.WithKeys("tab", "ctrl+down"),
+			key.WithHelp("tab/ctrl+↓", "next field"),
 		),
 		PrevField: key.NewBinding(
-			key.WithKeys("shift+tab", "up", "ctrl+k"),
-			key.WithHelp("shift+tab/↑", "prev field"),
+			key.WithKeys("shift+tab", "ctrl+up"),
+			key.WithHelp("shift+tab/ctrl+↑", "prev field"),
 		),
 		NextVariant: key.NewBinding(
 			key.WithKeys("ctrl+right", "pgdown", "ctrl+l"),
@@ -45,12 +45,12 @@ func newFormKeyMap() formKeyMap {
 			key.WithHelp("ctrl+←/pgup", "prev variant"),
 		),
 		ChoiceLeft: key.NewBinding(
-			key.WithKeys("left"),
-			key.WithHelp("←", "prev choice"),
+			key.WithKeys("left", "h"),
+			key.WithHelp("←/h", "prev choice"),
 		),
 		ChoiceRight: key.NewBinding(
-			key.WithKeys("right"),
-			key.WithHelp("→", "next choice"),
+			key.WithKeys("right", "l"),
+			key.WithHelp("→/l", "next choice"),
 		),
 	}
 }
