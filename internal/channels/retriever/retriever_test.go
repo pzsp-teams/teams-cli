@@ -9,524 +9,317 @@ import (
 	coreretriever "github.com/pzsp-teams/cli/internal/core/retriever"
 	"github.com/pzsp-teams/cli/internal/testutil"
 	"github.com/pzsp-teams/lib/models"
-	"github.com/stretchr/testify/assert"
+	"github.com/pzsp-teams/lib/search"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
 
-func TestGetMessages_Success(t *testing.T) {
+type sutDeps struct {
+	teams    *testutil.MockTeamsService
+	channels *testutil.MockChannelsService
+}
+
+const team1 = "team-1"
+const channelID = "chan-1"
+
+func newSUT(t *testing.T) (Retriever, context.Context, sutDeps) {
+	t.Helper()
+
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
+	t.Cleanup(ctrl.Finish)
 
-	mockTeamsService := testutil.NewMockTeamsService(ctrl)
-	mockChannelsService := testutil.NewMockChannelsService(ctrl)
-
-	ctx := context.Background()
-	timeRange := coreretriever.TimeRange{
-		Start: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-		End:   time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
+	d := sutDeps{
+		teams:    testutil.NewMockTeamsService(ctrl),
+		channels: testutil.NewMockChannelsService(ctrl),
 	}
+	return NewRetriever(d.teams, d.channels), context.Background(), d
+}
 
-	teams := []*models.Team{
-		{ID: "team1-id", DisplayName: "Team1", IsArchived: false},
-	}
-	mockTeamsService.EXPECT().
-		ListMyJoined(ctx).
-		Return(teams, nil)
-
-	channels := []*models.Channel{
-		{ID: "channel1-id", Name: "General"},
-	}
-	mockChannelsService.EXPECT().
-		ListChannels(ctx, "team1-id").
-		Return(channels, nil)
-
-	messages := &models.MessageCollection{
-		Messages: []*models.Message{
-			{
-				ID:              "msg1",
-				Content:         "<p>Hello from channel</p>",
-				ContentType:     models.MessageContentTypeHTML,
-				CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
-			},
-			{
-				ID:              "msg2",
-				Content:         "Plain text",
-				ContentType:     models.MessageContentTypeText,
-				CreatedDateTime: time.Date(2024, 1, 1, 13, 0, 0, 0, time.UTC),
-			},
+func mkMsg(messageID string) *search.SearchResult {
+	return &search.SearchResult{
+		TeamID:    testutil.Ptr(team1),
+		ChannelID: testutil.Ptr(channelID),
+		Message: &models.Message{
+			ID: messageID,
 		},
-		NextLink: nil,
 	}
-	top := int32(30)
-	opts := &models.ListMessagesOptions{
-		Top:           &top,
-		ExpandReplies: true,
-	}
-	mockChannelsService.EXPECT().
-		ListMessages(ctx, "team1-id", "channel1-id", opts, false, nil).
-		Return(messages, nil)
-
-	retriever := NewRetriever(mockTeamsService, mockChannelsService)
-	result, err := retriever.GetMessages(ctx, timeRange, nil, nil)
-
-	assert.NoError(t, err)
-	assert.Len(t, result, 2)
-
-	// First message should have raw content
-	assert.Equal(t, "Team1", result[0].TeamName)
-	assert.Equal(t, "team1-id", result[0].TeamID)
-	assert.Equal(t, "General", result[0].ChannelName)
-	assert.Equal(t, "channel1-id", result[0].ChannelID)
-	assert.Equal(t, "msg1", result[0].Message.ID)
-	assert.Equal(t, "<p>Hello from channel</p>", result[0].Message.Content)
-
-	// Second message should be raw text
-	assert.Equal(t, "msg2", result[1].Message.ID)
-	assert.Equal(t, "Plain text", result[1].Message.Content)
 }
 
-func TestGetMessages_NoTeamsFound(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
+func TestGetMessages_Paginates_ResolvesNames_AndCachesLookups(t *testing.T) {
+	t.Parallel()
 
-	mockTeamsService := testutil.NewMockTeamsService(ctrl)
-	mockChannelsService := testutil.NewMockChannelsService(ctrl)
-
-	ctx := context.Background()
 	timeRange := coreretriever.TimeRange{
 		Start: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 		End:   time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
 	}
 
-	mockTeamsService.EXPECT().
-		ListMyJoined(ctx).
-		Return([]*models.Team{}, nil)
+	r, ctx, d := newSUT(t)
 
-	retriever := NewRetriever(mockTeamsService, mockChannelsService)
-	result, err := retriever.GetMessages(ctx, timeRange, nil, nil)
+	gomock.InOrder(
+		d.channels.EXPECT().
+			SearchMessages(gomock.Any(), nil, nil, gomock.Any(), gomock.Any()).
+			DoAndReturn(func(
+				_ context.Context,
+				tRef, cRef *string,
+				opts *search.SearchMessagesOptions,
+				cfg *search.SearchConfig,
+			) (*search.SearchResults, error) {
+				require.Nil(t, tRef)
+				require.Nil(t, cRef)
 
-	assert.Error(t, err)
-	assert.Nil(t, result)
-	assert.ErrorIs(t, err, ErrNoTeamsFound)
+				require.NotNil(t, cfg)
+				require.Equal(t, coreretriever.WorkersCount, cfg.MaxWorkers)
+
+				require.NotNil(t, opts)
+				require.True(t, opts.NotFromMe)
+
+				require.NotNil(t, opts.StartTime)
+				require.Equal(t, timeRange.Start, *opts.StartTime)
+				require.NotNil(t, opts.EndTime)
+				require.Equal(t, timeRange.End, *opts.EndTime)
+
+				require.NotNil(t, opts.SearchPage)
+				require.NotNil(t, opts.SearchPage.From)
+				require.Equal(t, int32(0), *opts.SearchPage.From)
+				require.NotNil(t, opts.SearchPage.Size)
+				require.Equal(t, int32(25), *opts.SearchPage.Size)
+
+				return &search.SearchResults{
+					Messages: []*search.SearchResult{
+						mkMsg("m1"),
+						mkMsg("m2"),
+					},
+					NextFrom: testutil.Ptr(int32(25)),
+				}, nil
+			}),
+
+		d.teams.EXPECT().
+			Get(gomock.Any(), "team-1").
+			Return(&models.Team{ID: "team-1", DisplayName: "Team One"}, nil).
+			Times(1),
+
+		d.channels.EXPECT().
+			Get(gomock.Any(), "team-1", "chan-1").
+			Return(&models.Channel{ID: "chan-1", Name: "General"}, nil).
+			Times(1),
+
+		d.channels.EXPECT().
+			SearchMessages(gomock.Any(), nil, nil, gomock.Any(), gomock.Any()).
+			DoAndReturn(func(
+				_ context.Context,
+				_ *string, _ *string,
+				opts *search.SearchMessagesOptions,
+				_ *search.SearchConfig,
+			) (*search.SearchResults, error) {
+				require.NotNil(t, opts.SearchPage.From)
+				require.Equal(t, int32(25), *opts.SearchPage.From)
+
+				return &search.SearchResults{
+					Messages: []*search.SearchResult{
+						mkMsg("m3"),
+					},
+					NextFrom: nil,
+				}, nil
+			}),
+	)
+
+	out, err := r.GetMessages(ctx, timeRange, nil, nil)
+	require.NoError(t, err)
+	require.Len(t, out, 3)
+
+	require.Equal(t, "Team One", out[0].TeamName)
+	require.Equal(t, "team-1", out[0].TeamID)
+	require.Equal(t, "General", out[0].ChannelName)
+	require.Equal(t, "chan-1", out[0].ChannelID)
+	require.Equal(t, "m1", out[0].Message.ID)
+
+	require.Equal(t, "m2", out[1].Message.ID)
+	require.Equal(t, "m3", out[2].Message.ID)
 }
 
-func TestGetMessages_ArchivedTeamsFiltered(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
+func TestGetMessages_NormalizesEmptyRefsToNil(t *testing.T) {
+	t.Parallel()
 
-	mockTeamsService := testutil.NewMockTeamsService(ctrl)
-	mockChannelsService := testutil.NewMockChannelsService(ctrl)
-
-	ctx := context.Background()
 	timeRange := coreretriever.TimeRange{
 		Start: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 		End:   time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
 	}
 
-	teams := []*models.Team{
-		{ID: "archived-team-id", DisplayName: "ArchivedTeam", IsArchived: true},
-		{ID: "active-team-id", DisplayName: "ActiveTeam", IsArchived: false},
-	}
-	mockTeamsService.EXPECT().
-		ListMyJoined(ctx).
-		Return(teams, nil)
+	r, ctx, d := newSUT(t)
 
-	channels := []*models.Channel{
-		{ID: "channel1-id", Name: "General"},
-	}
-	mockChannelsService.EXPECT().
-		ListChannels(ctx, "active-team-id").
-		Return(channels, nil)
+	empty := ""
+	d.channels.EXPECT().
+		SearchMessages(gomock.Any(), nil, nil, gomock.Any(), gomock.Any()).
+		Return(&search.SearchResults{Messages: nil, NextFrom: nil}, nil).
+		Times(1)
 
-	messages := &models.MessageCollection{
-		Messages: []*models.Message{
-			{
-				ID:              "msg1",
-				Content:         "Active team message",
-				ContentType:     models.MessageContentTypeText,
-				CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
+	out, err := r.GetMessages(ctx, timeRange, &empty, &empty)
+	require.NoError(t, err)
+	require.Empty(t, out)
+}
+
+func TestGetMessages_PassesNonEmptyRefsThrough(t *testing.T) {
+	t.Parallel()
+
+	timeRange := coreretriever.TimeRange{
+		Start: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+		End:   time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
+	}
+
+	r, ctx, d := newSUT(t)
+
+	teamRef := "TeamA"
+	channelRef := "General"
+
+	d.channels.EXPECT().
+		SearchMessages(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(
+			_ context.Context,
+			tRef, cRef *string,
+			_ *search.SearchMessagesOptions,
+			_ *search.SearchConfig,
+		) (*search.SearchResults, error) {
+			require.NotNil(t, tRef)
+			require.Equal(t, "TeamA", *tRef)
+			require.NotNil(t, cRef)
+			require.Equal(t, "General", *cRef)
+			return &search.SearchResults{Messages: nil, NextFrom: nil}, nil
+		}).
+		Times(1)
+
+	out, err := r.GetMessages(ctx, timeRange, &teamRef, &channelRef)
+	require.NoError(t, err)
+	require.Empty(t, out)
+}
+
+func TestGetMessages_PropagatesSearchError(t *testing.T) {
+	t.Parallel()
+
+	timeRange := coreretriever.TimeRange{
+		Start: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+		End:   time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
+	}
+
+	r, ctx, d := newSUT(t)
+
+	exp := errors.New("boom")
+	d.channels.EXPECT().
+		SearchMessages(gomock.Any(), nil, nil, gomock.Any(), gomock.Any()).
+		Return(nil, exp).
+		Times(1)
+
+	out, err := r.GetMessages(ctx, timeRange, nil, nil)
+	require.ErrorIs(t, err, exp)
+	require.Nil(t, out)
+}
+
+func TestGetMessages_SkipsMessagesWithoutTeamOrChannelID(t *testing.T) {
+	t.Parallel()
+
+	timeRange := coreretriever.TimeRange{
+		Start: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+		End:   time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
+	}
+
+	r, ctx, d := newSUT(t)
+
+	msgMissingTeam := &search.SearchResult{
+		TeamID:    nil,
+		ChannelID: testutil.Ptr("chan-1"),
+		Message:   &models.Message{ID: "x"},
+	}
+	msgMissingChannel := &search.SearchResult{
+		TeamID:    testutil.Ptr("team-1"),
+		ChannelID: nil,
+		Message:   &models.Message{ID: "y"},
+	}
+
+	d.channels.EXPECT().
+		SearchMessages(gomock.Any(), nil, nil, gomock.Any(), gomock.Any()).
+		Return(&search.SearchResults{
+			Messages: []*search.SearchResult{msgMissingTeam, msgMissingChannel},
+			NextFrom: nil,
+		}, nil).
+		Times(1)
+
+	out, err := r.GetMessages(ctx, timeRange, nil, nil)
+	require.NoError(t, err)
+	require.Empty(t, out)
+}
+
+func TestGetMessages_IgnoresTeamAndChannelLookupErrors(t *testing.T) {
+	t.Parallel()
+
+	timeRange := coreretriever.TimeRange{
+		Start: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+		End:   time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
+	}
+
+	r, ctx, d := newSUT(t)
+
+	d.channels.EXPECT().
+		SearchMessages(gomock.Any(), nil, nil, gomock.Any(), gomock.Any()).
+		Return(&search.SearchResults{
+			Messages: []*search.SearchResult{
+				mkMsg("m1"),
 			},
-		},
-		NextLink: nil,
-	}
-	top := int32(30)
-	opts := &models.ListMessagesOptions{
-		Top:           &top,
-		ExpandReplies: true,
-	}
-	mockChannelsService.EXPECT().
-		ListMessages(ctx, "active-team-id", "channel1-id", opts, false, nil).
-		Return(messages, nil)
+			NextFrom: nil,
+		}, nil).
+		Times(1)
 
-	retriever := NewRetriever(mockTeamsService, mockChannelsService)
-	result, err := retriever.GetMessages(ctx, timeRange, nil, nil)
+	d.teams.EXPECT().
+		Get(gomock.Any(), "team-1").
+		Return(nil, errors.New("team lookup failed")).
+		Times(1)
 
-	assert.NoError(t, err)
-	assert.Len(t, result, 1)
-	assert.Equal(t, "ActiveTeam", result[0].TeamName)
-	assert.Equal(t, "Active team message", result[0].Message.Content)
+	d.channels.EXPECT().
+		Get(gomock.Any(), "team-1", "chan-1").
+		Return(nil, errors.New("channel lookup failed")).
+		Times(1)
+
+	out, err := r.GetMessages(ctx, timeRange, nil, nil)
+	require.NoError(t, err)
+	require.Len(t, out, 1)
+
+	require.Equal(t, "team-1", out[0].TeamID)
+	require.Equal(t, "chan-1", out[0].ChannelID)
+	require.Equal(t, "", out[0].TeamName)
+	require.Equal(t, "", out[0].ChannelName)
+	require.Equal(t, "m1", out[0].Message.ID)
 }
 
-func TestGetMessages_NoChannelsFound(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
+func TestGetMessages_BreaksIfNextFromDoesNotAdvance(t *testing.T) {
+	t.Parallel()
 
-	mockTeamsService := testutil.NewMockTeamsService(ctrl)
-	mockChannelsService := testutil.NewMockChannelsService(ctrl)
-
-	ctx := context.Background()
 	timeRange := coreretriever.TimeRange{
 		Start: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 		End:   time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
 	}
 
-	teams := []*models.Team{
-		{ID: "team1-id", DisplayName: "Team1", IsArchived: false},
-	}
-	mockTeamsService.EXPECT().
-		ListMyJoined(ctx).
-		Return(teams, nil)
+	r, ctx, d := newSUT(t)
 
-	mockChannelsService.EXPECT().
-		ListChannels(ctx, "team1-id").
-		Return([]*models.Channel{}, nil)
-
-	retriever := NewRetriever(mockTeamsService, mockChannelsService)
-	result, err := retriever.GetMessages(ctx, timeRange, nil, nil)
-
-	assert.Error(t, err)
-	assert.Nil(t, result)
-	assert.ErrorIs(t, err, ErrNoChannelsFound)
-}
-
-func TestGetMessages_TeamsServiceError(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockTeamsService := testutil.NewMockTeamsService(ctrl)
-	mockChannelsService := testutil.NewMockChannelsService(ctrl)
-
-	ctx := context.Background()
-	timeRange := coreretriever.TimeRange{
-		Start: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-		End:   time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
-	}
-
-	expectedError := errors.New("teams API error")
-	mockTeamsService.EXPECT().
-		ListMyJoined(ctx).
-		Return(nil, expectedError)
-
-	retriever := NewRetriever(mockTeamsService, mockChannelsService)
-	result, err := retriever.GetMessages(ctx, timeRange, nil, nil)
-
-	assert.Error(t, err)
-	assert.Nil(t, result)
-	assert.ErrorIs(t, err, ErrListingTeamsFailed)
-	assert.Contains(t, err.Error(), "teams API error")
-}
-
-func TestGetMessages_ChannelsServiceError(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockTeamsService := testutil.NewMockTeamsService(ctrl)
-	mockChannelsService := testutil.NewMockChannelsService(ctrl)
-
-	ctx := context.Background()
-	timeRange := coreretriever.TimeRange{
-		Start: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-		End:   time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
-	}
-
-	teams := []*models.Team{
-		{ID: "team1-id", DisplayName: "Team1", IsArchived: false},
-	}
-	mockTeamsService.EXPECT().
-		ListMyJoined(ctx).
-		Return(teams, nil)
-
-	expectedError := errors.New("channels API error")
-	mockChannelsService.EXPECT().
-		ListChannels(ctx, "team1-id").
-		Return(nil, expectedError)
-
-	retriever := NewRetriever(mockTeamsService, mockChannelsService)
-	result, err := retriever.GetMessages(ctx, timeRange, nil, nil)
-
-	assert.Error(t, err)
-	assert.Nil(t, result)
-	assert.ErrorIs(t, err, ErrListingChannelsFailed)
-	assert.Contains(t, err.Error(), "channels API error")
-}
-
-func TestGetMessages_MessagesServiceError(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockTeamsService := testutil.NewMockTeamsService(ctrl)
-	mockChannelsService := testutil.NewMockChannelsService(ctrl)
-
-	ctx := context.Background()
-	timeRange := coreretriever.TimeRange{
-		Start: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-		End:   time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
-	}
-
-	teams := []*models.Team{
-		{ID: "team1-id", DisplayName: "Team1", IsArchived: false},
-	}
-	mockTeamsService.EXPECT().
-		ListMyJoined(ctx).
-		Return(teams, nil)
-
-	channels := []*models.Channel{
-		{ID: "channel1-id", Name: "General"},
-	}
-	mockChannelsService.EXPECT().
-		ListChannels(ctx, "team1-id").
-		Return(channels, nil)
-
-	expectedError := errors.New("messages API error")
-	top := int32(30)
-	opts := &models.ListMessagesOptions{
-		Top:           &top,
-		ExpandReplies: true,
-	}
-	mockChannelsService.EXPECT().
-		ListMessages(ctx, "team1-id", "channel1-id", opts, false, nil).
-		Return(nil, expectedError)
-
-	retriever := NewRetriever(mockTeamsService, mockChannelsService)
-	result, err := retriever.GetMessages(ctx, timeRange, nil, nil)
-
-	assert.Error(t, err)
-	assert.Nil(t, result)
-	assert.ErrorIs(t, err, ErrListingMessagesFailed)
-	assert.Contains(t, err.Error(), "messages API error")
-}
-
-func TestGetMessages_403ErrorIgnored(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockTeamsService := testutil.NewMockTeamsService(ctrl)
-	mockChannelsService := testutil.NewMockChannelsService(ctrl)
-
-	ctx := context.Background()
-	timeRange := coreretriever.TimeRange{
-		Start: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-		End:   time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
-	}
-
-	teams := []*models.Team{
-		{ID: "team1-id", DisplayName: "Team1", IsArchived: false},
-	}
-	mockTeamsService.EXPECT().
-		ListMyJoined(ctx).
-		Return(teams, nil)
-
-	channels := []*models.Channel{
-		{ID: "channel1-id", Name: "General"},
-	}
-	mockChannelsService.EXPECT().
-		ListChannels(ctx, "team1-id").
-		Return(channels, nil)
-
-	forbiddenError := errors.New("403 Forbidden")
-	top := int32(30)
-	opts := &models.ListMessagesOptions{
-		Top:           &top,
-		ExpandReplies: true,
-	}
-	mockChannelsService.EXPECT().
-		ListMessages(ctx, "team1-id", "channel1-id", opts, false, nil).
-		Return(nil, forbiddenError)
-
-	retriever := NewRetriever(mockTeamsService, mockChannelsService)
-	result, err := retriever.GetMessages(ctx, timeRange, nil, nil)
-
-	assert.NoError(t, err)
-	assert.Empty(t, result)
-}
-
-func TestGetMessages_TimeRangeFiltering(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockTeamsService := testutil.NewMockTeamsService(ctrl)
-	mockChannelsService := testutil.NewMockChannelsService(ctrl)
-
-	ctx := context.Background()
-	timeRange := coreretriever.TimeRange{
-		Start: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-		End:   time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
-	}
-
-	teams := []*models.Team{
-		{ID: "team1-id", DisplayName: "Team1", IsArchived: false},
-	}
-	mockTeamsService.EXPECT().
-		ListMyJoined(ctx).
-		Return(teams, nil)
-
-	channels := []*models.Channel{
-		{ID: "channel1-id", Name: "General"},
-	}
-	mockChannelsService.EXPECT().
-		ListChannels(ctx, "team1-id").
-		Return(channels, nil)
-
-	messages := &models.MessageCollection{
-		Messages: []*models.Message{
-			{
-				ID:              "msg1",
-				Content:         "Before range",
-				ContentType:     models.MessageContentTypeText,
-				CreatedDateTime: time.Date(2023, 12, 31, 23, 0, 0, 0, time.UTC),
+	d.channels.EXPECT().
+		SearchMessages(gomock.Any(), nil, nil, gomock.Any(), gomock.Any()).
+		Return(&search.SearchResults{
+			Messages: []*search.SearchResult{
+				mkMsg("m1"),
 			},
-			{
-				ID:              "msg2",
-				Content:         "In range 1",
-				ContentType:     models.MessageContentTypeText,
-				CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
-			},
-			{
-				ID:              "msg3",
-				Content:         "In range 2",
-				ContentType:     models.MessageContentTypeText,
-				CreatedDateTime: time.Date(2024, 1, 1, 18, 0, 0, 0, time.UTC),
-			},
-			{
-				ID:              "msg4",
-				Content:         "After range",
-				ContentType:     models.MessageContentTypeText,
-				CreatedDateTime: time.Date(2024, 1, 2, 1, 0, 0, 0, time.UTC),
-			},
-		},
-		NextLink: nil,
-	}
-	top := int32(30)
-	opts := &models.ListMessagesOptions{
-		Top:           &top,
-		ExpandReplies: true,
-	}
-	mockChannelsService.EXPECT().
-		ListMessages(ctx, "team1-id", "channel1-id", opts, false, nil).
-		Return(messages, nil)
+			NextFrom: testutil.Ptr(int32(0)),
+		}, nil).
+		Times(1)
 
-	retriever := NewRetriever(mockTeamsService, mockChannelsService)
-	result, err := retriever.GetMessages(ctx, timeRange, nil, nil)
+	d.teams.EXPECT().
+		Get(gomock.Any(), "team-1").
+		Return(&models.Team{ID: "team-1", DisplayName: "Team One"}, nil).
+		Times(1)
 
-	assert.NoError(t, err)
-	assert.Len(t, result, 2) // Only messages in range
+	d.channels.EXPECT().
+		Get(gomock.Any(), "team-1", "chan-1").
+		Return(&models.Channel{ID: "chan-1", Name: "General"}, nil).
+		Times(1)
 
-	assert.Equal(t, "msg2", result[0].Message.ID)
-	assert.Equal(t, "In range 1", result[0].Message.Content)
-
-	assert.Equal(t, "msg3", result[1].Message.ID)
-	assert.Equal(t, "In range 2", result[1].Message.Content)
-}
-
-func TestGetMessages_MultipleTeamsAndChannels(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockTeamsService := testutil.NewMockTeamsService(ctrl)
-	mockChannelsService := testutil.NewMockChannelsService(ctrl)
-
-	ctx := context.Background()
-	timeRange := coreretriever.TimeRange{
-		Start: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-		End:   time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
-	}
-
-	teams := []*models.Team{
-		{ID: "team1-id", DisplayName: "Team1", IsArchived: false},
-		{ID: "team2-id", DisplayName: "Team2", IsArchived: false},
-	}
-	mockTeamsService.EXPECT().
-		ListMyJoined(ctx).
-		Return(teams, nil)
-
-	// Team1 channels
-	team1Channels := []*models.Channel{
-		{ID: "general-id", Name: "General"},
-		{ID: "random-id", Name: "Random"},
-	}
-	mockChannelsService.EXPECT().
-		ListChannels(ctx, "team1-id").
-		Return(team1Channels, nil)
-
-	team2Channels := []*models.Channel{
-		{ID: "announcements-id", Name: "Announcements"},
-	}
-	mockChannelsService.EXPECT().
-		ListChannels(ctx, "team2-id").
-		Return(team2Channels, nil)
-
-	top := int32(30)
-	opts := &models.ListMessagesOptions{
-		Top:           &top,
-		ExpandReplies: true,
-	}
-
-	team1GeneralMessages := &models.MessageCollection{
-		Messages: []*models.Message{
-			{
-				ID:              "t1g1",
-				Content:         "Team1 General",
-				ContentType:     models.MessageContentTypeText,
-				CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
-			},
-		},
-		NextLink: nil,
-	}
-	mockChannelsService.EXPECT().
-		ListMessages(ctx, "team1-id", "general-id", opts, false, nil).
-		Return(team1GeneralMessages, nil)
-
-	team1RandomMessages := &models.MessageCollection{
-		Messages: []*models.Message{
-			{
-				ID:              "t1r1",
-				Content:         "Team1 Random",
-				ContentType:     models.MessageContentTypeText,
-				CreatedDateTime: time.Date(2024, 1, 1, 13, 0, 0, 0, time.UTC),
-			},
-		},
-		NextLink: nil,
-	}
-	mockChannelsService.EXPECT().
-		ListMessages(ctx, "team1-id", "random-id", opts, false, nil).
-		Return(team1RandomMessages, nil)
-
-	team2AnnouncementsMessages := &models.MessageCollection{
-		Messages: []*models.Message{
-			{
-				ID:              "t2a1",
-				Content:         "Team2 Announcements",
-				ContentType:     models.MessageContentTypeText,
-				CreatedDateTime: time.Date(2024, 1, 1, 14, 0, 0, 0, time.UTC),
-			},
-		},
-		NextLink: nil,
-	}
-	mockChannelsService.EXPECT().
-		ListMessages(ctx, "team2-id", "announcements-id", opts, false, nil).
-		Return(team2AnnouncementsMessages, nil)
-
-	retriever := NewRetriever(mockTeamsService, mockChannelsService)
-	result, err := retriever.GetMessages(ctx, timeRange, nil, nil)
-
-	assert.NoError(t, err)
-	assert.Len(t, result, 3) // Messages from all channels
-
-	messageIDs := make([]string, len(result))
-	for i, msg := range result {
-		messageIDs[i] = msg.Message.ID
-	}
-	assert.Contains(t, messageIDs, "t1g1")
-	assert.Contains(t, messageIDs, "t1r1")
-	assert.Contains(t, messageIDs, "t2a1")
+	out, err := r.GetMessages(ctx, timeRange, nil, nil)
+	require.NoError(t, err)
+	require.Len(t, out, 1)
+	require.Equal(t, "m1", out[0].Message.ID)
 }
