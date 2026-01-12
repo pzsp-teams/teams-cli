@@ -8,5 +8,5 @@ type TimeRange struct {
 	End   time.Time
 }
 
-// WorkersCount is a constant to represent number of workers to be used in ExecuteJobs
+// WorkersCount is a constant to represent number of workers
 var WorkersCount = 100
