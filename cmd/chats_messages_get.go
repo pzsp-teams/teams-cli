@@ -28,7 +28,11 @@ Examples:
   teams-cli chats messages get --start "2024-01-01 10:00" --end "2024-01-01 11:00"
 
   # Yesterday
-  teams-cli chats messages get --start yesterday --end now`,
+  teams-cli chats messages get --start yesterday --end now
+  
+  # Filter by chat
+  teams-cli chats messages get --chat-ref "<chat-reference>"
+`,
 	RunE: runChatsMessagesGet,
 }
 
