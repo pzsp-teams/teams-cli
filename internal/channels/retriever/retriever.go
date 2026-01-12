@@ -34,6 +34,9 @@ func (r *retriever) getMessagesInTimeRange(ctx context.Context, timeRange corere
 	if channelRef != nil && *channelRef != "" {
 		cRef = channelRef
 	}
+	searchConfig := &search.SearchConfig{
+		MaxWorkers: 32,
+	}
 	for {
 		searchOpts := &search.SearchMessagesOptions{
 			StartTime: &timeRange.Start,
@@ -45,7 +48,7 @@ func (r *retriever) getMessagesInTimeRange(ctx context.Context, timeRange corere
 			},
 		}
 
-		searchResult, err := r.channelsService.SearchMessages(ctx, tRef, cRef, searchOpts, search.DefaultSearchConfig())
+		searchResult, err := r.channelsService.SearchMessages(ctx, tRef, cRef, searchOpts, searchConfig)
 		if err != nil {
 			return nil, err
 		}
