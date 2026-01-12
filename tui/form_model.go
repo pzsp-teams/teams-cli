@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/filepicker"
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	bubbledatetimepicker "github.com/lcc/bubble-datetime-picker"
 
 	"github.com/pzsp-teams/cli/app"
 )
@@ -33,10 +35,12 @@ const (
 
 // formModel represents a form with mixed input types and variants (mutually exclusive groups)
 type formModel struct {
-	def       *app.CommandDef
-	inputs    []textinput.Model
-	choices   []choiceField
-	textAreas []textarea.Model
+	def         *app.CommandDef
+	inputs      []textinput.Model
+	choices     []choiceField
+	textAreas   []textarea.Model
+	filePickers []filepicker.Model
+	datePickers []*bubbledatetimepicker.DateAndHourModel
 
 	variants     [][]formField // Groups of fields to show together
 	variantIndex int
@@ -54,14 +58,16 @@ type formModel struct {
 
 // NewFormModel creates a new form model from a command definition
 func NewFormModel(def *app.CommandDef) *formModel {
-	inputs, choices, textAreas, fieldMap := buildFields(def)
-	variants := buildVariants(def, fieldMap)
+	components := buildFields(def)
+	variants := buildVariants(def, components.fieldMap)
 
 	m := &formModel{
 		def:          def,
-		inputs:       inputs,
-		choices:      choices,
-		textAreas:    textAreas,
+		inputs:       components.inputs,
+		choices:      components.choices,
+		textAreas:    components.textAreas,
+		filePickers:  components.filePickers,
+		datePickers:  components.datePickers,
 		variants:     variants,
 		variantIndex: 0,
 		focused:      0,
@@ -75,7 +81,8 @@ func NewFormModel(def *app.CommandDef) *formModel {
 
 // Init implements tea.Model
 func (m *formModel) Init() tea.Cmd {
-	return tea.Batch(textinput.Blink, textarea.Blink)
+	cmds := []tea.Cmd{textinput.Blink, textarea.Blink}
+	return tea.Batch(cmds...)
 }
 
 // Update implements tea.Model
@@ -86,11 +93,20 @@ func (m *formModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 		m.help.Width = msg.Width
 		return m, nil
+	case datePickerDoneMsg:
+		m.focused++
+		currentVariant := m.variants[m.variantIndex]
+		if m.focused > len(currentVariant) {
+			m.focused = 0
+		}
+		cmd := m.updateFocus()
+		return m, cmd
 	}
 
 	key, ok := msg.(tea.KeyMsg)
+	var cmd tea.Cmd
 	if !ok {
-		cmd := m.updateInputs(msg)
+		cmd = m.updateInputs(msg)
 		return m, cmd
 	}
 
@@ -98,44 +114,74 @@ func (m *formModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	}
 
-	// Handle Variant Navigation
-	if m.keys.isNextVariant(key) {
-		m.changeVariant(variantNext)
-		return m, nil
-	} else if m.keys.isPrevVariant(key) {
-		m.changeVariant(variantPrev)
+	if handled := m.handleVariantKey(key); handled {
 		return m, nil
 	}
 
-	// If inside a textarea and it's focused, we might want to allow normal navigation keys
-	// UNLESS it's a specific key we want to hijack (like Tab to move focus).
-	// But `textarea` usually consumes Enter for newlines.
-	if m.isFocusedTextArea() {
-		// Pass everything to textarea except navigation out keys
-		if m.keys.isNextField(key) || m.keys.isPrevField(key) {
-			return m.handleNavigation(key)
-		}
-		// Allow "esc" to blur/navigate? Handled in global key handler in model.go usually.
-		// If we want "Enter" to insert newline, we just update inputs.
-		// If we want "Enter" to submit form...
-		// Usually in multiline text, Enter is newline. Ctrl+Enter or Tab to submit/move.
-		// Let's assume standard behavior: Enter = newline in textarea.
-		cmd := m.updateInputs(msg)
-		return m, cmd
+	if m.isFocusedSpecialField() {
+		return m.handleSpecialFieldUpdate(msg, key)
 	}
 
-	if m.keys.isChoiceLeft(key) || m.keys.isChoiceRight(key) {
-		if m.handleChoiceSelection(key) {
-			return m, nil
-		}
+	if m.handleChoiceFieldUpdate(key) {
+		return m, nil
 	}
 
 	if m.keys.isNavKey(key) {
 		return m.handleNavigation(key)
 	}
 
-	cmd := m.updateInputs(msg)
+	cmd = m.updateInputs(msg)
 	return m, cmd
+}
+
+func (m *formModel) handleVariantKey(key tea.KeyMsg) bool {
+	if m.keys.isNextVariant(key) {
+		m.changeVariant(variantNext)
+		return true
+	} else if m.keys.isPrevVariant(key) {
+		m.changeVariant(variantPrev)
+		return true
+	}
+	return false
+}
+
+func (m *formModel) handleSpecialFieldUpdate(msg tea.Msg, key tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.keys.isNextField(key) || m.keys.isPrevField(key) {
+		return m.handleNavigation(key)
+	}
+
+	// For textareas: Enter is newline
+	// For file pickers: Enter selects file/enters directory, arrows navigate
+	// For date pickers: Enter moves from date to time (handled by picker internally)
+	// All handle their own input through updateInputs
+	cmd := m.updateInputs(msg)
+
+	// Check for FilePicker auto-advance
+	currentVariant := m.variants[m.variantIndex]
+	if m.focused < len(currentVariant) {
+		field := currentVariant[m.focused]
+		if field.fieldType == app.InputFile && m.keys.isSubmit(key) {
+			if m.filePickers[field.index].Path != "" {
+				return m.handleNavigation(key)
+			}
+		}
+	}
+
+	return m, cmd
+}
+
+func (m *formModel) handleChoiceFieldUpdate(key tea.KeyMsg) bool {
+	currentVariant := m.variants[m.variantIndex]
+	if m.focused >= len(currentVariant) {
+		return false
+	}
+	field := currentVariant[m.focused]
+	if field.fieldType == app.InputChoice {
+		if m.keys.isChoiceLeft(key) || m.keys.isChoiceRight(key) {
+			return m.handleChoiceSelection(key)
+		}
+	}
+	return false
 }
 
 func (m *formModel) changeVariant(dir variantDirection) {
@@ -150,30 +196,26 @@ func (m *formModel) changeVariant(dir variantDirection) {
 			m.variantIndex = len(m.variants) - 1
 		}
 	}
-	// Reset focus to top when changing variants
 	m.focused = 0
 	m.updateFocus()
 }
 
-func (m *formModel) isFocusedTextArea() bool {
+func (m *formModel) isFocusedSpecialField() bool {
 	currentVariant := m.variants[m.variantIndex]
 	if m.focused >= len(currentVariant) {
 		return false
 	}
 	field := currentVariant[m.focused]
-	return field.fieldType == app.InputLongString || field.fieldType == app.InputList
+	// Special fields are textareas, file pickers, and date pickers
+	return field.fieldType == app.InputLongString ||
+		field.fieldType == app.InputList ||
+		field.fieldType == app.InputFile ||
+		field.fieldType == app.InputDate
 }
 
 func (m *formModel) handleChoiceSelection(key tea.KeyMsg) bool {
 	currentVariant := m.variants[m.variantIndex]
-	if m.focused >= len(currentVariant) {
-		return false
-	}
-
 	field := currentVariant[m.focused]
-	if field.fieldType != app.InputChoice {
-		return false
-	}
 
 	choice := &m.choices[field.index]
 	if m.keys.isChoiceLeft(key) {
@@ -231,7 +273,6 @@ func (m *formModel) updateFocus() tea.Cmd {
 	currentVariant := m.variants[m.variantIndex]
 	var cmds []tea.Cmd
 
-	// Update Text Inputs
 	for i := range m.inputs {
 		isFocused := false
 		if m.focused < len(currentVariant) {
@@ -250,7 +291,6 @@ func (m *formModel) updateFocus() tea.Cmd {
 		}
 	}
 
-	// Update Text Areas
 	for i := range m.textAreas {
 		isFocused := false
 		if m.focused < len(currentVariant) {
@@ -260,8 +300,6 @@ func (m *formModel) updateFocus() tea.Cmd {
 
 		if isFocused {
 			cmds = append(cmds, m.textAreas[i].Focus())
-			// Textarea doesn't have PromptStyle/TextStyle public fields in the same way,
-			// but Focus handles the cursor.
 		} else {
 			m.textAreas[i].Blur()
 		}
@@ -271,33 +309,54 @@ func (m *formModel) updateFocus() tea.Cmd {
 }
 
 func (m *formModel) updateInputs(msg tea.Msg) tea.Cmd {
-	var cmds []tea.Cmd
-
-	for i := range m.inputs {
-		var cmd tea.Cmd
-		m.inputs[i], cmd = m.inputs[i].Update(msg)
-		cmds = append(cmds, cmd)
+	currentVariant := m.variants[m.variantIndex]
+	if m.focused >= len(currentVariant) {
+		return nil
 	}
 
-	for i := range m.textAreas {
+	field := currentVariant[m.focused]
+
+	switch field.fieldType {
+	case app.InputFile:
 		var cmd tea.Cmd
-		m.textAreas[i], cmd = m.textAreas[i].Update(msg)
-		cmds = append(cmds, cmd)
+		m.filePickers[field.index], cmd = m.filePickers[field.index].Update(msg)
+		return cmd
+
+	case app.InputDate:
+		updated, updateCmd := m.datePickers[field.index].Update(msg)
+		if dp, ok := updated.(*bubbledatetimepicker.DateAndHourModel); ok {
+			m.datePickers[field.index] = dp
+		}
+		return wrapDatePickerCmd(updateCmd)
+
+	case app.InputLongString, app.InputList:
+		var cmd tea.Cmd
+		m.textAreas[field.index], cmd = m.textAreas[field.index].Update(msg)
+		return cmd
+
+	case app.InputChoice:
+		// Choices don't need Update() calls, handled separately
+		return nil
+
+	default:
+		// Regular text input
+		if isTextInput(field.fieldType) {
+			var cmd tea.Cmd
+			m.inputs[field.index], cmd = m.inputs[field.index].Update(msg)
+			return cmd
+		}
 	}
 
-	return tea.Batch(cmds...)
+	return nil
 }
 
-// validateForm validates the form using schema validation for CURRENT VARIANT
-func (m *formModel) validateForm() error {
+// collectFlags collects values from all fields in the current variant
+func (m *formModel) collectFlags() map[string]any {
 	flagMap := make(map[string]any)
 	currentVariant := m.variants[m.variantIndex]
 
-	var variantFlags []app.FlagDef
-
 	for _, field := range currentVariant {
 		flagDef := &m.def.Flags[field.flagIndex]
-		variantFlags = append(variantFlags, *flagDef)
 
 		switch field.fieldType {
 		case app.InputLongString:
@@ -324,12 +383,34 @@ func (m *formModel) validateForm() error {
 			choice := m.choices[field.index]
 			selectedValue := choice.flagDef.Options[choice.selected]
 			flagMap[flagDef.Name] = selectedValue
+		case app.InputFile:
+			selectedFile := m.filePickers[field.index].Path
+			if selectedFile != "" {
+				flagMap[flagDef.Name] = selectedFile
+			}
+		case app.InputDate:
+			picker := m.datePickers[field.index]
+			dateTime := picker.Time()
+			flagMap[flagDef.Name] = dateTime.Format("2006-01-02T15:04:05Z07:00")
 		default: // All other text inputs
 			val := m.inputs[field.index].Value()
 			if val != "" {
 				flagMap[flagDef.Name] = val
 			}
 		}
+	}
+	return flagMap
+}
+
+// validateForm validates the form using schema validation for current variant
+func (m *formModel) validateForm() error {
+	flagMap := m.collectFlags()
+	currentVariant := m.variants[m.variantIndex]
+
+	var variantFlags []app.FlagDef
+	for _, field := range currentVariant {
+		flagDef := &m.def.Flags[field.flagIndex]
+		variantFlags = append(variantFlags, *flagDef)
 	}
 
 	return app.ValidateFlags(flagMap, variantFlags)
@@ -339,14 +420,36 @@ func (m *formModel) validateForm() error {
 func (m *formModel) View() string {
 	var b strings.Builder
 
-	// Variant header
-	if len(m.variants) > 1 {
-		fmt.Fprintf(&b, "Variant %d of %d\n", m.variantIndex+1, len(m.variants))
+	m.renderVariantHeader(&b)
+	m.renderFields(&b)
+	m.renderValidationErrors(&b)
+	m.renderSubmitButton(&b)
+
+	formContent := b.String()
+	helpView := m.renderHelp()
+
+	// Calculate lines used by form content
+	contentLines := strings.Count(formContent, "\n")
+	helpLines := strings.Count(helpView, "\n") + 1 // +1 for the help itself
+
+	usedLines := 1 + contentLines + helpLines
+	paddingLines := 0
+	if m.height > usedLines {
+		paddingLines = m.height - usedLines
 	}
 
+	return formContent + strings.Repeat("\n", paddingLines) + formHelpStyle.Render(helpView)
+}
+
+func (m *formModel) renderVariantHeader(b *strings.Builder) {
+	if len(m.variants) > 1 {
+		fmt.Fprintf(b, "Variant %d of %d\n", m.variantIndex+1, len(m.variants))
+	}
+}
+
+func (m *formModel) renderFields(b *strings.Builder) {
 	currentVariant := m.variants[m.variantIndex]
 
-	// Render form fields
 	for i, field := range currentVariant {
 		isFocused := (i == m.focused)
 
@@ -357,58 +460,45 @@ func (m *formModel) View() string {
 		case app.InputChoice:
 			choice := m.choices[field.index]
 			b.WriteString(m.renderChoice(choice, isFocused))
+		case app.InputFile:
+			flagName := m.def.Flags[field.flagIndex].Name
+			b.WriteString(m.renderFilePicker(&m.filePickers[field.index], flagName, isFocused))
+		case app.InputDate:
+			flagName := m.def.Flags[field.flagIndex].Name
+			b.WriteString(m.renderDateTimePicker(m.datePickers[field.index], flagName, isFocused))
 		default: // Text inputs
 			b.WriteString(m.inputs[field.index].View())
 		}
 		b.WriteString("\n")
-		// Extra spacing for text areas if focused
-		if (field.fieldType == app.InputLongString || field.fieldType == app.InputList) && isFocused {
+		if isFocused && (field.fieldType == app.InputLongString ||
+			field.fieldType == app.InputList ||
+			field.fieldType == app.InputFile ||
+			field.fieldType == app.InputDate) {
 			b.WriteString("\n")
 		}
 	}
+}
 
-	// Validation errors
+func (m *formModel) renderValidationErrors(b *strings.Builder) {
 	if m.validationErr != "" {
 		b.WriteString("\n")
 		b.WriteString(errorStyle.Render("Error: " + m.validationErr))
 		b.WriteString("\n")
 	}
+}
 
-	// Submit button
+func (m *formModel) renderSubmitButton(b *strings.Builder) {
 	button := blurredButton
+	currentVariant := m.variants[m.variantIndex]
 	if m.focused == len(currentVariant) {
 		button = focusedButton
 	}
 	b.WriteString("\n" + button + "\n")
+}
 
-	formContent := b.String()
-
-	// Render help with appropriate keybindings
-	var helpView string
+func (m *formModel) renderHelp() string {
 	if len(m.variants) > 1 {
-		// Create a temporary key map that includes variant navigation
-		helpView = m.help.ShortHelpView(m.keys.ShortHelpWithVariants())
-	} else {
-		helpView = m.help.View(m.keys)
+		return m.help.ShortHelpView(m.keys.ShortHelpWithVariants())
 	}
-
-	// Calculate lines used by form content
-	contentLines := strings.Count(formContent, "\n")
-	helpLines := strings.Count(helpView, "\n") + 1 // +1 for the help itself
-
-	// Calculate padding needed to push help to bottom
-	// Account for top margin (1 line from model.go)
-	usedLines := 1 + contentLines + helpLines
-	paddingLines := 0
-	if m.height > usedLines {
-		paddingLines = m.height - usedLines
-	}
-
-	// Build final output with help at bottom
-	var final strings.Builder
-	final.WriteString(formContent)
-	final.WriteString(strings.Repeat("\n", paddingLines))
-	final.WriteString(formHelpStyle.Render(helpView))
-
-	return final.String()
+	return m.help.View(&m.keys)
 }

@@ -56,17 +56,17 @@ func newFormKeyMap() formKeyMap {
 }
 
 // ShortHelp returns keybindings to be shown in the mini help view
-func (k formKeyMap) ShortHelp() []key.Binding {
+func (k *formKeyMap) ShortHelp() []key.Binding {
 	return []key.Binding{k.NextField, k.PrevField, k.Submit, k.Quit}
 }
 
 // ShortHelpWithVariants returns keybindings including variant navigation
-func (k formKeyMap) ShortHelpWithVariants() []key.Binding {
+func (k *formKeyMap) ShortHelpWithVariants() []key.Binding {
 	return []key.Binding{k.NextField, k.PrevField, k.NextVariant, k.PrevVariant, k.Submit, k.Quit}
 }
 
 // FullHelp returns keybindings for the expanded help view
-func (k formKeyMap) FullHelp() [][]key.Binding {
+func (k *formKeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.NextField, k.PrevField, k.ChoiceLeft, k.ChoiceRight},
 		{k.Submit, k.Quit},
@@ -74,7 +74,7 @@ func (k formKeyMap) FullHelp() [][]key.Binding {
 }
 
 // FullHelpWithVariants returns keybindings including variant navigation
-func (k formKeyMap) FullHelpWithVariants() [][]key.Binding {
+func (k *formKeyMap) FullHelpWithVariants() [][]key.Binding {
 	return [][]key.Binding{
 		{k.NextField, k.PrevField, k.ChoiceLeft, k.ChoiceRight},
 		{k.NextVariant, k.PrevVariant, k.Submit, k.Quit},
@@ -83,38 +83,38 @@ func (k formKeyMap) FullHelpWithVariants() [][]key.Binding {
 
 // Helper methods for checking key matches
 
-func (k formKeyMap) isQuit(msg tea.KeyMsg) bool {
+func (k *formKeyMap) isQuit(msg tea.KeyMsg) bool {
 	return key.Matches(msg, k.Quit)
 }
 
-func (k formKeyMap) isSubmit(msg tea.KeyMsg) bool {
+func (k *formKeyMap) isSubmit(msg tea.KeyMsg) bool {
 	return key.Matches(msg, k.Submit)
 }
 
-func (k formKeyMap) isNextField(msg tea.KeyMsg) bool {
+func (k *formKeyMap) isNextField(msg tea.KeyMsg) bool {
 	return key.Matches(msg, k.NextField)
 }
 
-func (k formKeyMap) isPrevField(msg tea.KeyMsg) bool {
+func (k *formKeyMap) isPrevField(msg tea.KeyMsg) bool {
 	return key.Matches(msg, k.PrevField)
 }
 
-func (k formKeyMap) isNextVariant(msg tea.KeyMsg) bool {
+func (k *formKeyMap) isNextVariant(msg tea.KeyMsg) bool {
 	return key.Matches(msg, k.NextVariant)
 }
 
-func (k formKeyMap) isPrevVariant(msg tea.KeyMsg) bool {
+func (k *formKeyMap) isPrevVariant(msg tea.KeyMsg) bool {
 	return key.Matches(msg, k.PrevVariant)
 }
 
-func (k formKeyMap) isChoiceLeft(msg tea.KeyMsg) bool {
+func (k *formKeyMap) isChoiceLeft(msg tea.KeyMsg) bool {
 	return key.Matches(msg, k.ChoiceLeft)
 }
 
-func (k formKeyMap) isChoiceRight(msg tea.KeyMsg) bool {
+func (k *formKeyMap) isChoiceRight(msg tea.KeyMsg) bool {
 	return key.Matches(msg, k.ChoiceRight)
 }
 
-func (k formKeyMap) isNavKey(msg tea.KeyMsg) bool {
+func (k *formKeyMap) isNavKey(msg tea.KeyMsg) bool {
 	return k.isNextField(msg) || k.isPrevField(msg) || k.isSubmit(msg)
 }

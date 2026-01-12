@@ -1,8 +1,10 @@
 package tui
 
 import (
+	"github.com/charmbracelet/bubbles/filepicker"
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/textinput"
+	bubbledatetimepicker "github.com/lcc/bubble-datetime-picker"
 
 	"github.com/pzsp-teams/cli/app"
 )
@@ -48,10 +50,6 @@ func createTextInput(flagDef *app.FlagDef) textinput.Model {
 	t.Placeholder = flagDef.Usage
 
 	switch flagDef.Type {
-	case app.InputFile:
-		t.Placeholder += " (File Picker coming soon)"
-	case app.InputDate:
-		t.Placeholder += " (Date Picker coming soon)"
 	case app.InputPassword:
 		t.EchoMode = textinput.EchoPassword
 	case app.InputBool:
@@ -59,6 +57,21 @@ func createTextInput(flagDef *app.FlagDef) textinput.Model {
 	}
 
 	return t
+}
+
+func createFilePicker() filepicker.Model {
+	fp := filepicker.New()
+	fp.AllowedTypes = nil
+	fp.CurrentDirectory = "."
+	fp.ShowHidden = true
+	fp.ShowPermissions = false
+	fp.SetHeight(10)
+	return fp
+}
+
+func createDateTimePicker() *bubbledatetimepicker.DateAndHourModel {
+	dp := bubbledatetimepicker.NewDateAndHourModel()
+	return &dp
 }
 
 func createTextArea(flagDef *app.FlagDef) textarea.Model {
@@ -75,13 +88,25 @@ func createTextArea(flagDef *app.FlagDef) textarea.Model {
 	return t
 }
 
-func buildFields(def *app.CommandDef) (
-	inputs []textinput.Model,
-	choices []choiceField,
-	textAreas []textarea.Model,
-	fieldMap map[int]fieldInfo,
-) {
-	fieldMap = make(map[int]fieldInfo)
+// formComponents holds all the initialized UI components for a form
+type formComponents struct {
+	inputs      []textinput.Model
+	choices     []choiceField
+	textAreas   []textarea.Model
+	filePickers []filepicker.Model
+	datePickers []*bubbledatetimepicker.DateAndHourModel
+	fieldMap    map[int]fieldInfo
+}
+
+func buildFields(def *app.CommandDef) formComponents {
+	var (
+		inputs      []textinput.Model
+		choices     []choiceField
+		textAreas   []textarea.Model
+		filePickers []filepicker.Model
+		datePickers []*bubbledatetimepicker.DateAndHourModel
+		fieldMap    = make(map[int]fieldInfo)
+	)
 
 	for i := range def.Flags {
 		f := &def.Flags[i]
@@ -95,11 +120,26 @@ func buildFields(def *app.CommandDef) (
 			textAreas = append(textAreas, createTextArea(f))
 			fieldMap[i] = fieldInfo{f.Type, len(textAreas) - 1}
 
+		case app.InputFile:
+			filePickers = append(filePickers, createFilePicker())
+			fieldMap[i] = fieldInfo{app.InputFile, len(filePickers) - 1}
+
+		case app.InputDate:
+			datePickers = append(datePickers, createDateTimePicker())
+			fieldMap[i] = fieldInfo{app.InputDate, len(datePickers) - 1}
+
 		default:
 			inputs = append(inputs, createTextInput(f))
 			fieldMap[i] = fieldInfo{f.Type, len(inputs) - 1}
 		}
 	}
 
-	return
+	return formComponents{
+		inputs:      inputs,
+		choices:     choices,
+		textAreas:   textAreas,
+		filePickers: filePickers,
+		datePickers: datePickers,
+		fieldMap:    fieldMap,
+	}
 }
