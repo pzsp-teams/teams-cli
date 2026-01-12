@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -174,6 +173,11 @@ func (m *model) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *model) updateForm(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if m.form == nil || len(m.form.variants) == 0 {
+		m.mode = modeMenu
+		return m, nil
+	}
+
 	currentVariantIdx := m.form.variantIndex
 	if currentVariantIdx >= len(m.form.variants) {
 		currentVariantIdx = 0
@@ -195,49 +199,12 @@ func (m *model) updateResults(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *model) executeForm() (tea.Model, tea.Cmd) {
-	flags := make(map[string]any)
-
-	currentVariantIdx := m.form.variantIndex
-	if currentVariantIdx >= len(m.form.variants) {
-		currentVariantIdx = 0
+	if m.form == nil || len(m.form.variants) == 0 {
+		m.mode = modeMenu
+		return m, nil
 	}
-	currentVariant := m.form.variants[currentVariantIdx]
 
-	for _, field := range currentVariant {
-		flagDef := &m.form.def.Flags[field.flagIndex]
-
-		switch field.fieldType {
-		case app.InputLongString:
-			val := m.form.textAreas[field.index].Value()
-			if val != "" {
-				flags[flagDef.Name] = val
-			}
-		case app.InputList:
-			val := m.form.textAreas[field.index].Value()
-			if val != "" {
-				lines := strings.Split(val, "\n")
-				var filtered []string
-				for _, line := range lines {
-					trimmed := strings.TrimSpace(line)
-					if trimmed != "" {
-						filtered = append(filtered, trimmed)
-					}
-				}
-				if len(filtered) > 0 {
-					flags[flagDef.Name] = filtered
-				}
-			}
-		case app.InputChoice:
-			choice := m.form.choices[field.index]
-			selectedValue := choice.flagDef.Options[choice.selected]
-			flags[flagDef.Name] = selectedValue
-		default: // Text inputs
-			val := m.form.inputs[field.index].Value()
-			if val != "" {
-				flags[flagDef.Name] = val
-			}
-		}
-	}
+	flags := m.form.collectFlags()
 
 	output, _, err := m.executor.ExecuteCommand(m.form.def, flags)
 	title := "Results: " + m.form.def.Use
@@ -280,7 +247,7 @@ func (m *model) handleSelection() (tea.Model, tea.Cmd) {
 	if len(selectedDef.Flags) > 0 {
 		m.form = NewFormModel(selectedDef)
 		m.mode = modeForm
-		return m, nil
+		return m, m.form.Init()
 	}
 
 	return m.executeCommand(selectedDef)
