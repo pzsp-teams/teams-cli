@@ -1,6 +1,5 @@
 package teams
 
-// TODO: add creation result  for create-single command
 import (
 	"context"
 	"fmt"
@@ -26,7 +25,6 @@ func CreateSingleTeam(ctx context.Context, w io.Writer, flags map[string]any) (a
 	includeMe, _ := flags["include-me"].(bool)
 	dryRun, _ := flags["dry-run"].(bool)
 
-	// Validation
 	validate := validator.New()
 	if err := validate.Var(teamName, "required"); err != nil {
 		return nil, fmt.Errorf("team-name is required")
@@ -83,6 +81,8 @@ func CreateSingleTeam(ctx context.Context, w io.Writer, flags map[string]any) (a
 	if hasErrors {
 		return nil, fmt.Errorf("one or more teams failed to create")
 	}
+
+	printTeamCreationResults(w, results, dryRun)
 
 	return results, nil
 }
