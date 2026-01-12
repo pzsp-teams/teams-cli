@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -20,6 +21,8 @@ type resultsModel struct {
 	ready    bool
 	content  string
 	title    string
+	loading  bool
+	spinner  spinner.Model
 }
 
 // NewResultsModel creates a new results display model
@@ -27,17 +30,39 @@ func NewResultsModel(title, content string) *resultsModel {
 	return &resultsModel{
 		title:   title,
 		content: content,
+		loading: false,
+	}
+}
+
+// NewLoadingResultsModel creates a new results display model in loading state
+func NewLoadingResultsModel(title string) *resultsModel {
+	s := spinner.New()
+	s.Spinner = spinner.Dot
+	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+	return &resultsModel{
+		title:   title,
+		loading: true,
+		spinner: s,
 	}
 }
 
 // Init implements tea.Model
 func (m *resultsModel) Init() tea.Cmd {
+	if m.loading {
+		return m.spinner.Tick
+	}
 	return nil
 }
 
 // Update implements tea.Model
 func (m *resultsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
+	var cmds []tea.Cmd
+
+	if m.loading {
+		m.spinner, cmd = m.spinner.Update(msg)
+		cmds = append(cmds, cmd)
+	}
 
 	if msg, ok := msg.(tea.WindowSizeMsg); ok {
 		headerHeight := lipgloss.Height(m.headerView())
@@ -56,7 +81,8 @@ func (m *resultsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	m.viewport, cmd = m.viewport.Update(msg)
-	return m, cmd
+	cmds = append(cmds, cmd)
+	return m, tea.Batch(cmds...)
 }
 
 // View implements tea.Model
@@ -73,7 +99,11 @@ func (m *resultsModel) View() string {
 }
 
 func (m *resultsModel) headerView() string {
-	title := resultTitleStyle.Render(m.title)
+	titleText := m.title
+	if m.loading {
+		titleText = fmt.Sprintf("%s %s", m.spinner.View(), titleText)
+	}
+	title := resultTitleStyle.Render(titleText)
 	line := strings.Repeat("─", max(0, m.viewport.Width-lipgloss.Width(title)))
 	return lipgloss.JoinHorizontal(lipgloss.Center, title, line)
 }
