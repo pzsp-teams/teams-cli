@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/pzsp-teams/cli/internal/client"
 	"github.com/pzsp-teams/lib/models"
+	"github.com/pzsp-teams/teams-cli/internal/client"
 )
 
 // GetTeam handles retrieving team details.

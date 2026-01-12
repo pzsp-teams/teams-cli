@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/pzsp-teams/cli/cmd/common"
-	channelsretriever "github.com/pzsp-teams/cli/internal/channels/retriever"
-	"github.com/pzsp-teams/cli/internal/client"
-	"github.com/pzsp-teams/cli/internal/formatters"
-	"github.com/pzsp-teams/cli/internal/initializers"
+	"github.com/pzsp-teams/teams-cli/cmd/common"
+	channelsretriever "github.com/pzsp-teams/teams-cli/internal/channels/retriever"
+	"github.com/pzsp-teams/teams-cli/internal/client"
+	"github.com/pzsp-teams/teams-cli/internal/formatters"
+	"github.com/pzsp-teams/teams-cli/internal/initializers"
 )
 
 // GetMessages handles retrieving messages from channels.

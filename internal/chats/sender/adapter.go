@@ -3,9 +3,9 @@ package sender
 import (
 	"context"
 
-	"github.com/pzsp-teams/cli/internal/utils"
 	"github.com/pzsp-teams/lib/chats"
 	"github.com/pzsp-teams/lib/models"
+	"github.com/pzsp-teams/teams-cli/internal/utils"
 )
 
 type chatAdapter struct {

@@ -9,8 +9,8 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/adrg/xdg"
-	"github.com/pzsp-teams/cli/internal/file_readers"
 	lib "github.com/pzsp-teams/lib/config"
+	"github.com/pzsp-teams/teams-cli/internal/file_readers"
 	"gopkg.in/yaml.v3"
 )
 

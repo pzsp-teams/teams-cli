@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	corecreator "github.com/pzsp-teams/cli/internal/core/creator"
-	"github.com/pzsp-teams/cli/internal/initializers"
 	"github.com/pzsp-teams/lib/teams"
+	corecreator "github.com/pzsp-teams/teams-cli/internal/core/creator"
+	"github.com/pzsp-teams/teams-cli/internal/initializers"
 )
 
 type teamCreator struct {

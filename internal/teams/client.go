@@ -3,9 +3,9 @@ package teams
 import (
 	"context"
 
-	"github.com/pzsp-teams/cli/internal/teams/creator"
 	"github.com/pzsp-teams/lib/models"
 	"github.com/pzsp-teams/lib/teams"
+	"github.com/pzsp-teams/teams-cli/internal/teams/creator"
 )
 
 // NewClient creates a new teams client

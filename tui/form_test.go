@@ -3,7 +3,7 @@ package tui
 import (
 	"testing"
 
-	"github.com/pzsp-teams/cli/app"
+	"github.com/pzsp-teams/teams-cli/app"
 )
 
 func TestCalculateVariants(t *testing.T) {

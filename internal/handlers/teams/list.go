@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/pzsp-teams/cli/internal/client"
+	"github.com/pzsp-teams/teams-cli/internal/client"
 )
 
 // ListTeams handles the listing of teams.

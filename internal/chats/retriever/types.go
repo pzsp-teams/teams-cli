@@ -3,9 +3,9 @@ package retriever
 import (
 	"context"
 
-	coreretriever "github.com/pzsp-teams/cli/internal/core/retriever"
 	"github.com/pzsp-teams/lib/chats"
 	"github.com/pzsp-teams/lib/models"
+	coreretriever "github.com/pzsp-teams/teams-cli/internal/core/retriever"
 )
 
 // ChatMessageWithContext contains a message with its chat context

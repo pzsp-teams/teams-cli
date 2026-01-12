@@ -8,9 +8,9 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/pzsp-teams/cli/internal/file_readers"
-	"github.com/pzsp-teams/cli/internal/initializers"
 	"github.com/pzsp-teams/lib/models"
+	"github.com/pzsp-teams/teams-cli/internal/file_readers"
+	"github.com/pzsp-teams/teams-cli/internal/initializers"
 )
 
 var (

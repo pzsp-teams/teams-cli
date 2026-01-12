@@ -1,8 +1,8 @@
 package app
 
 import (
-	chatsHandlers "github.com/pzsp-teams/cli/internal/handlers/chats"
-	chatsMessagesHandlers "github.com/pzsp-teams/cli/internal/handlers/chats/messages"
+	chatsHandlers "github.com/pzsp-teams/teams-cli/internal/handlers/chats"
+	chatsMessagesHandlers "github.com/pzsp-teams/teams-cli/internal/handlers/chats/messages"
 )
 
 var (

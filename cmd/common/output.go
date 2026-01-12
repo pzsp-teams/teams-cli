@@ -5,7 +5,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/pzsp-teams/cli/internal/formatters"
+	"github.com/pzsp-teams/teams-cli/internal/formatters"
 )
 
 type nopWriteCloser struct {

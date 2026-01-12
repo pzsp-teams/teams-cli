@@ -5,7 +5,7 @@ import (
 	"io"
 	"text/template"
 
-	"github.com/pzsp-teams/cli/internal/initializers"
+	"github.com/pzsp-teams/teams-cli/internal/initializers"
 )
 
 // readTemplate reads template content from r and returns a parsed text/template.

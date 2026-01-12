@@ -12,7 +12,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	bubbledatetimepicker "github.com/lcc/bubble-datetime-picker"
 
-	"github.com/pzsp-teams/cli/app"
+	"github.com/pzsp-teams/teams-cli/app"
 )
 
 var (

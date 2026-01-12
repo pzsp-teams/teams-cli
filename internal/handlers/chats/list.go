@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/pzsp-teams/cli/internal/client"
-	"github.com/pzsp-teams/cli/internal/initializers"
+	"github.com/pzsp-teams/teams-cli/internal/client"
+	"github.com/pzsp-teams/teams-cli/internal/initializers"
 )
 
 // ListChats handles listing all chats.

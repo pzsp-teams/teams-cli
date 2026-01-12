@@ -7,7 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/textarea"
 	bubbledatetimepicker "github.com/lcc/bubble-datetime-picker"
 
-	"github.com/pzsp-teams/cli/app"
+	"github.com/pzsp-teams/teams-cli/app"
 )
 
 func (m *formModel) renderChoice(choice choiceField, focused bool) string {

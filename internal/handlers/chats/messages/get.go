@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/pzsp-teams/cli/cmd/common"
-	chatsretriever "github.com/pzsp-teams/cli/internal/chats/retriever"
-	"github.com/pzsp-teams/cli/internal/client"
-	"github.com/pzsp-teams/cli/internal/formatters"
-	"github.com/pzsp-teams/cli/internal/initializers"
-	"github.com/pzsp-teams/cli/internal/utils"
+	"github.com/pzsp-teams/teams-cli/cmd/common"
+	chatsretriever "github.com/pzsp-teams/teams-cli/internal/chats/retriever"
+	"github.com/pzsp-teams/teams-cli/internal/client"
+	"github.com/pzsp-teams/teams-cli/internal/formatters"
+	"github.com/pzsp-teams/teams-cli/internal/initializers"
+	"github.com/pzsp-teams/teams-cli/internal/utils"
 )
 
 // GetMessages handles retrieving messages from chats.

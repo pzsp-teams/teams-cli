@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/pzsp-teams/cli/internal/templates"
+	"github.com/pzsp-teams/teams-cli/internal/templates"
 )
 
 // GetMessageContent reads message content from either a string or file and processes it with RawToHTML

@@ -6,7 +6,7 @@ import (
 	"io"
 	"testing"
 
-	"github.com/pzsp-teams/cli/internal/file_readers"
+	"github.com/pzsp-teams/teams-cli/internal/file_readers"
 	"github.com/stretchr/testify/require"
 )
 

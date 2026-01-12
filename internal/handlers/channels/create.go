@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	channelcreation "github.com/pzsp-teams/cli/internal/channels/creator"
-	"github.com/pzsp-teams/cli/internal/client"
-	"github.com/pzsp-teams/cli/internal/initializers"
+	channelcreation "github.com/pzsp-teams/teams-cli/internal/channels/creator"
+	"github.com/pzsp-teams/teams-cli/internal/client"
+	"github.com/pzsp-teams/teams-cli/internal/initializers"
 )
 
 // CreateChannels handles creating channels from a file.

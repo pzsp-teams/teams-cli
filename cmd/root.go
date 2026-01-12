@@ -9,11 +9,11 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/pzsp-teams/cli/app"
-	"github.com/pzsp-teams/cli/internal/client"
-	"github.com/pzsp-teams/cli/internal/initializers"
-	"github.com/pzsp-teams/cli/internal/logger"
-	"github.com/pzsp-teams/cli/tui"
+	"github.com/pzsp-teams/teams-cli/app"
+	"github.com/pzsp-teams/teams-cli/internal/client"
+	"github.com/pzsp-teams/teams-cli/internal/initializers"
+	"github.com/pzsp-teams/teams-cli/internal/logger"
+	"github.com/pzsp-teams/teams-cli/tui"
 )
 
 // RootCmd is the root command for the CLI

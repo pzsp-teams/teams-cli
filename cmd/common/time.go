@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/araddon/dateparse"
-	coreretriever "github.com/pzsp-teams/cli/internal/core/retriever"
+	coreretriever "github.com/pzsp-teams/teams-cli/internal/core/retriever"
 )
 
 // ParseTimeRange parses dates given in natural language or other formats

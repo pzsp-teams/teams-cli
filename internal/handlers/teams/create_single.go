@@ -8,12 +8,12 @@ import (
 
 	"github.com/go-playground/validator/v10"
 
-	"github.com/pzsp-teams/cli/internal/client"
-	internalcommon "github.com/pzsp-teams/cli/internal/common"
-	"github.com/pzsp-teams/cli/internal/core/creator"
-	"github.com/pzsp-teams/cli/internal/initializers"
-	tcreator "github.com/pzsp-teams/cli/internal/teams/creator"
-	"github.com/pzsp-teams/cli/internal/teams/creator/single"
+	"github.com/pzsp-teams/teams-cli/internal/client"
+	internalcommon "github.com/pzsp-teams/teams-cli/internal/common"
+	"github.com/pzsp-teams/teams-cli/internal/core/creator"
+	"github.com/pzsp-teams/teams-cli/internal/initializers"
+	tcreator "github.com/pzsp-teams/teams-cli/internal/teams/creator"
+	"github.com/pzsp-teams/teams-cli/internal/teams/creator/single"
 )
 
 // CreateSingleTeam handles creating a single team.

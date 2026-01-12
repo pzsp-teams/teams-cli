@@ -1,4 +1,4 @@
-module github.com/pzsp-teams/cli
+module github.com/pzsp-teams/teams-cli
 
 go 1.25.5
 

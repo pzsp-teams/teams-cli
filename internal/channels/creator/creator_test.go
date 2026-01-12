@@ -6,8 +6,8 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/pzsp-teams/cli/internal/testutil"
 	"github.com/pzsp-teams/lib/models"
+	"github.com/pzsp-teams/teams-cli/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"

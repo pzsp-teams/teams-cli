@@ -3,12 +3,12 @@ package channels
 import (
 	"context"
 
-	"github.com/pzsp-teams/cli/internal/channels/creator"
-	"github.com/pzsp-teams/cli/internal/channels/retriever"
-	"github.com/pzsp-teams/cli/internal/channels/sender"
-	coreretriever "github.com/pzsp-teams/cli/internal/core/retriever"
 	"github.com/pzsp-teams/lib/channels"
 	"github.com/pzsp-teams/lib/teams"
+	"github.com/pzsp-teams/teams-cli/internal/channels/creator"
+	"github.com/pzsp-teams/teams-cli/internal/channels/retriever"
+	"github.com/pzsp-teams/teams-cli/internal/channels/sender"
+	coreretriever "github.com/pzsp-teams/teams-cli/internal/core/retriever"
 )
 
 // Client provides all channel-related operations

@@ -1,7 +1,7 @@
 package app
 
 import (
-	teamsHandlers "github.com/pzsp-teams/cli/internal/handlers/teams"
+	teamsHandlers "github.com/pzsp-teams/teams-cli/internal/handlers/teams"
 )
 
 var (

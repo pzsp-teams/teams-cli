@@ -3,8 +3,8 @@ package retriever
 import (
 	"context"
 
-	coreretriever "github.com/pzsp-teams/cli/internal/core/retriever"
 	"github.com/pzsp-teams/lib/models"
+	coreretriever "github.com/pzsp-teams/teams-cli/internal/core/retriever"
 )
 
 // ChannelMessageWithContext contains a message with its team and channel context

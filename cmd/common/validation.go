@@ -3,7 +3,7 @@ package common
 import (
 	"errors"
 
-	"github.com/pzsp-teams/cli/internal/common"
+	"github.com/pzsp-teams/teams-cli/internal/common"
 )
 
 // MessageInputFlags represents the flags for message input

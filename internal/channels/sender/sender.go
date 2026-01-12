@@ -3,9 +3,9 @@ package sender
 import (
 	"context"
 
-	coresender "github.com/pzsp-teams/cli/internal/core/sender"
 	"github.com/pzsp-teams/lib/channels"
 	"github.com/pzsp-teams/lib/models"
+	coresender "github.com/pzsp-teams/teams-cli/internal/core/sender"
 )
 
 type channelSender struct {

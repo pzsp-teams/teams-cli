@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/pzsp-teams/cli/app"
+	"github.com/pzsp-teams/teams-cli/app"
 )
 
 var mockRegistry = []app.CommandDef{

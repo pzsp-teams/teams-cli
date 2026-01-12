@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/pzsp-teams/cli/internal/config"
+	"github.com/pzsp-teams/teams-cli/internal/config"
 )
 
 var (

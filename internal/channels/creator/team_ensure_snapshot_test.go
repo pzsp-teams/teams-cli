@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	corecreator "github.com/pzsp-teams/cli/internal/core/creator"
+	corecreator "github.com/pzsp-teams/teams-cli/internal/core/creator"
 	"github.com/stretchr/testify/assert"
 )
 

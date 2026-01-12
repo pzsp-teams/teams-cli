@@ -6,12 +6,12 @@ import (
 	"testing"
 	"time"
 
-	coreretriever "github.com/pzsp-teams/cli/internal/core/retriever"
-	"github.com/pzsp-teams/cli/internal/testutil"
-	"github.com/pzsp-teams/cli/internal/utils"
 	"github.com/pzsp-teams/lib/chats"
 	"github.com/pzsp-teams/lib/models"
 	"github.com/pzsp-teams/lib/search"
+	coreretriever "github.com/pzsp-teams/teams-cli/internal/core/retriever"
+	"github.com/pzsp-teams/teams-cli/internal/testutil"
+	"github.com/pzsp-teams/teams-cli/internal/utils"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )

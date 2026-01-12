@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/pzsp-teams/cli/internal/file_readers"
-	"github.com/pzsp-teams/cli/internal/initializers"
+	"github.com/pzsp-teams/teams-cli/internal/file_readers"
+	"github.com/pzsp-teams/teams-cli/internal/initializers"
 )
 
 // ParseTeamsData parses team data using the provided decode function.

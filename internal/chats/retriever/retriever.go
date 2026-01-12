@@ -3,10 +3,10 @@ package retriever
 import (
 	"context"
 
-	coreretriever "github.com/pzsp-teams/cli/internal/core/retriever"
-	"github.com/pzsp-teams/cli/internal/utils"
 	"github.com/pzsp-teams/lib/chats"
 	"github.com/pzsp-teams/lib/search"
+	coreretriever "github.com/pzsp-teams/teams-cli/internal/core/retriever"
+	"github.com/pzsp-teams/teams-cli/internal/utils"
 )
 
 type retriever struct {

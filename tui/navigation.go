@@ -1,7 +1,7 @@
 package tui
 
 import (
-	"github.com/pzsp-teams/cli/app"
+	"github.com/pzsp-teams/teams-cli/app"
 )
 
 // navigationState tracks current command and navigation history

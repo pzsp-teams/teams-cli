@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/pzsp-teams/cli/cmd/common"
-	"github.com/pzsp-teams/cli/internal/chats/sender"
-	"github.com/pzsp-teams/cli/internal/client"
-	internalcommon "github.com/pzsp-teams/cli/internal/common"
-	"github.com/pzsp-teams/cli/internal/initializers"
+	"github.com/pzsp-teams/teams-cli/cmd/common"
+	"github.com/pzsp-teams/teams-cli/internal/chats/sender"
+	"github.com/pzsp-teams/teams-cli/internal/client"
+	internalcommon "github.com/pzsp-teams/teams-cli/internal/common"
+	"github.com/pzsp-teams/teams-cli/internal/initializers"
 )
 
 // SendMessages handles sending messages to chats.

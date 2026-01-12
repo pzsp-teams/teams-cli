@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/pzsp-teams/cli/internal/initializers"
-	"github.com/pzsp-teams/cli/internal/templates"
 	"github.com/pzsp-teams/lib/models"
+	"github.com/pzsp-teams/teams-cli/internal/initializers"
+	"github.com/pzsp-teams/teams-cli/internal/templates"
 )
 
 // GenericSender handles message sending with mention resolution and error handling

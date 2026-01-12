@@ -1,7 +1,7 @@
 package creator
 
 import (
-	corecreator "github.com/pzsp-teams/cli/internal/core/creator"
+	corecreator "github.com/pzsp-teams/teams-cli/internal/core/creator"
 )
 
 // TeamData represents raw team data parsed from input files (YAML/JSON/CSV).

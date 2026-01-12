@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/pzsp-teams/cli/internal/client"
-	"github.com/pzsp-teams/cli/internal/initializers"
-	teamcreator "github.com/pzsp-teams/cli/internal/teams/creator"
+	"github.com/pzsp-teams/teams-cli/internal/client"
+	"github.com/pzsp-teams/teams-cli/internal/initializers"
+	teamcreator "github.com/pzsp-teams/teams-cli/internal/teams/creator"
 )
 
 // CreateTeams handles creating teams from a file.

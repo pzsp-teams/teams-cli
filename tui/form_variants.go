@@ -3,7 +3,7 @@ package tui
 import (
 	"math/bits"
 
-	"github.com/pzsp-teams/cli/app"
+	"github.com/pzsp-teams/teams-cli/app"
 )
 
 // fieldInfo tracks a field's type and index for variant building

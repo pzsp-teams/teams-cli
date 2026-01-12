@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/pzsp-teams/cli/cmd"
-	"github.com/pzsp-teams/cli/internal/pepper"
 	"github.com/pzsp-teams/lib"
+	"github.com/pzsp-teams/teams-cli/cmd"
+	"github.com/pzsp-teams/teams-cli/internal/pepper"
 )
 
 func main() {

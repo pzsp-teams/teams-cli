@@ -3,10 +3,10 @@ package retriever
 import (
 	"context"
 
-	coreretriever "github.com/pzsp-teams/cli/internal/core/retriever"
 	lib_channels "github.com/pzsp-teams/lib/channels"
 	"github.com/pzsp-teams/lib/search"
 	lib_teams "github.com/pzsp-teams/lib/teams"
+	coreretriever "github.com/pzsp-teams/teams-cli/internal/core/retriever"
 )
 
 // retriever retrieves messages from channels within a time range

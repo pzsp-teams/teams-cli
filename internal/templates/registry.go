@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/pzsp-teams/cli/internal/file_readers"
-	"github.com/pzsp-teams/cli/internal/initializers"
+	"github.com/pzsp-teams/teams-cli/internal/file_readers"
+	"github.com/pzsp-teams/teams-cli/internal/initializers"
 )
 
 // Registry manages available parsers for different file formats

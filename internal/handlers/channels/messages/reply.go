@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/pzsp-teams/cli/internal/client"
-	internalcommon "github.com/pzsp-teams/cli/internal/common"
-	"github.com/pzsp-teams/cli/internal/initializers"
+	"github.com/pzsp-teams/teams-cli/internal/client"
+	internalcommon "github.com/pzsp-teams/teams-cli/internal/common"
+	"github.com/pzsp-teams/teams-cli/internal/initializers"
 )
 
 // ReplyToMessage handles sending a reply to a message.

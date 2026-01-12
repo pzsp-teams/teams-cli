@@ -3,8 +3,8 @@ package sender
 import (
 	"context"
 
-	coresender "github.com/pzsp-teams/cli/internal/core/sender"
 	"github.com/pzsp-teams/lib/chats"
+	coresender "github.com/pzsp-teams/teams-cli/internal/core/sender"
 )
 
 type chatSender struct {

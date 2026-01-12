@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/pzsp-teams/cli/internal/file_readers"
-	"github.com/pzsp-teams/cli/internal/templates"
+	"github.com/pzsp-teams/teams-cli/internal/file_readers"
+	"github.com/pzsp-teams/teams-cli/internal/templates"
 )
 
 // ParseTemplateAndData parses a template file and data file to generate messages

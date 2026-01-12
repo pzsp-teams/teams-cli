@@ -1,7 +1,7 @@
 package creator
 
 import (
-	corecreator "github.com/pzsp-teams/cli/internal/core/creator"
+	corecreator "github.com/pzsp-teams/teams-cli/internal/core/creator"
 )
 
 // ChannelData represents lists of members and owners for new channels

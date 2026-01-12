@@ -4,7 +4,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/pzsp-teams/cli/internal/logger"
+	"github.com/pzsp-teams/teams-cli/internal/logger"
 )
 
 // Logger is the global logger instance that can be used throughout the application.

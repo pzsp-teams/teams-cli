@@ -5,7 +5,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/pzsp-teams/cli/app"
+	"github.com/pzsp-teams/teams-cli/app"
 )
 
 // CommandExecutor executes CLI commands from TUI

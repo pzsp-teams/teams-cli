@@ -6,8 +6,8 @@ import (
 	"sort"
 	"testing"
 
-	corecreator "github.com/pzsp-teams/cli/internal/core/creator"
-	"github.com/pzsp-teams/cli/internal/testutil"
+	corecreator "github.com/pzsp-teams/teams-cli/internal/core/creator"
+	"github.com/pzsp-teams/teams-cli/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"

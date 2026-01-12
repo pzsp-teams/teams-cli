@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/pzsp-teams/cli/internal/file_readers"
 	"github.com/pzsp-teams/lib/models"
+	"github.com/pzsp-teams/teams-cli/internal/file_readers"
 )
 
 func TestMessageParser_JSONFormatMultipleRecipients(t *testing.T) {

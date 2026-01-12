@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/pzsp-teams/cli/internal/file_readers"
-	"github.com/pzsp-teams/cli/internal/initializers"
+	"github.com/pzsp-teams/teams-cli/internal/file_readers"
+	"github.com/pzsp-teams/teams-cli/internal/initializers"
 )
 
 // ParseSingleTeamDataByExtension parses team data for a single team

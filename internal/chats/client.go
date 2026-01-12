@@ -3,11 +3,11 @@ package chats
 import (
 	"context"
 
-	"github.com/pzsp-teams/cli/internal/chats/retriever"
-	"github.com/pzsp-teams/cli/internal/chats/sender"
-	coreretriever "github.com/pzsp-teams/cli/internal/core/retriever"
 	"github.com/pzsp-teams/lib/chats"
 	"github.com/pzsp-teams/lib/models"
+	"github.com/pzsp-teams/teams-cli/internal/chats/retriever"
+	"github.com/pzsp-teams/teams-cli/internal/chats/sender"
+	coreretriever "github.com/pzsp-teams/teams-cli/internal/core/retriever"
 )
 
 // Client provides all chat-related operations

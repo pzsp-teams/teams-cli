@@ -6,7 +6,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	bubbledatetimepicker "github.com/lcc/bubble-datetime-picker"
 
-	"github.com/pzsp-teams/cli/app"
+	"github.com/pzsp-teams/teams-cli/app"
 )
 
 // formField tracks a field in the form and its type

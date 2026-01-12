@@ -3,11 +3,11 @@ package client
 import (
 	"context"
 
-	"github.com/pzsp-teams/cli/internal/channels"
-	"github.com/pzsp-teams/cli/internal/chats"
-	"github.com/pzsp-teams/cli/internal/teams"
 	"github.com/pzsp-teams/lib"
 	lib_config "github.com/pzsp-teams/lib/config"
+	"github.com/pzsp-teams/teams-cli/internal/channels"
+	"github.com/pzsp-teams/teams-cli/internal/chats"
+	"github.com/pzsp-teams/teams-cli/internal/teams"
 )
 
 // TeamsClient aggregates resource-level clients

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/pzsp-teams/cli/app"
+	"github.com/pzsp-teams/teams-cli/app"
 
 	tea "github.com/charmbracelet/bubbletea"
 )

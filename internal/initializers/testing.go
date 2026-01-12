@@ -2,7 +2,7 @@
 
 package initializers
 
-import "github.com/pzsp-teams/cli/internal/logger"
+import "github.com/pzsp-teams/teams-cli/internal/logger"
 
 type noopLogger struct{}
 

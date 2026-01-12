@@ -5,8 +5,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/pzsp-teams/cli/internal/initializers"
-	"github.com/pzsp-teams/cli/internal/logger"
+	"github.com/pzsp-teams/teams-cli/internal/initializers"
+	"github.com/pzsp-teams/teams-cli/internal/logger"
 )
 
 func TestMain(m *testing.M) {

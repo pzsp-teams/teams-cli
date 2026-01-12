@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/pzsp-teams/cli/internal/file_readers"
-	"github.com/pzsp-teams/cli/internal/initializers"
+	"github.com/pzsp-teams/teams-cli/internal/file_readers"
+	"github.com/pzsp-teams/teams-cli/internal/initializers"
 )
 
 // ParseChannelsData parses channel creation data from the provided reader

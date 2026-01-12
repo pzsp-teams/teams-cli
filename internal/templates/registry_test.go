@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/pzsp-teams/cli/internal/file_readers"
+	"github.com/pzsp-teams/teams-cli/internal/file_readers"
 )
 
 func closeFile(t *testing.T, file *os.File) {

@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/adrg/xdg"
-	"github.com/pzsp-teams/cli/internal/config"
+	"github.com/pzsp-teams/teams-cli/internal/config"
 	"github.com/spf13/cobra"
 )
 

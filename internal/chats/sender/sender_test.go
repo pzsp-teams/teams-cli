@@ -5,10 +5,10 @@ import (
 	"errors"
 	"testing"
 
-	coresender "github.com/pzsp-teams/cli/internal/core/sender"
-	"github.com/pzsp-teams/cli/internal/testutil"
 	"github.com/pzsp-teams/lib/chats"
 	"github.com/pzsp-teams/lib/models"
+	coresender "github.com/pzsp-teams/teams-cli/internal/core/sender"
+	"github.com/pzsp-teams/teams-cli/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
