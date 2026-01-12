@@ -32,7 +32,7 @@ func newSUT(t *testing.T) (Retriever, context.Context, sutDeps) {
 	return NewRetriever(d.chats), context.Background(), d
 }
 
-func mkMsg(chatID string, msgID string, fromDisplayName string) *search.SearchResult {
+func mkMsg(chatID, msgID, fromDisplayName string) *search.SearchResult {
 	var from *models.MessageFrom
 	if fromDisplayName != "" {
 		from = &models.MessageFrom{DisplayName: fromDisplayName}
@@ -396,7 +396,6 @@ func TestGetMessages_PassesChatRefThrough(t *testing.T) {
 	require.Empty(t, out)
 }
 
-
 func TestGetMessages_UnknownChatRef_ReturnsUnknownType(t *testing.T) {
 	t.Parallel()
 
@@ -441,4 +440,3 @@ func TestGetMessages_UnknownChatRef_ReturnsUnknownType(t *testing.T) {
 	require.Equal(t, "Unknown", out[0].ChatType)
 	require.Equal(t, "m1", out[0].Message.ID)
 }
-
