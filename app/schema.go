@@ -10,6 +10,7 @@ import (
 // InputType represents the type of UI input required
 type InputType int
 
+// Different accepted input types for cmd and tui
 const (
 	InputNone InputType = iota
 	InputString
