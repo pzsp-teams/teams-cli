@@ -50,6 +50,7 @@ func (r *retriever) GetMessages(
 				From: &f,
 				Size: &s,
 			},
+			ToMe: true,
 		}
 
 		page, err := r.chatService.SearchMessages(ctx, chatRef, searchOpts, searchConfig)
