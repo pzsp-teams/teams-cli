@@ -27,7 +27,14 @@ Examples:
   teams-cli channels messages get --start "2024-01-01 10:00" --end "2024-01-01 11:00"
 
   # Yesterday
-  teams-cli channels messages get --start yesterday --end now`,
+  teams-cli channels messages get --start yesterday --end now
+	
+  # Filter by team
+  teams-cli channels messages get --team "My Team"
+
+  # Filter by channel and team
+  teams-cli channels messages get --team "My Team" --channel "General"
+`,
 	RunE: runChannelsMessagesGet,
 }
 
