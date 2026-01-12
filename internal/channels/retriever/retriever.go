@@ -23,89 +23,102 @@ func NewRetriever(teamsService lib_teams.Service, channelsService lib_channels.S
 	}
 }
 
-// GetMessages retrieves messages from all channels within the specified time range
-func (r *retriever) GetMessages(ctx context.Context, timeRange coreretriever.TimeRange, teamRef, channelRef *string) ([]*ChannelMessageWithContext, error) {
-	messages, err := r.getMessagesInTimeRange(ctx, timeRange, teamRef, channelRef)
-	if err != nil {
-		return nil, err
-	}
-	return messages, nil
-}
+// GetMessages retrieves messages from channels within the specified time range and optional team/channel filters
+func (r *retriever) GetMessages(
+	ctx context.Context,
+	timeRange coreretriever.TimeRange,
+	teamRef, channelRef *string,
+) ([]*ChannelMessageWithContext, error) {
+	tRef := normalizeRef(teamRef)
+	cRef := normalizeRef(channelRef)
 
-func (r *retriever) getMessagesInTimeRange(ctx context.Context, timeRange coreretriever.TimeRange, teamRef, channelRef *string) ([]*ChannelMessageWithContext, error) {
-	var aggregatedSearchResults []*search.SearchResults
-	var from int32 = 0
-	var size int32 = 25
-	var tRef, cRef *string
-	if teamRef != nil && *teamRef != "" {
-		tRef = teamRef
-	}
-	if channelRef != nil && *channelRef != "" {
-		cRef = channelRef
-	}
 	searchConfig := &search.SearchConfig{
 		MaxWorkers: coreretriever.WorkersCount,
 	}
-	for {
+
+	teamNameByID := make(map[string]string)
+	channelNameByKey := make(map[string]string)
+
+	var results []*ChannelMessageWithContext
+
+	from := int32(0)
+	size := int32(25)
+
+	for range 10_000 {
+		f := from
+		s := size
+
 		searchOpts := &search.SearchMessagesOptions{
 			StartTime: &timeRange.Start,
 			EndTime:   &timeRange.End,
 			NotFromMe: true,
 			SearchPage: &search.SearchPage{
-				From: &from,
-				Size: &size,
+				From: &f,
+				Size: &s,
 			},
 		}
 
-		searchResult, err := r.channelsService.SearchMessages(ctx, tRef, cRef, searchOpts, searchConfig)
+		page, err := r.channelsService.SearchMessages(ctx, tRef, cRef, searchOpts, searchConfig)
 		if err != nil {
 			return nil, err
 		}
-		aggregatedSearchResults = append(aggregatedSearchResults, searchResult)
-		if searchResult.NextFrom == nil {
+
+		r.processPage(ctx, page, teamNameByID, channelNameByKey, &results)
+
+		if page.NextFrom == nil || *page.NextFrom == from {
 			break
 		}
-		from = *searchResult.NextFrom
+		from = *page.NextFrom
 	}
-	return r.processChannelMessages(ctx, aggregatedSearchResults), nil
+
+	return results, nil
 }
 
-func (r *retriever) processChannelMessages(ctx context.Context, searchResults []*search.SearchResults) []*ChannelMessageWithContext {
-	var results []*ChannelMessageWithContext
-	var teamNameByID = make(map[string]string)
-	var channelNameByID = make(map[string]string)
-	for _, result := range searchResults {
-		for _, msg := range result.Messages {
-			if msg.TeamID == nil || msg.ChannelID == nil {
-				continue
-			}
-			var teamName, channelName string
-			if name, ok := teamNameByID[*msg.TeamID]; ok {
-				teamName = name
-			} else if msg.TeamID != nil {
-				team, err := r.teamsService.Get(ctx, *msg.TeamID)
-				if err == nil {
-					teamName = team.DisplayName
-					teamNameByID[*msg.TeamID] = team.DisplayName
-				}
-			}
-			if name, ok := channelNameByID[*msg.ChannelID]; ok {
-				channelName = name
-			} else if msg.ChannelID != nil {
-				channel, err := r.channelsService.Get(ctx, *msg.TeamID, *msg.ChannelID)
-				if err == nil {
-					channelName = channel.Name
-					channelNameByID[*msg.ChannelID] = channel.Name
-				}
-			}
-			results = append(results, &ChannelMessageWithContext{
-				TeamName:    teamName,
-				TeamID:      *msg.TeamID,
-				ChannelName: channelName,
-				ChannelID:   *msg.ChannelID,
-				Message:     msg.Message,
-			})
-		}
+func normalizeRef(ref *string) *string {
+	if ref == nil || *ref == "" {
+		return nil
 	}
-	return results
+	return ref
+}
+
+func (r *retriever) processPage(
+	ctx context.Context,
+	page *search.SearchResults,
+	teamNameByID map[string]string,
+	channelNameByKey map[string]string,
+	out *[]*ChannelMessageWithContext,
+) {
+	for _, msg := range page.Messages {
+		if msg.TeamID == nil || msg.ChannelID == nil {
+			continue
+		}
+
+		teamID := *msg.TeamID
+		channelID := *msg.ChannelID
+		channelKey := teamID + ":" + channelID
+
+		teamName := teamNameByID[teamID]
+		if teamName == "" {
+			if team, err := r.teamsService.Get(ctx, teamID); err == nil && team != nil {
+				teamName = team.DisplayName
+				teamNameByID[teamID] = teamName
+			}
+		}
+
+		channelName := channelNameByKey[channelKey]
+		if channelName == "" {
+			if ch, err := r.channelsService.Get(ctx, teamID, channelID); err == nil && ch != nil {
+				channelName = ch.Name
+				channelNameByKey[channelKey] = channelName
+			}
+		}
+
+		*out = append(*out, &ChannelMessageWithContext{
+			TeamName:    teamName,
+			TeamID:      teamID,
+			ChannelName: channelName,
+			ChannelID:   channelID,
+			Message:     msg.Message,
+		})
+	}
 }
