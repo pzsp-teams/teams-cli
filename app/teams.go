@@ -37,7 +37,13 @@ func init() {
 				Flags: []FlagDef{
 					{Name: "team-name", Usage: "Name of the team to create", Type: InputString, Required: true},
 					{Name: "description", Usage: "Description of the team", Type: InputString},
-					{Name: "visibility", Usage: "Visibility (private/public)", Type: InputString, DefaultVal: "private"},
+					{
+						Name:       "visibility",
+						Usage:      "Visibility (private/public)",
+						Type:       InputChoice,
+						DefaultVal: "private",
+						Options:    []string{"private", "public"},
+					},
 					{Name: "file", Shorthand: "f", Usage: "Path to members data file", Type: InputFile, Required: true},
 					{Name: "include-me", Shorthand: "i", Usage: "Include current user", Type: InputBool},
 					{Name: "dry-run", Usage: "Preview only", Type: InputBool},
