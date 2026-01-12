@@ -69,17 +69,16 @@ const (
 )
 
 type model struct {
-	registry    []app.CommandDef
-	mode        mode
-	list        list.Model
-	form        *formModel
-	results     *resultsModel
-	messageList *messageListModel
-	navigation  *navigationState
-	executor    *CommandExecutor
-	width       int
-	height      int
-	quitting    bool
+	registry   []app.CommandDef
+	mode       mode
+	list       list.Model
+	form       *formModel
+	results    *resultsModel
+	navigation *navigationState
+	executor   *CommandExecutor
+	width      int
+	height     int
+	quitting   bool
 }
 
 // Init implements tea.Model interface
