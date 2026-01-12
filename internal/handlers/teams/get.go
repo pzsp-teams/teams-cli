@@ -13,7 +13,7 @@ import (
 func GetTeam(ctx context.Context, w io.Writer, flags map[string]any) (any, error) {
 	team, _ := flags["team"].(string)
 
-	c, err := client.GetOrCreateInstance(ctx)
+	c, err := client.GetInstance()
 	if err != nil {
 		return nil, err
 	}
