@@ -9,6 +9,7 @@ import (
 	channelsretriever "github.com/pzsp-teams/cli/internal/channels/retriever"
 	"github.com/pzsp-teams/cli/internal/formatters"
 	"github.com/pzsp-teams/cli/internal/initializers"
+	"github.com/pzsp-teams/cli/internal/timeparse"
 )
 
 var channelsMessagesGetCmd = &cobra.Command{
@@ -73,7 +74,7 @@ func runChannelsMessagesGet(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	timeRange, err := ParseTimeRange(channelsMessagesStartTime, channelsMessagesEndTime)
+	timeRange, err := timeparse.ParseTimeRange(channelsMessagesStartTime, channelsMessagesEndTime)
 	if err != nil {
 		return fmt.Errorf("failed to parse time range: %w", err)
 	}

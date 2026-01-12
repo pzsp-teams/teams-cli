@@ -9,6 +9,7 @@ import (
 	chatsretriever "github.com/pzsp-teams/cli/internal/chats/retriever"
 	"github.com/pzsp-teams/cli/internal/formatters"
 	"github.com/pzsp-teams/cli/internal/initializers"
+	"github.com/pzsp-teams/cli/internal/timeparse"
 	"github.com/pzsp-teams/cli/internal/utils"
 )
 
@@ -69,7 +70,7 @@ func runChatsMessagesGet(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	timeRange, err := ParseTimeRange(chatsMessagesStartTime, chatsMessagesEndTime)
+	timeRange, err := timeparse.ParseTimeRange(chatsMessagesStartTime, chatsMessagesEndTime)
 	if err != nil {
 		return fmt.Errorf("failed to parse time range: %w", err)
 	}
