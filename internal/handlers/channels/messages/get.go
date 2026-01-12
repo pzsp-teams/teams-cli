@@ -30,14 +30,15 @@ func GetMessages(ctx context.Context, w io.Writer, flags map[string]any) (any, e
 		if err != nil {
 			return nil, err
 		}
-		defer func() {
-			if err := dest.Close(); err != nil {
-				log.Error("Failed to close destination", "error", err)
-			}
-		}()
 	} else {
 		dest = common.NopWriteCloser(w)
 	}
+
+	defer func() {
+		if err := dest.Close(); err != nil {
+			log.Error("Failed to close destination", "error", err)
+		}
+	}()
 
 	formatter := common.GetFormatter(format)
 	if err != nil {
