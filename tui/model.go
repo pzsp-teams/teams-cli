@@ -68,6 +68,12 @@ const (
 	modeResults
 )
 
+type commandFinishedMsg struct {
+	output string
+	data   any
+	err    error
+}
+
 type model struct {
 	registry   []app.CommandDef
 	mode       mode
@@ -192,6 +198,19 @@ func (m *model) updateForm(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *model) updateResults(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if msg, ok := msg.(commandFinishedMsg); ok {
+		m.results.loading = false
+		output := msg.output
+		if msg.err != nil {
+			output = fmt.Sprintf("Error: %v\n\n%s", msg.err, output)
+		}
+		m.results.content = output
+		if m.results.ready {
+			m.results.viewport.SetContent(output)
+		}
+		return m, nil
+	}
+
 	var cmd tea.Cmd
 	_, cmd = m.results.Update(msg)
 	return m, cmd
@@ -204,19 +223,21 @@ func (m *model) executeForm() (tea.Model, tea.Cmd) {
 	}
 
 	flags := m.form.collectFlags()
+	def := m.form.def
 
-	output, _, err := m.executor.ExecuteCommand(m.form.def, flags)
-	title := "Results: " + m.form.def.Use
-	if err != nil {
-		output = fmt.Sprintf("Error: %v\n\n%s", err, output)
-	}
-
-	m.results = NewResultsModel(title, output)
+	m.results = NewLoadingResultsModel("Results: " + def.Use)
 	m.mode = modeResults
 
-	return m, func() tea.Msg {
-		return tea.WindowSizeMsg{Width: m.width, Height: m.height}
-	}
+	return m, tea.Batch(
+		m.results.Init(),
+		func() tea.Msg {
+			output, data, err := m.executor.ExecuteCommand(def, flags)
+			return commandFinishedMsg{output, data, err}
+		},
+		func() tea.Msg {
+			return tea.WindowSizeMsg{Width: m.width, Height: m.height}
+		},
+	)
 }
 
 func (m *model) handleSelection() (tea.Model, tea.Cmd) {
@@ -276,17 +297,20 @@ func (m *model) findCommandDef(selection string) *app.CommandDef {
 
 func (m *model) executeCommand(def *app.CommandDef) (tea.Model, tea.Cmd) {
 	m.form = nil
-	output, _, err := m.executor.ExecuteCommand(def, nil)
-	title := "Results: " + def.Use
-	if err != nil {
-		output = fmt.Sprintf("Error: %v\n\n%s", err, output)
-	}
 
-	m.results = NewResultsModel(title, output)
+	m.results = NewLoadingResultsModel("Results: " + def.Use)
 	m.mode = modeResults
-	return m, func() tea.Msg {
-		return tea.WindowSizeMsg{Width: m.width, Height: m.height}
-	}
+
+	return m, tea.Batch(
+		m.results.Init(),
+		func() tea.Msg {
+			output, data, err := m.executor.ExecuteCommand(def, nil)
+			return commandFinishedMsg{output, data, err}
+		},
+		func() tea.Msg {
+			return tea.WindowSizeMsg{Width: m.width, Height: m.height}
+		},
+	)
 }
 
 func (m *model) updateListForCurrentScreen() {

@@ -19,7 +19,7 @@ func NewCommandExecutor(ctx context.Context) *CommandExecutor {
 }
 
 // ExecuteCommand executes an app handler
-func (e *CommandExecutor) ExecuteCommand(def *app.CommandDef, flags map[string]any) (string, any, error) {
+func (e *CommandExecutor) ExecuteCommand(def *app.CommandDef, flags map[string]any) (output string, data any, err error) {
 	if def.Handler == nil {
 		return "", nil, fmt.Errorf("no handler defined for command: %s", def.Use)
 	}
@@ -29,6 +29,7 @@ func (e *CommandExecutor) ExecuteCommand(def *app.CommandDef, flags map[string]a
 	}
 
 	var buf bytes.Buffer
-	data, err := def.Handler(e.ctx, &buf, flags)
-	return buf.String(), data, err
+	data, err = def.Handler(e.ctx, &buf, flags)
+	output = buf.String()
+	return output, data, err
 }
