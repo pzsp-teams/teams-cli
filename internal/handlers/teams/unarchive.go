@@ -22,6 +22,6 @@ func UnarchiveTeam(ctx context.Context, w io.Writer, flags map[string]any) (any,
 		return nil, err
 	}
 
-	fmt.Fprintln(w, "Team unarchive initiated. The team will be unarchived shortly.")
+	_, _ = fmt.Fprintln(w, "Team unarchive initiated. The team will be unarchived shortly.")
 	return nil, nil
 }

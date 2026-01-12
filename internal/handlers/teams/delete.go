@@ -22,6 +22,6 @@ func DeleteTeam(ctx context.Context, w io.Writer, flags map[string]any) (any, er
 		return nil, err
 	}
 
-	fmt.Fprintln(w, "Team deletion initiated. The team will be deleted shortly.")
+	_, _ = fmt.Fprintln(w, "Team deletion initiated. The team will be deleted shortly.")
 	return nil, nil
 }

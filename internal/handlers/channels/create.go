@@ -58,50 +58,50 @@ func printChannelCreationResults(w io.Writer, results []channelcreation.CreateRe
 	successCount := 0
 	for _, res := range results {
 		if res.Error != nil {
-			fmt.Fprintf(w, "Failed - channel: %s, error: %v\n", res.ChannelName, res.Error)
+			_, _ = fmt.Fprintf(w, "Failed - channel: %s, error: %v\n", res.ChannelName, res.Error)
 		} else {
 			successCount++
 			if dryRun {
 				switch res.Status {
 				case channelcreation.StatusWouldCreate:
-					fmt.Fprintf(w, "[Dry Run] Would create - channel: %s\n", res.ChannelName)
-					fmt.Fprintf(w, "Members: %s\n", strings.Join(res.MemberRefs, ", "))
-					fmt.Fprintf(w, "Owners: %s\n", strings.Join(res.OwnerRefs, ", "))
+					_, _ = fmt.Fprintf(w, "[Dry Run] Would create - channel: %s\n", res.ChannelName)
+					_, _ = fmt.Fprintf(w, "Members: %s\n", strings.Join(res.MemberRefs, ", "))
+					_, _ = fmt.Fprintf(w, "Owners: %s\n", strings.Join(res.OwnerRefs, ", "))
 				case channelcreation.StatusWouldEnsureMembers:
-					fmt.Fprintf(w, "[Dry Run] Would ensure members - channel: %s\n", res.ChannelName)
-					fmt.Fprintf(w, "Members to ensure: %s\n", strings.Join(res.MemberRefs, ", "))
-					fmt.Fprintf(w, "Owners to ensure: %s\n", strings.Join(res.OwnerRefs, ", "))
+					_, _ = fmt.Fprintf(w, "[Dry Run] Would ensure members - channel: %s\n", res.ChannelName)
+					_, _ = fmt.Fprintf(w, "Members to ensure: %s\n", strings.Join(res.MemberRefs, ", "))
+					_, _ = fmt.Fprintf(w, "Owners to ensure: %s\n", strings.Join(res.OwnerRefs, ", "))
 				case channelcreation.StatusAlreadyExists:
-					fmt.Fprintf(w, "[Dry Run] Already exists - channel: %s\n", res.ChannelName)
+					_, _ = fmt.Fprintf(w, "[Dry Run] Already exists - channel: %s\n", res.ChannelName)
 				default:
-					fmt.Fprintf(w, "[Dry Run] Processed - channel: %s\n", res.ChannelName)
+					_, _ = fmt.Fprintf(w, "[Dry Run] Processed - channel: %s\n", res.ChannelName)
 				}
 			} else {
 				switch res.Status {
 				case channelcreation.StatusCreated:
-					fmt.Fprintf(w, "Created - channel: %s\n", res.ChannelName)
-					fmt.Fprintf(w, "Members: %s\n", strings.Join(res.MemberRefs, ", "))
-					fmt.Fprintf(w, "Owners: %s\n", strings.Join(res.OwnerRefs, ", "))
+					_, _ = fmt.Fprintf(w, "Created - channel: %s\n", res.ChannelName)
+					_, _ = fmt.Fprintf(w, "Members: %s\n", strings.Join(res.MemberRefs, ", "))
+					_, _ = fmt.Fprintf(w, "Owners: %s\n", strings.Join(res.OwnerRefs, ", "))
 				case channelcreation.StatusAlreadyExists:
-					fmt.Fprintf(w, "Already exists - channel: %s\n", res.ChannelName)
+					_, _ = fmt.Fprintf(w, "Already exists - channel: %s\n", res.ChannelName)
 				case channelcreation.StatusMembersEnsured:
-					fmt.Fprintf(w, "Members ensured - channel: %s\n", res.ChannelName)
-					fmt.Fprintf(w, "Members ensured: %s\n", strings.Join(res.MemberRefs, ", "))
-					fmt.Fprintf(w, "Owners ensured: %s\n", strings.Join(res.OwnerRefs, ", "))
+					_, _ = fmt.Fprintf(w, "Members ensured - channel: %s\n", res.ChannelName)
+					_, _ = fmt.Fprintf(w, "Members ensured: %s\n", strings.Join(res.MemberRefs, ", "))
+					_, _ = fmt.Fprintf(w, "Owners ensured: %s\n", strings.Join(res.OwnerRefs, ", "))
 				case channelcreation.StatusPartiallyEnsured:
-					fmt.Fprintf(w, "Partially ensured - channel: %s\n", res.ChannelName)
-					fmt.Fprintf(w, "Members ensured: %s\n", strings.Join(res.MemberRefs, ", "))
-					fmt.Fprintf(w, "Owners ensured: %s\n", strings.Join(res.OwnerRefs, ", "))
+					_, _ = fmt.Fprintf(w, "Partially ensured - channel: %s\n", res.ChannelName)
+					_, _ = fmt.Fprintf(w, "Members ensured: %s\n", strings.Join(res.MemberRefs, ", "))
+					_, _ = fmt.Fprintf(w, "Owners ensured: %s\n", strings.Join(res.OwnerRefs, ", "))
 				default:
-					fmt.Fprintf(w, "Processed - channel: %s\n", res.ChannelName)
+					_, _ = fmt.Fprintf(w, "Processed - channel: %s\n", res.ChannelName)
 				}
 			}
 		}
 	}
 
 	if dryRun {
-		fmt.Fprintf(w, "Dry run completed - successful: %d, total: %d\n", successCount, len(results))
+		_, _ = fmt.Fprintf(w, "Dry run completed - successful: %d, total: %d\n", successCount, len(results))
 	} else {
-		fmt.Fprintf(w, "Channel creation completed - successful: %d, total: %d\n", successCount, len(results))
+		_, _ = fmt.Fprintf(w, "Channel creation completed - successful: %d, total: %d\n", successCount, len(results))
 	}
 }

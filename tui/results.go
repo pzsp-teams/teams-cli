@@ -9,17 +9,10 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-var (
-	resultTitleStyle = lipgloss.NewStyle().
-				Bold(true).
-				Foreground(lipgloss.Color("205")).
-				MarginBottom(1)
-
-	resultStyle = lipgloss.NewStyle().
-			Padding(1, 2).
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(lipgloss.Color("240"))
-)
+var resultTitleStyle = lipgloss.NewStyle().
+	Bold(true).
+	Foreground(lipgloss.Color("205")).
+	MarginBottom(1)
 
 // resultsModel displays command execution results
 type resultsModel struct {

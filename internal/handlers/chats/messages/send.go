@@ -63,20 +63,20 @@ func printChatResults(w io.Writer, results []sender.ChatSendResult, dryRun bool)
 	if dryRun {
 		for _, res := range results {
 			if res.GetError() != nil {
-				fmt.Fprintf(w, "Would fail - chat: %s, error: %v\n", res.GetRef(), res.GetError())
+				_, _ = fmt.Fprintf(w, "Would fail - chat: %s, error: %v\n", res.GetRef(), res.GetError())
 			} else {
-				fmt.Fprintf(w, "Would send - chat: %s, message: %s\n", res.GetRef(), res.GetMessage())
+				_, _ = fmt.Fprintf(w, "Would send - chat: %s, message: %s\n", res.GetRef(), res.GetMessage())
 			}
 		}
 	} else {
 		successCount := 0
 		for _, res := range results {
 			if res.GetError() != nil {
-				fmt.Fprintf(w, "Failed - chat: %s, error: %v\n", res.GetRef(), res.GetError())
+				_, _ = fmt.Fprintf(w, "Failed - chat: %s, error: %v\n", res.GetRef(), res.GetError())
 			} else {
 				successCount++
 			}
 		}
-		fmt.Fprintf(w, "Send complete - successful: %d, total: %d\n", successCount, len(results))
+		_, _ = fmt.Fprintf(w, "Send complete - successful: %d, total: %d\n", successCount, len(results))
 	}
 }

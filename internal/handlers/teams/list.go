@@ -24,19 +24,19 @@ func ListTeams(ctx context.Context, w io.Writer, flags map[string]any) (any, err
 	}
 
 	if len(ts) == 0 {
-		fmt.Fprintln(w, "No teams found.")
+		_, _ = fmt.Fprintln(w, "No teams found.")
 		return nil, nil
 	}
 
 	// For now, write to stdout directly.
 	// Ideally, this should take an io.Writer for better testability.
-	fmt.Fprintln(w, "Teams:")
+	_, _ = fmt.Fprintln(w, "Teams:")
 	for _, t := range ts {
 		state := ""
 		if t.IsArchived {
 			state = " (Archived)"
 		}
-		fmt.Fprintf(w, "- %s%s (ID: %s)\n", t.DisplayName, state, t.ID)
+		_, _ = fmt.Fprintf(w, "- %s%s (ID: %s)\n", t.DisplayName, state, t.ID)
 	}
 
 	return ts, nil

@@ -57,30 +57,30 @@ func printTeamCreationResults(w io.Writer, results []teamcreator.TeamCreateResul
 	for i := range results {
 		res := &results[i]
 		if res.Error != nil {
-			fmt.Fprintf(w, "Failed - team: %s, error: %v\n", res.TeamName, res.Error)
+			_, _ = fmt.Fprintf(w, "Failed - team: %s, error: %v\n", res.TeamName, res.Error)
 		} else {
 			successCount++
 			if dryRun {
-				fmt.Fprintf(w, "[Dry Run] Would create - team: %s\n", res.TeamName)
+				_, _ = fmt.Fprintf(w, "[Dry Run] Would create - team: %s\n", res.TeamName)
 			} else {
-				fmt.Fprintf(w, "Created - team: %s (ID: %s)\n", res.TeamName, res.TeamID)
+				_, _ = fmt.Fprintf(w, "Created - team: %s (ID: %s)\n", res.TeamName, res.TeamID)
 			}
 			if res.Description != "" {
-				fmt.Fprintf(w, "  Description: %s\n", res.Description)
+				_, _ = fmt.Fprintf(w, "  Description: %s\n", res.Description)
 			}
 			if len(res.OwnerRefs) > 0 {
-				fmt.Fprintf(w, "  Owners: %s\n", strings.Join(res.OwnerRefs, ", "))
+				_, _ = fmt.Fprintf(w, "  Owners: %s\n", strings.Join(res.OwnerRefs, ", "))
 			}
 			if len(res.MemberRefs) > 0 {
-				fmt.Fprintf(w, "  Members: %s\n", strings.Join(res.MemberRefs, ", "))
+				_, _ = fmt.Fprintf(w, "  Members: %s\n", strings.Join(res.MemberRefs, ", "))
 			}
-			fmt.Fprintf(w, "  Visibility: %s\n", res.Visibility)
+			_, _ = fmt.Fprintf(w, "  Visibility: %s\n", res.Visibility)
 		}
 	}
 
 	if dryRun {
-		fmt.Fprintf(w, "\nDry run completed - successful: %d, total: %d\n", successCount, len(results))
+		_, _ = fmt.Fprintf(w, "\nDry run completed - successful: %d, total: %d\n", successCount, len(results))
 	} else {
-		fmt.Fprintf(w, "\nTeam creation completed - successful: %d, total: %d\n", successCount, len(results))
+		_, _ = fmt.Fprintf(w, "\nTeam creation completed - successful: %d, total: %d\n", successCount, len(results))
 	}
 }

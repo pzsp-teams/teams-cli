@@ -28,12 +28,12 @@ func GetTeam(ctx context.Context, w io.Writer, flags map[string]any) (any, error
 }
 
 func printTeamDetails(w io.Writer, t *models.Team) {
-	fmt.Fprintln(w, "Team Details:")
-	fmt.Fprintf(w, "ID: %s\n", t.ID)
-	fmt.Fprintf(w, "Display Name: %s\n", t.DisplayName)
-	fmt.Fprintf(w, "Description: %s\n", t.Description)
-	fmt.Fprintf(w, "Is Archived: %t\n", t.IsArchived)
+	_, _ = fmt.Fprintln(w, "Team Details:")
+	_, _ = fmt.Fprintf(w, "ID: %s\n", t.ID)
+	_, _ = fmt.Fprintf(w, "Display Name: %s\n", t.DisplayName)
+	_, _ = fmt.Fprintf(w, "Description: %s\n", t.Description)
+	_, _ = fmt.Fprintf(w, "Is Archived: %t\n", t.IsArchived)
 	if t.Visibility != nil {
-		fmt.Fprintf(w, "Visibility: %s\n", *t.Visibility)
+		_, _ = fmt.Fprintf(w, "Visibility: %s\n", *t.Visibility)
 	}
 }
