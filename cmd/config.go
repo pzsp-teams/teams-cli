@@ -52,9 +52,7 @@ func runConfigInit(cmd *cobra.Command, args []string) error {
 		if len(args) > 0 {
 			outPath = args[0]
 		} else {
-			configDir := filepath.Join(xdg.ConfigHome, "teams-cli")
-			filename := fmt.Sprintf("config.%s", format)
-			outPath = filepath.Join(configDir, filename)
+			outPath = config.GetDefaultConfigPath(string(format))
 		}
 	}
 

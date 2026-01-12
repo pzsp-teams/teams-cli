@@ -8,11 +8,27 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
-	"github.com/joho/godotenv"
+	"github.com/adrg/xdg"
 	"github.com/pzsp-teams/cli/internal/file_readers"
 	lib "github.com/pzsp-teams/lib/config"
 	"gopkg.in/yaml.v3"
 )
+
+// defaultScopes contains the default OAuth scopes for Microsoft Teams
+var defaultScopes = []string{
+	"openid",
+	"profile",
+	"User.Read",
+	"Team.ReadBasic.All",
+	"Channel.ReadBasic.All",
+	"ChannelSettings.ReadWrite.All",
+	"Channel.Create",
+	"Channel.Delete.All",
+	"ChannelMessage.Send",
+	"Team.Create",
+	"TeamSettings.ReadWrite.All",
+	"Group.ReadWrite.All",
+}
 
 type config struct {
 	Auth   authSection   `json:"auth" yaml:"auth" toml:"auth"`
@@ -43,6 +59,13 @@ var defaultConfigPaths = []string{
 	"teams_cli.json",
 	"teams_cli.yaml",
 	"teams_cli.yml",
+}
+
+// GetDefaultConfigPath returns the default configuration file path for the given format
+func GetDefaultConfigPath(format string) string {
+	configDir := filepath.Join(xdg.ConfigHome, "teams-cli")
+	filename := fmt.Sprintf("config.%s", format)
+	return filepath.Join(configDir, filename)
 }
 
 // FindDefaultConfigFile looks for a config file in the current directory
@@ -176,14 +199,11 @@ func buildCacheConfig(cfg *config) *lib.CacheConfig {
 }
 
 func buildAuthConfig(cfg *config) *lib.AuthConfig {
-	_ = godotenv.Load()
-	scopes := strings.Split(getEnv("SCOPES", ""), ",")
-
 	return &lib.AuthConfig{
 		ClientID:   cfg.Auth.ClientID,
 		Tenant:     cfg.Auth.TenantID,
 		Email:      cfg.Auth.Email,
-		Scopes:     scopes,
+		Scopes:     defaultScopes,
 		AuthMethod: parseAuthMethod(cfg.Auth.AuthMethod),
 	}
 }
