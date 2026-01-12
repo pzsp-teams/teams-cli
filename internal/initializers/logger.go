@@ -10,6 +10,9 @@ import (
 // Logger is the global logger instance that can be used throughout the application.
 var Logger logger.Logger
 
+// StderrLogger tracks the stderr logger for potential removal in TUI mode.
+var StderrLogger logger.Logger
+
 // InitLogger initializes the global logger with the provided configurations.
 // Each config creates a separate logger, and all are combined into a MultiLogger.
 func InitLogger(configs ...*logger.Config) {
@@ -65,4 +68,18 @@ func InitMultiOutputLogger(cfg MultiOutputConfig) {
 	})
 
 	Logger = logger.NewMultiLogger(stderrLogger, fileLogger)
+}
+
+// DisableStderrLogger removes the stderr logger from the MultiLogger.
+// This is useful for TUI mode to prevent log output from interfering with the display.
+func DisableStderrLogger() {
+	if multiLogger, ok := Logger.(*logger.MultiLogger); ok {
+		loggers := multiLogger.GetLoggers()
+		for i, l := range loggers {
+			if l == StderrLogger {
+				multiLogger.RemoveLoggerAt(i)
+				return
+			}
+		}
+	}
 }

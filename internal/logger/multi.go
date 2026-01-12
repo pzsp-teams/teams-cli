@@ -53,3 +53,18 @@ func (m *MultiLogger) With(args ...any) Logger {
 		loggers: newLoggers,
 	}
 }
+
+// GetLoggers returns a copy of the current loggers (for identification).
+func (m *MultiLogger) GetLoggers() []Logger {
+	result := make([]Logger, len(m.loggers))
+	copy(result, m.loggers)
+	return result
+}
+
+// RemoveLoggerAt removes the logger at the specified index.
+func (m *MultiLogger) RemoveLoggerAt(index int) {
+	if index < 0 || index >= len(m.loggers) {
+		return
+	}
+	m.loggers = append(m.loggers[:index], m.loggers[index+1:]...)
+}
