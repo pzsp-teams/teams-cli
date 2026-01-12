@@ -7,7 +7,7 @@ require (
 	github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de
 	github.com/charmbracelet/log v0.4.2
 	github.com/joho/godotenv v1.5.1
-	github.com/pzsp-teams/lib v0.0.0-20260111170324-f66ca4f5d369
+	github.com/pzsp-teams/lib v0.0.0-20260112132712-1335fb93c11f
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
