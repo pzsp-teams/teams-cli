@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/adrg/xdg"
 	"github.com/pzsp-teams/cli/internal/config"
 	"github.com/spf13/cobra"
 )
@@ -33,7 +34,9 @@ func init() {
 	configCmd.AddCommand(configInitCmd)
 
 	AddFormatFlags(configInitCmd, &configFormatFlags)
-	configInitCmd.Flags().StringVarP(&outputPath, "output", "o", "", "Output file path (default: teams_cli.<format>)")
+
+	defaultConfigPath := filepath.Join(xdg.ConfigHome, "teams-cli", "config.<format>")
+	configInitCmd.Flags().StringVarP(&outputPath, "output", "o", "", fmt.Sprintf("Output file path (default: %s)", defaultConfigPath))
 
 	RootCmd.PersistentFlags().StringP("config", "c", "", "Path to configuration file")
 }
@@ -49,13 +52,14 @@ func runConfigInit(cmd *cobra.Command, args []string) error {
 		if len(args) > 0 {
 			outPath = args[0]
 		} else {
-			outPath = fmt.Sprintf("teams_cli.%s", format)
+			configDir := filepath.Join(xdg.ConfigHome, "teams-cli")
+			filename := fmt.Sprintf("config.%s", format)
+			outPath = filepath.Join(configDir, filename)
 		}
 	}
 
-	ext := filepath.Ext(outPath)
-	if ext == "" {
-		outPath = fmt.Sprintf("%s.%s", outPath, format)
+	if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
+		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
 	content, err := config.CreateDefaultConfig(string(format))
