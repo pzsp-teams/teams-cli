@@ -58,6 +58,8 @@ func toCobraCommand(def *app.CommandDef) *cobra.Command {
 			cmd.Flags().BoolP(flag.Name, flag.Shorthand, false, flag.Usage)
 		case app.InputInt:
 			cmd.Flags().IntP(flag.Name, flag.Shorthand, 0, flag.Usage)
+		case app.InputList:
+			cmd.Flags().StringSliceP(flag.Name, flag.Shorthand, []string{}, flag.Usage)
 		default:
 			cmd.Flags().StringP(flag.Name, flag.Shorthand, "", flag.Usage)
 		}
@@ -83,6 +85,8 @@ func toCobraCommand(def *app.CommandDef) *cobra.Command {
 					val, err = cmd.Flags().GetBool(f.Name)
 				case app.InputInt:
 					val, err = cmd.Flags().GetInt(f.Name)
+				case app.InputList:
+					val, err = cmd.Flags().GetStringSlice(f.Name)
 				default:
 					val, err = cmd.Flags().GetString(f.Name)
 				}
