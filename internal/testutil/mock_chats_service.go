@@ -103,6 +103,21 @@ func (mr *MockChatsServiceMockRecorder) DeleteMessage(ctx, chatRef, messageID an
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteMessage", reflect.TypeOf((*MockChatsService)(nil).DeleteMessage), ctx, chatRef, messageID)
 }
 
+// GetChat mocks base method.
+func (m *MockChatsService) GetChat(ctx context.Context, chatRef chats.ChatRef) (*models.Chat, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetChat", ctx, chatRef)
+	ret0, _ := ret[0].(*models.Chat)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetChat indicates an expected call of GetChat.
+func (mr *MockChatsServiceMockRecorder) GetChat(ctx, chatRef any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetChat", reflect.TypeOf((*MockChatsService)(nil).GetChat), ctx, chatRef)
+}
+
 // GetMentions mocks base method.
 func (m *MockChatsService) GetMentions(ctx context.Context, chatRef chats.ChatRef, rawMentions []string) ([]models.Mention, error) {
 	m.ctrl.T.Helper()
