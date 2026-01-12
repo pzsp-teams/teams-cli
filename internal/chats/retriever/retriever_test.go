@@ -3,459 +3,395 @@ package retriever
 import (
 	"context"
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 
 	coreretriever "github.com/pzsp-teams/cli/internal/core/retriever"
 	"github.com/pzsp-teams/cli/internal/testutil"
+	"github.com/pzsp-teams/cli/internal/utils"
 	"github.com/pzsp-teams/lib/chats"
 	"github.com/pzsp-teams/lib/models"
-	"github.com/stretchr/testify/assert"
+	"github.com/pzsp-teams/lib/search"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
 
-func stringPtr(s string) *string {
-	return &s
+type sutDeps struct {
+	chats *testutil.MockChatsService
 }
 
-func TestGetMessages_Success_BothChatTypes(t *testing.T) {
+func newSUT(t *testing.T) (Retriever, context.Context, sutDeps) {
+	t.Helper()
+
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
+	t.Cleanup(ctrl.Finish)
 
-	mockService := testutil.NewMockChatsService(ctrl)
+	d := sutDeps{
+		chats: testutil.NewMockChatsService(ctrl),
+	}
+	return NewRetriever(d.chats), context.Background(), d
+}
 
-	ctx := context.Background()
+func mkMsg(chatID string, msgID string, fromDisplayName string) *search.SearchResult {
+	var from *models.MessageFrom
+	if fromDisplayName != "" {
+		from = &models.MessageFrom{DisplayName: fromDisplayName}
+	}
+	return &search.SearchResult{
+		ChatID: testutil.Ptr(chatID),
+		Message: &models.Message{
+			ID:   msgID,
+			From: from,
+		},
+	}
+}
+
+func mkMsgNoChatID(msgID string) *search.SearchResult {
+	return &search.SearchResult{
+		ChatID: nil,
+		Message: &models.Message{
+			ID: msgID,
+		},
+	}
+}
+
+func pickOneOnOneChatID(t *testing.T) string {
+	t.Helper()
+	candidates := []string{
+		"user1@contoso.com",
+		"someone@example.com",
+		"john.doe@pw.edu.pl",
+		"user@domain.local",
+	}
+	for _, id := range candidates {
+		if _, ok := utils.GetChatRef(id).(chats.OneOnOneChatRef); ok {
+			return id
+		}
+	}
+	ref := utils.GetChatRef(candidates[0])
+	t.Fatalf("could not find OneOnOne chat id candidate; utils.GetChatRef(%q) -> %T", candidates[0], ref)
+	return ""
+}
+
+func pickGroupChatID(t *testing.T) string {
+	t.Helper()
+	candidates := []string{
+		"19:abcdef1234567890@thread.v2",
+		"19:groupchat@thread.v2",
+		"19:xyz@unq.gbl.spaces",
+	}
+	for _, id := range candidates {
+		if _, ok := utils.GetChatRef(id).(chats.GroupChatRef); ok {
+			return id
+		}
+	}
+	ref := utils.GetChatRef(candidates[0])
+	t.Fatalf("could not find Group chat id candidate; utils.GetChatRef(%q) -> %T", candidates[0], ref)
+	return ""
+}
+
+func TestGetMessages_Paginates_GroupChatMetaCached(t *testing.T) {
+	t.Parallel()
+
+	r, ctx, d := newSUT(t)
+
 	timeRange := coreretriever.TimeRange{
 		Start: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 		End:   time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
 	}
 
-	oneOnOneTopic := "One on One Chat"
-	groupTopic := "Group Chat"
-	chatList := []*models.Chat{
-		{
-			ID:    "chat1-id",
-			Topic: &oneOnOneTopic,
-			Type:  models.ChatTypeOneOnOne,
-		},
-		{
-			ID:    "chat2-id",
-			Topic: &groupTopic,
-			Type:  models.ChatTypeGroup,
-		},
-	}
+	groupChatID := pickGroupChatID(t)
+	groupRef := utils.GetChatRef(groupChatID).(chats.GroupChatRef)
 
-	messagesChat1 := &models.MessageCollection{
-		Messages: []*models.Message{
-			{
-				ID:              "msg1",
-				Content:         "<p>Hello</p>",
-				ContentType:     models.MessageContentTypeHTML,
-				CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
-				From: &models.MessageFrom{
-					DisplayName: "User 1",
-					UserID:      "user1",
-				},
-			},
-		},
-		NextLink: nil,
-	}
+	gomock.InOrder(
+		d.chats.EXPECT().
+			SearchMessages(gomock.Any(), nil, gomock.Any(), gomock.Any()).
+			DoAndReturn(func(
+				_ context.Context,
+				_ chats.ChatRef,
+				opts *search.SearchMessagesOptions,
+				cfg *search.SearchConfig,
+			) (*search.SearchResults, error) {
+				require.NotNil(t, cfg)
+				require.Equal(t, coreretriever.WorkersCount, cfg.MaxWorkers)
 
-	messagesChat2 := &models.MessageCollection{
-		Messages: []*models.Message{
-			{
-				ID:              "msg2",
-				Content:         "Plain text message",
-				ContentType:     models.MessageContentTypeText,
-				CreatedDateTime: time.Date(2024, 1, 1, 13, 0, 0, 0, time.UTC),
-				From: &models.MessageFrom{
-					DisplayName: "User 2",
-					UserID:      "user2",
-				},
-			},
-		},
-		NextLink: nil,
-	}
+				require.NotNil(t, opts)
+				require.True(t, opts.NotFromMe)
+				require.Equal(t, timeRange.Start, *opts.StartTime)
+				require.Equal(t, timeRange.End, *opts.EndTime)
 
-	mockService.EXPECT().
-		ListChats(ctx, nil).
-		Return(chatList, nil)
+				require.NotNil(t, opts.SearchPage)
+				require.Equal(t, int32(0), *opts.SearchPage.From)
+				require.Equal(t, int32(25), *opts.SearchPage.Size)
 
-	mockService.EXPECT().
-		ListMessages(ctx, chats.OneOnOneChatRef{Ref: "chat1-id"}, false, nil).
-		Return(messagesChat1, nil)
+				return &search.SearchResults{
+					Messages: []*search.SearchResult{
+						mkMsg(groupChatID, "m1", "Alice"),
+						mkMsg(groupChatID, "m2", "Bob"),
+					},
+					NextFrom: testutil.Ptr(int32(25)),
+				}, nil
+			}),
 
-	mockService.EXPECT().
-		ListMessages(ctx, chats.GroupChatRef{Ref: "chat2-id"}, false, nil).
-		Return(messagesChat2, nil)
+		d.chats.EXPECT().
+			GetChat(gomock.Any(), groupRef).
+			Return(&models.Chat{ID: groupChatID, Topic: testutil.Ptr("Study Group")}, nil).
+			Times(1),
 
-	retriever := NewRetriever(mockService)
-	messages, err := retriever.GetMessages(ctx, timeRange, nil)
+		d.chats.EXPECT().
+			SearchMessages(gomock.Any(), nil, gomock.Any(), gomock.Any()).
+			DoAndReturn(func(
+				_ context.Context,
+				_ chats.ChatRef,
+				opts *search.SearchMessagesOptions,
+				_ *search.SearchConfig,
+			) (*search.SearchResults, error) {
+				require.NotNil(t, opts.SearchPage.From)
+				require.Equal(t, int32(25), *opts.SearchPage.From)
 
-	assert.NoError(t, err)
-	assert.Len(t, messages, 2)
+				return &search.SearchResults{
+					Messages: []*search.SearchResult{
+						mkMsg(groupChatID, "m3", "Eve"),
+					},
+					NextFrom: nil,
+				}, nil
+			}),
+	)
 
-	assert.Equal(t, "msg1", messages[0].Message.ID)
-	assert.Equal(t, "<p>Hello</p>", messages[0].Message.Content)
-	assert.Equal(t, "One on One Chat", messages[0].ChatName)
-	assert.Equal(t, "chat1-id", messages[0].ChatID)
-	assert.Equal(t, "one-on-one", messages[0].ChatType)
+	out, err := r.GetMessages(ctx, timeRange, nil)
+	require.NoError(t, err)
+	require.Len(t, out, 3)
 
-	assert.Equal(t, "msg2", messages[1].Message.ID)
-	assert.Equal(t, "Plain text message", messages[1].Message.Content)
-	assert.Equal(t, "Group Chat", messages[1].ChatName)
-	assert.Equal(t, "chat2-id", messages[1].ChatID)
-	assert.Equal(t, "group", messages[1].ChatType)
+	require.Equal(t, "Study Group", out[0].ChatName)
+	require.Equal(t, groupChatID, out[0].ChatID)
+	require.Equal(t, "Group", out[0].ChatType)
+	require.Equal(t, "m1", out[0].Message.ID)
+
+	require.Equal(t, "m2", out[1].Message.ID)
+	require.Equal(t, "m3", out[2].Message.ID)
 }
 
-func TestGetMessages_TimeRangeFiltering(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
+func TestGetMessages_OneOnOne_UsesFromDisplayName(t *testing.T) {
+	t.Parallel()
 
-	mockService := testutil.NewMockChatsService(ctrl)
+	r, ctx, d := newSUT(t)
 
-	ctx := context.Background()
-	timeRange := coreretriever.TimeRange{
-		Start: time.Date(2024, 1, 1, 10, 0, 0, 0, time.UTC),
-		End:   time.Date(2024, 1, 1, 14, 0, 0, 0, time.UTC),
-	}
-
-	chatList := []*models.Chat{
-		{
-			ID:    "chat1-id",
-			Topic: stringPtr("Test Chat"),
-			Type:  models.ChatTypeGroup,
-		},
-	}
-
-	messages := &models.MessageCollection{
-		Messages: []*models.Message{
-			{
-				ID:              "msg-before",
-				Content:         "Before range",
-				ContentType:     models.MessageContentTypeText,
-				CreatedDateTime: time.Date(2024, 1, 1, 9, 0, 0, 0, time.UTC),
-			},
-			{
-				ID:              "msg-inside",
-				Content:         "Inside range",
-				ContentType:     models.MessageContentTypeText,
-				CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
-			},
-			{
-				ID:              "msg-after",
-				Content:         "After range",
-				ContentType:     models.MessageContentTypeText,
-				CreatedDateTime: time.Date(2024, 1, 1, 15, 0, 0, 0, time.UTC),
-			},
-		},
-		NextLink: nil,
-	}
-
-	mockService.EXPECT().
-		ListChats(ctx, nil).
-		Return(chatList, nil)
-
-	mockService.EXPECT().
-		ListMessages(ctx, chats.GroupChatRef{Ref: "chat1-id"}, false, nil).
-		Return(messages, nil)
-
-	retriever := NewRetriever(mockService)
-	result, err := retriever.GetMessages(ctx, timeRange, nil)
-
-	assert.NoError(t, err)
-	assert.Len(t, result, 1)
-	assert.Equal(t, "msg-inside", result[0].Message.ID)
-}
-
-func TestGetMessages_NoChatsFound(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockService := testutil.NewMockChatsService(ctrl)
-
-	ctx := context.Background()
 	timeRange := coreretriever.TimeRange{
 		Start: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 		End:   time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
 	}
 
-	mockService.EXPECT().
-		ListChats(ctx, nil).
-		Return([]*models.Chat{}, nil)
+	oneOnOneID := pickOneOnOneChatID(t)
 
-	retriever := NewRetriever(mockService)
-	messages, err := retriever.GetMessages(ctx, timeRange, nil)
-
-	assert.Error(t, err)
-	assert.Nil(t, messages)
-	assert.ErrorIs(t, err, ErrNoChatsFound)
-}
-
-func TestGetMessages_ListChatsFailed(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockService := testutil.NewMockChatsService(ctrl)
-
-	ctx := context.Background()
-	timeRange := coreretriever.TimeRange{
-		Start: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-		End:   time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
-	}
-
-	expectedError := errors.New("API error")
-	mockService.EXPECT().
-		ListChats(ctx, nil).
-		Return(nil, expectedError)
-
-	retriever := NewRetriever(mockService)
-	messages, err := retriever.GetMessages(ctx, timeRange, nil)
-
-	assert.Error(t, err)
-	assert.Nil(t, messages)
-	assert.ErrorIs(t, err, ErrListingChatsFailed)
-	assert.Contains(t, err.Error(), "API error")
-}
-
-func TestGetMessages_ListMessagesFailed(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockService := testutil.NewMockChatsService(ctrl)
-
-	ctx := context.Background()
-	timeRange := coreretriever.TimeRange{
-		Start: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-		End:   time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
-	}
-
-	chatList := []*models.Chat{
-		{
-			ID:    "chat1-id",
-			Topic: stringPtr("Test Chat"),
-			Type:  models.ChatTypeGroup,
-		},
-	}
-
-	expectedError := errors.New("API error")
-	mockService.EXPECT().
-		ListChats(ctx, nil).
-		Return(chatList, nil)
-
-	mockService.EXPECT().
-		ListMessages(ctx, chats.GroupChatRef{Ref: "chat1-id"}, false, nil).
-		Return(nil, expectedError)
-
-	retriever := NewRetriever(mockService)
-	messages, err := retriever.GetMessages(ctx, timeRange, nil)
-
-	assert.Error(t, err)
-	assert.Nil(t, messages)
-	assert.ErrorIs(t, err, ErrListingMessagesFailed)
-	assert.Contains(t, err.Error(), "API error")
-}
-
-func TestGetMessages_403ErrorIgnored(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockService := testutil.NewMockChatsService(ctrl)
-
-	ctx := context.Background()
-	timeRange := coreretriever.TimeRange{
-		Start: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-		End:   time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
-	}
-
-	chatList := []*models.Chat{
-		{
-			ID:    "chat1-id",
-			Topic: stringPtr("Accessible Chat"),
-			Type:  models.ChatTypeGroup,
-		},
-		{
-			ID:    "chat2-id",
-			Topic: stringPtr("Forbidden Chat"),
-			Type:  models.ChatTypeGroup,
-		},
-	}
-
-	messagesChat1 := &models.MessageCollection{
-		Messages: []*models.Message{
-			{
-				ID:              "msg1",
-				Content:         "Accessible message",
-				ContentType:     models.MessageContentTypeText,
-				CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
+	d.chats.EXPECT().
+		SearchMessages(gomock.Any(), nil, gomock.Any(), gomock.Any()).
+		Return(&search.SearchResults{
+			Messages: []*search.SearchResult{
+				mkMsg(oneOnOneID, "m1", "User One"),
 			},
-		},
-		NextLink: nil,
-	}
+			NextFrom: nil,
+		}, nil).
+		Times(1)
 
-	mockService.EXPECT().
-		ListChats(ctx, nil).
-		Return(chatList, nil)
+	d.chats.EXPECT().GetChat(gomock.Any(), gomock.Any()).Times(0)
 
-	mockService.EXPECT().
-		ListMessages(ctx, chats.GroupChatRef{Ref: "chat1-id"}, false, nil).
-		Return(messagesChat1, nil)
+	out, err := r.GetMessages(ctx, timeRange, nil)
+	require.NoError(t, err)
+	require.Len(t, out, 1)
 
-	mockService.EXPECT().
-		ListMessages(ctx, chats.GroupChatRef{Ref: "chat2-id"}, false, nil).
-		Return(nil, fmt.Errorf("403 Forbidden"))
-
-	retriever := NewRetriever(mockService)
-	messages, err := retriever.GetMessages(ctx, timeRange, nil)
-
-	assert.NoError(t, err)
-	assert.Len(t, messages, 1)
-	assert.Equal(t, "msg1", messages[0].Message.ID)
+	require.Equal(t, "User One", out[0].ChatName)
+	require.Equal(t, oneOnOneID, out[0].ChatID)
+	require.Equal(t, "OneOnOne", out[0].ChatType)
+	require.Equal(t, "m1", out[0].Message.ID)
 }
 
-func TestGetMessages_MixedContentTypes(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
+func TestGetMessages_OneOnOne_NoDisplayName_FallsBackToChatID(t *testing.T) {
+	t.Parallel()
 
-	mockService := testutil.NewMockChatsService(ctrl)
+	r, ctx, d := newSUT(t)
 
-	ctx := context.Background()
 	timeRange := coreretriever.TimeRange{
 		Start: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 		End:   time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
 	}
 
-	chatList := []*models.Chat{
-		{
-			ID:    "chat1-id",
-			Topic: stringPtr("Test Chat"),
-			Type:  models.ChatTypeGroup,
-		},
-	}
+	oneOnOneID := pickOneOnOneChatID(t)
 
-	messages := &models.MessageCollection{
-		Messages: []*models.Message{
-			{
-				ID:              "msg1",
-				Content:         "<p>HTML</p>",
-				ContentType:     models.MessageContentTypeHTML,
-				CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
+	d.chats.EXPECT().
+		SearchMessages(gomock.Any(), nil, gomock.Any(), gomock.Any()).
+		Return(&search.SearchResults{
+			Messages: []*search.SearchResult{
+				mkMsg(oneOnOneID, "m1", ""),
 			},
-			{
-				ID:              "msg2",
-				Content:         "Plain",
-				ContentType:     models.MessageContentTypeText,
-				CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
-			},
-			{
-				ID:              "msg3",
-				Content:         "<b>More HTML</b>",
-				ContentType:     models.MessageContentTypeHTML,
-				CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
-			},
-		},
-		NextLink: nil,
-	}
+			NextFrom: nil,
+		}, nil).
+		Times(1)
 
-	mockService.EXPECT().
-		ListChats(ctx, nil).
-		Return(chatList, nil)
+	out, err := r.GetMessages(ctx, timeRange, nil)
+	require.NoError(t, err)
+	require.Len(t, out, 1)
 
-	mockService.EXPECT().
-		ListMessages(ctx, chats.GroupChatRef{Ref: "chat1-id"}, false, nil).
-		Return(messages, nil)
-
-	retriever := NewRetriever(mockService)
-	result, err := retriever.GetMessages(ctx, timeRange, nil)
-
-	assert.NoError(t, err)
-	assert.Len(t, result, 3)
-
-	assert.Equal(t, "<p>HTML</p>", result[0].Message.Content)
-	assert.Equal(t, "Plain", result[1].Message.Content)
-	assert.Equal(t, "<b>More HTML</b>", result[2].Message.Content)
+	require.Equal(t, oneOnOneID, out[0].ChatName)
+	require.Equal(t, oneOnOneID, out[0].ChatID)
+	require.Equal(t, "OneOnOne", out[0].ChatType)
 }
 
-func TestGetMessages_ChatWithoutTopic(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
+func TestGetMessages_GroupChat_GetChatError_FallsBackToChatID(t *testing.T) {
+	t.Parallel()
 
-	mockService := testutil.NewMockChatsService(ctrl)
+	r, ctx, d := newSUT(t)
 
-	ctx := context.Background()
 	timeRange := coreretriever.TimeRange{
 		Start: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 		End:   time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
 	}
 
-	chatList := []*models.Chat{
-		{
-			ID:    "chat1-id",
-			Topic: nil,
-			Type:  models.ChatTypeOneOnOne,
-		},
-	}
+	groupChatID := pickGroupChatID(t)
+	groupRef := utils.GetChatRef(groupChatID).(chats.GroupChatRef)
 
-	messages := &models.MessageCollection{
-		Messages: []*models.Message{
-			{
-				ID:              "msg1",
-				Content:         "Test message",
-				ContentType:     models.MessageContentTypeText,
-				CreatedDateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
-			},
-		},
-		NextLink: nil,
-	}
+	d.chats.EXPECT().
+		SearchMessages(gomock.Any(), nil, gomock.Any(), gomock.Any()).
+		Return(&search.SearchResults{
+			Messages: []*search.SearchResult{mkMsg(groupChatID, "m1", "Alice")},
+			NextFrom: nil,
+		}, nil).
+		Times(1)
 
-	mockService.EXPECT().
-		ListChats(ctx, nil).
-		Return(chatList, nil)
+	d.chats.EXPECT().
+		GetChat(gomock.Any(), groupRef).
+		Return(nil, errors.New("boom")).
+		Times(1)
 
-	mockService.EXPECT().
-		ListMessages(ctx, chats.OneOnOneChatRef{Ref: "chat1-id"}, false, nil).
-		Return(messages, nil)
+	out, err := r.GetMessages(ctx, timeRange, nil)
+	require.NoError(t, err)
+	require.Len(t, out, 1)
 
-	retriever := NewRetriever(mockService)
-	result, err := retriever.GetMessages(ctx, timeRange, nil)
-
-	assert.NoError(t, err)
-	assert.Len(t, result, 1)
-	assert.Equal(t, "chat1-id", result[0].ChatName)
+	require.Equal(t, groupChatID, out[0].ChatName)
+	require.Equal(t, "Group", out[0].ChatType)
 }
 
-func TestGetMessages_EmptyMessagesInChat(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
+func TestGetMessages_GroupChat_NoTopic_FallsBackToChatID(t *testing.T) {
+	t.Parallel()
 
-	mockService := testutil.NewMockChatsService(ctrl)
+	r, ctx, d := newSUT(t)
 
-	ctx := context.Background()
 	timeRange := coreretriever.TimeRange{
 		Start: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 		End:   time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
 	}
 
-	chatList := []*models.Chat{
-		{
-			ID:    "chat1-id",
-			Topic: stringPtr("Empty Chat"),
-			Type:  models.ChatTypeGroup,
-		},
+	groupChatID := pickGroupChatID(t)
+	groupRef := utils.GetChatRef(groupChatID).(chats.GroupChatRef)
+
+	d.chats.EXPECT().
+		SearchMessages(gomock.Any(), nil, gomock.Any(), gomock.Any()).
+		Return(&search.SearchResults{
+			Messages: []*search.SearchResult{mkMsg(groupChatID, "m1", "Alice")},
+			NextFrom: nil,
+		}, nil).
+		Times(1)
+
+	d.chats.EXPECT().
+		GetChat(gomock.Any(), groupRef).
+		Return(&models.Chat{ID: groupChatID, Topic: nil}, nil).
+		Times(1)
+
+	out, err := r.GetMessages(ctx, timeRange, nil)
+	require.NoError(t, err)
+	require.Len(t, out, 1)
+
+	require.Equal(t, groupChatID, out[0].ChatName)
+	require.Equal(t, "Group", out[0].ChatType)
+}
+
+func TestGetMessages_SkipsMessagesWithoutChatID(t *testing.T) {
+	t.Parallel()
+
+	r, ctx, d := newSUT(t)
+
+	timeRange := coreretriever.TimeRange{
+		Start: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+		End:   time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
 	}
 
-	mockService.EXPECT().
-		ListChats(ctx, nil).
-		Return(chatList, nil)
+	d.chats.EXPECT().
+		SearchMessages(gomock.Any(), nil, gomock.Any(), gomock.Any()).
+		Return(&search.SearchResults{
+			Messages: []*search.SearchResult{
+				mkMsgNoChatID("x"),
+				mkMsgNoChatID("y"),
+			},
+			NextFrom: nil,
+		}, nil).
+		Times(1)
 
-	mockService.EXPECT().
-		ListMessages(ctx, chats.GroupChatRef{Ref: "chat1-id"}, false, nil).
-		Return(&models.MessageCollection{Messages: []*models.Message{}, NextLink: nil}, nil)
+	out, err := r.GetMessages(ctx, timeRange, nil)
+	require.NoError(t, err)
+	require.Empty(t, out)
+}
 
-	retriever := NewRetriever(mockService)
-	messages, err := retriever.GetMessages(ctx, timeRange, nil)
+func TestGetMessages_PropagatesSearchError(t *testing.T) {
+	t.Parallel()
 
-	assert.NoError(t, err)
-	assert.Empty(t, messages)
+	r, ctx, d := newSUT(t)
+
+	timeRange := coreretriever.TimeRange{
+		Start: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+		End:   time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
+	}
+
+	exp := errors.New("search boom")
+	d.chats.EXPECT().
+		SearchMessages(gomock.Any(), nil, gomock.Any(), gomock.Any()).
+		Return(nil, exp).
+		Times(1)
+
+	out, err := r.GetMessages(ctx, timeRange, nil)
+	require.ErrorIs(t, err, exp)
+	require.Nil(t, out)
+}
+
+func TestGetMessages_BreaksIfNextFromDoesNotAdvance(t *testing.T) {
+	t.Parallel()
+
+	r, ctx, d := newSUT(t)
+
+	timeRange := coreretriever.TimeRange{
+		Start: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+		End:   time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
+	}
+
+	d.chats.EXPECT().
+		SearchMessages(gomock.Any(), nil, gomock.Any(), gomock.Any()).
+		Return(&search.SearchResults{
+			Messages: nil,
+			NextFrom: testutil.Ptr(int32(0)),
+		}, nil).
+		Times(1)
+
+	out, err := r.GetMessages(ctx, timeRange, nil)
+	require.NoError(t, err)
+	require.Empty(t, out)
+}
+
+func TestGetMessages_PassesChatRefThrough(t *testing.T) {
+	t.Parallel()
+
+	r, ctx, d := newSUT(t)
+
+	timeRange := coreretriever.TimeRange{
+		Start: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+		End:   time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
+	}
+
+	chatRef := chats.GroupChatRef{Ref: "SomeGroup"}
+
+	d.chats.EXPECT().
+		SearchMessages(gomock.Any(), chatRef, gomock.Any(), gomock.Any()).
+		Return(&search.SearchResults{Messages: nil, NextFrom: nil}, nil).
+		Times(1)
+
+	out, err := r.GetMessages(ctx, timeRange, chatRef)
+	require.NoError(t, err)
+	require.Empty(t, out)
 }
