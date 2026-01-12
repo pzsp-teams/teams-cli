@@ -9,6 +9,7 @@ import (
 	chatsretriever "github.com/pzsp-teams/cli/internal/chats/retriever"
 	"github.com/pzsp-teams/cli/internal/formatters"
 	"github.com/pzsp-teams/cli/internal/initializers"
+	"github.com/pzsp-teams/cli/internal/utils"
 )
 
 var chatsMessagesGetCmd = &cobra.Command{
@@ -77,7 +78,7 @@ func runChatsMessagesGet(cmd *cobra.Command, args []string) error {
 	}
 
 	log.Info("Retrieving chat messages", "start", timeRange.Start, "end", timeRange.End)
-	messages, err := teamsClient.Chats.GetMessages(ctx, timeRange, nil)
+	messages, err := teamsClient.Chats.GetMessages(ctx, timeRange, utils.GetChatRef(chatRef))
 	if err != nil {
 		log.Error("Failed to retrieve messages", "error", err)
 		return err

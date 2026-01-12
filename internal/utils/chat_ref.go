@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"strings"
+
 	"github.com/pzsp-teams/lib/chats"
 )
 
@@ -9,6 +11,9 @@ import (
 func GetChatRef(ref string) chats.ChatRef {
 	if IsLikelyEmail(ref) || IsLikelyOneOnOneChatID(ref) {
 		return chats.OneOnOneChatRef{Ref: ref}
+	}
+	if strings.TrimSpace(ref) == "" {
+		return nil
 	}
 	return chats.GroupChatRef{Ref: ref}
 }
