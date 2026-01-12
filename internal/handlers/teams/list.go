@@ -13,7 +13,7 @@ import (
 func ListTeams(ctx context.Context, w io.Writer, flags map[string]any) (any, error) {
 	// Initialize client (assuming global init or passed in context,
 	// but here we use the internal client helper for now)
-	c, err := client.GetOrCreateInstance(ctx)
+	c, err := client.GetInstance()
 	if err != nil {
 		return nil, err
 	}

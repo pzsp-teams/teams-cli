@@ -50,7 +50,7 @@ func GetMessages(ctx context.Context, w io.Writer, flags map[string]any) (any, e
 		return nil, fmt.Errorf("failed to parse time range: %w", err)
 	}
 
-	c, err := client.GetOrCreateInstance(ctx)
+	c, err := client.GetInstance()
 	if err != nil {
 		return nil, err
 	}

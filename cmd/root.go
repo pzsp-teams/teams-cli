@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/pzsp-teams/cli/app"
+	"github.com/pzsp-teams/cli/internal/client"
 	"github.com/pzsp-teams/cli/internal/initializers"
 	"github.com/pzsp-teams/cli/internal/logger"
 	"github.com/pzsp-teams/cli/tui"
@@ -144,6 +145,13 @@ func initializeLogger(cmd *cobra.Command, args []string) {
 	})
 
 	initializers.Logger = logger.NewMultiLogger(initializers.StderrLogger, fileLogger)
+
+	// Initialize Teams client
+	configPath := getConfigPath(cmd)
+	if err := client.Initialize(cmd.Context(), configPath); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to initialize Teams client: %v\n", err)
+		os.Exit(1)
+	}
 }
 
 func mapVerboseToLevel(count int) logger.Level {
@@ -174,4 +182,10 @@ func startTUI(ctx context.Context, startPath string) {
 		fmt.Fprintf(os.Stderr, "Error running TUI: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+// getConfigPath extracts the config path from the command flags
+func getConfigPath(cmd *cobra.Command) string {
+	configPath, _ := cmd.Flags().GetString("config")
+	return configPath
 }

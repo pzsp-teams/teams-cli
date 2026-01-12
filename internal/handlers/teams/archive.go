@@ -13,7 +13,7 @@ func ArchiveTeam(ctx context.Context, w io.Writer, flags map[string]any) (any, e
 	team, _ := flags["team"].(string)
 	spoReadOnly, _ := flags["spo-read-only"].(bool)
 
-	c, err := client.GetOrCreateInstance(ctx)
+	c, err := client.GetInstance()
 	if err != nil {
 		return nil, err
 	}

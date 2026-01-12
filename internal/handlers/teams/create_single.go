@@ -56,7 +56,7 @@ func CreateSingleTeam(ctx context.Context, w io.Writer, flags map[string]any) (a
 		IncludeMe:   includeMe,
 	}
 
-	c, err := client.GetOrCreateInstance(ctx)
+	c, err := client.GetInstance()
 	if err != nil {
 		return nil, err
 	}
