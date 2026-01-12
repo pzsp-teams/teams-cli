@@ -70,7 +70,7 @@ func ValidateFlags(flags map[string]any, defs []FlagDef) error {
 			if !ok {
 				continue
 			}
-			if !contains(def.Options, strVal) {
+			if !slices.Contains(def.Options, strVal) {
 				return fmt.Errorf("invalid value for --%s: must be one of %v", def.Name, def.Options)
 			}
 		}
@@ -106,8 +106,4 @@ func isSet(flags map[string]any, name string) bool {
 	default:
 		return val != nil
 	}
-}
-
-func contains(slice []string, val string) bool {
-	return slices.Contains(slice, val)
 }
