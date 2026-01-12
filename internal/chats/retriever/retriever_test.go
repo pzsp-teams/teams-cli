@@ -395,3 +395,50 @@ func TestGetMessages_PassesChatRefThrough(t *testing.T) {
 	require.NoError(t, err)
 	require.Empty(t, out)
 }
+
+
+func TestGetMessages_UnknownChatRef_ReturnsUnknownType(t *testing.T) {
+	t.Parallel()
+
+	r, ctx, d := newSUT(t)
+
+	timeRange := coreretriever.TimeRange{
+		Start: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+		End:   time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
+	}
+
+	unknownChatID := ""
+	if _, ok := utils.GetChatRef(unknownChatID).(chats.OneOnOneChatRef); ok {
+		unknownChatID = "invalid-chat-id"
+	}
+	if _, ok := utils.GetChatRef(unknownChatID).(chats.GroupChatRef); ok {
+		unknownChatID = "still-invalid-chat-id"
+	}
+
+	d.chats.EXPECT().
+		SearchMessages(gomock.Any(), nil, gomock.Any(), gomock.Any()).
+		Return(&search.SearchResults{
+			Messages: []*search.SearchResult{
+				{
+					ChatID: testutil.Ptr(unknownChatID),
+					Message: &models.Message{
+						ID: "m1",
+					},
+				},
+			},
+			NextFrom: nil,
+		}, nil).
+		Times(1)
+
+	d.chats.EXPECT().GetChat(gomock.Any(), gomock.Any()).Times(0)
+
+	out, err := r.GetMessages(ctx, timeRange, nil)
+	require.NoError(t, err)
+	require.Len(t, out, 1)
+
+	require.Equal(t, unknownChatID, out[0].ChatID)
+	require.Equal(t, unknownChatID, out[0].ChatName)
+	require.Equal(t, "Unknown", out[0].ChatType)
+	require.Equal(t, "m1", out[0].Message.ID)
+}
+
