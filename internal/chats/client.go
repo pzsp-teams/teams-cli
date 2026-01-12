@@ -32,8 +32,8 @@ func (c *Client) Send(ctx context.Context, messages map[string]string, dryRun, i
 }
 
 // GetMessages retrieves messages from all chats within the specified time range
-func (c *Client) GetMessages(ctx context.Context, timeRange coreretriever.TimeRange) ([]*retriever.ChatMessageWithContext, error) {
-	return c.retriever.GetMessages(ctx, timeRange)
+func (c *Client) GetMessages(ctx context.Context, timeRange coreretriever.TimeRange, chatRef chats.ChatRef) ([]*retriever.ChatMessageWithContext, error) {
+	return c.retriever.GetMessages(ctx, timeRange, chatRef)
 }
 
 // List returns a list of chats

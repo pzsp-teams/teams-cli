@@ -91,7 +91,7 @@ func TestGetMessages_Success_BothChatTypes(t *testing.T) {
 		Return(messagesChat2, nil)
 
 	retriever := NewRetriever(mockService)
-	messages, err := retriever.GetMessages(ctx, timeRange)
+	messages, err := retriever.GetMessages(ctx, timeRange, nil)
 
 	assert.NoError(t, err)
 	assert.Len(t, messages, 2)
@@ -162,7 +162,7 @@ func TestGetMessages_TimeRangeFiltering(t *testing.T) {
 		Return(messages, nil)
 
 	retriever := NewRetriever(mockService)
-	result, err := retriever.GetMessages(ctx, timeRange)
+	result, err := retriever.GetMessages(ctx, timeRange, nil)
 
 	assert.NoError(t, err)
 	assert.Len(t, result, 1)
@@ -186,7 +186,7 @@ func TestGetMessages_NoChatsFound(t *testing.T) {
 		Return([]*models.Chat{}, nil)
 
 	retriever := NewRetriever(mockService)
-	messages, err := retriever.GetMessages(ctx, timeRange)
+	messages, err := retriever.GetMessages(ctx, timeRange, nil)
 
 	assert.Error(t, err)
 	assert.Nil(t, messages)
@@ -211,7 +211,7 @@ func TestGetMessages_ListChatsFailed(t *testing.T) {
 		Return(nil, expectedError)
 
 	retriever := NewRetriever(mockService)
-	messages, err := retriever.GetMessages(ctx, timeRange)
+	messages, err := retriever.GetMessages(ctx, timeRange, nil)
 
 	assert.Error(t, err)
 	assert.Nil(t, messages)
@@ -249,7 +249,7 @@ func TestGetMessages_ListMessagesFailed(t *testing.T) {
 		Return(nil, expectedError)
 
 	retriever := NewRetriever(mockService)
-	messages, err := retriever.GetMessages(ctx, timeRange)
+	messages, err := retriever.GetMessages(ctx, timeRange, nil)
 
 	assert.Error(t, err)
 	assert.Nil(t, messages)
@@ -307,7 +307,7 @@ func TestGetMessages_403ErrorIgnored(t *testing.T) {
 		Return(nil, fmt.Errorf("403 Forbidden"))
 
 	retriever := NewRetriever(mockService)
-	messages, err := retriever.GetMessages(ctx, timeRange)
+	messages, err := retriever.GetMessages(ctx, timeRange, nil)
 
 	assert.NoError(t, err)
 	assert.Len(t, messages, 1)
@@ -367,7 +367,7 @@ func TestGetMessages_MixedContentTypes(t *testing.T) {
 		Return(messages, nil)
 
 	retriever := NewRetriever(mockService)
-	result, err := retriever.GetMessages(ctx, timeRange)
+	result, err := retriever.GetMessages(ctx, timeRange, nil)
 
 	assert.NoError(t, err)
 	assert.Len(t, result, 3)
@@ -418,7 +418,7 @@ func TestGetMessages_ChatWithoutTopic(t *testing.T) {
 		Return(messages, nil)
 
 	retriever := NewRetriever(mockService)
-	result, err := retriever.GetMessages(ctx, timeRange)
+	result, err := retriever.GetMessages(ctx, timeRange, nil)
 
 	assert.NoError(t, err)
 	assert.Len(t, result, 1)
@@ -454,7 +454,7 @@ func TestGetMessages_EmptyMessagesInChat(t *testing.T) {
 		Return(&models.MessageCollection{Messages: []*models.Message{}, NextLink: nil}, nil)
 
 	retriever := NewRetriever(mockService)
-	messages, err := retriever.GetMessages(ctx, timeRange)
+	messages, err := retriever.GetMessages(ctx, timeRange, nil)
 
 	assert.NoError(t, err)
 	assert.Empty(t, messages)

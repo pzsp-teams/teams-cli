@@ -4,6 +4,7 @@ import (
 	"context"
 
 	coreretriever "github.com/pzsp-teams/cli/internal/core/retriever"
+	"github.com/pzsp-teams/lib/chats"
 	"github.com/pzsp-teams/lib/models"
 )
 
@@ -17,5 +18,5 @@ type ChatMessageWithContext struct {
 
 // Retriever defines the interface for retrieving chat messages
 type Retriever interface {
-	GetMessages(ctx context.Context, timeRange coreretriever.TimeRange) ([]*ChatMessageWithContext, error)
+	GetMessages(ctx context.Context, timeRange coreretriever.TimeRange, chatRef chats.ChatRef) ([]*ChatMessageWithContext, error)
 }

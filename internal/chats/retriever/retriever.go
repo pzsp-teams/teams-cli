@@ -2,13 +2,11 @@ package retriever
 
 import (
 	"context"
-	"fmt"
-	"strings"
-	"time"
 
 	coreretriever "github.com/pzsp-teams/cli/internal/core/retriever"
+	"github.com/pzsp-teams/cli/internal/utils"
 	"github.com/pzsp-teams/lib/chats"
-	"github.com/pzsp-teams/lib/models"
+	"github.com/pzsp-teams/lib/search"
 )
 
 type retriever struct {
@@ -22,89 +20,92 @@ func NewRetriever(chatService chats.Service) Retriever {
 	}
 }
 
-// getChatRef builds a ChatRef from a Chat model
-func getChatRef(chat *models.Chat) chats.ChatRef {
-	if chat.Type == models.ChatTypeOneOnOne {
-		return chats.OneOnOneChatRef{Ref: chat.ID}
-	}
-	return chats.GroupChatRef{Ref: chat.ID}
-}
-
-type chatJob struct {
-	Chat *models.Chat
-}
-
 // GetMessages retrieves messages from all chats within the specified time range
-func (r *retriever) GetMessages(ctx context.Context, timeRange coreretriever.TimeRange) ([]*ChatMessageWithContext, error) {
-	chatList, err := r.chatService.ListChats(ctx, nil)
+func (r *retriever) GetMessages(ctx context.Context, timeRange coreretriever.TimeRange, chatRef chats.ChatRef) ([]*ChatMessageWithContext, error) {
+	messages, err := r.getMessagesInTimeRange(ctx, timeRange, chatRef)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrListingChatsFailed, err)
+		return nil, err
 	}
-
-	if len(chatList) == 0 {
-		return nil, ErrNoChatsFound
-	}
-
-	jobs := make([]chatJob, len(chatList))
-	for i, chat := range chatList {
-		jobs[i] = chatJob{Chat: chat}
-	}
-
-	results := coreretriever.ExecuteJobs(jobs, coreretriever.WorkersCount, func(job chatJob) ([]*ChatMessageWithContext, error) {
-		return r.processChatMessages(ctx, job, timeRange)
-	})
-
-	return coreretriever.AggregateResults(results)
+	return messages, nil
 }
 
-func (r *retriever) processChatMessages(ctx context.Context, job chatJob, timeRange coreretriever.TimeRange) ([]*ChatMessageWithContext, error) {
-	chatRef := getChatRef(job.Chat)
-
-	var messageCollection *models.MessageCollection
-	var err error
-	var filteredMessages []*ChatMessageWithContext
-	var oldestMessage time.Time
-	var nextLink *string
-
+func (r *retriever) getMessagesInTimeRange(ctx context.Context, timeRange coreretriever.TimeRange, chatRef chats.ChatRef) ([]*ChatMessageWithContext, error) {
+	var aggregatedSearchResults []*search.SearchResults
+	var from int32 = 0
+	var size int32 = 25
+	var cRef chats.ChatRef
+	if chatRef != nil {
+		cRef = chatRef
+	}
+	searchConfig := &search.SearchConfig{
+		MaxWorkers: 32,
+	}
 	for {
-		messageCollection, err = r.chatService.ListMessages(ctx, chatRef, false, nextLink)
+		searchOpts := &search.SearchMessagesOptions{
+			StartTime: &timeRange.Start,
+			EndTime:   &timeRange.End,
+			NotFromMe: true,
+			SearchPage: &search.SearchPage{
+				From: &from,
+				Size: &size,
+			},
+		}
+
+		searchResult, err := r.chatService.SearchMessages(ctx, cRef, searchOpts, searchConfig)
 		if err != nil {
-			if strings.Contains(err.Error(), "403") {
-				return nil, nil // Skip forbidden chats
-			}
-			return nil, fmt.Errorf("%w: chat=%s: %v", ErrListingMessagesFailed, job.Chat.ID, err)
+			return nil, err
 		}
-
-		if len(messageCollection.Messages) == 0 {
+		aggregatedSearchResults = append(aggregatedSearchResults, searchResult)
+		if searchResult.NextFrom == nil {
 			break
 		}
+		from = *searchResult.NextFrom
+	}
+	return r.processChatMessages(ctx, aggregatedSearchResults), nil
+}
 
-		for _, msg := range messageCollection.Messages {
-			if msg.CreatedDateTime.After(timeRange.Start) && msg.CreatedDateTime.Before(timeRange.End) {
-				chatName := job.Chat.ID
-				if job.Chat.Topic != nil && *job.Chat.Topic != "" {
-					chatName = *job.Chat.Topic
+func (r *retriever) processChatMessages(ctx context.Context, searchResults []*search.SearchResults) []*ChatMessageWithContext {
+	var results []*ChatMessageWithContext
+	var nameByChatID = make(map[string]string)
+	var chatTypeByChatID = make(map[string]string)
+	for _, searchResult := range searchResults {
+		for _, msg := range searchResult.Messages {
+			if msg.ChatID == nil {
+				continue
+			}
+			var chatName string
+			var chatType string
+			if name, exists := nameByChatID[*msg.ChatID]; exists {
+				chatName = name
+				chatType = chatTypeByChatID[*msg.ChatID]
+			} else if msg.ChatID != nil {
+				chatRef := utils.GetChatRef(*msg.ChatID)
+				switch cr := chatRef.(type) {
+				case chats.OneOnOneChatRef:
+					chatName = msg.Message.From.DisplayName
+					chatType = "OneOnOne"
+				case chats.GroupChatRef:
+					chat, err := r.chatService.GetChat(ctx, cr)
+					if err != nil {
+						continue
+					}
+					if chat.Topic != nil {
+						chatName = *chat.Topic
+					} else {
+						chatName = *msg.ChatID
+					}
+					chatType = "Group"
 				}
-
-				filteredMessages = append(filteredMessages, &ChatMessageWithContext{
-					ChatName: chatName,
-					ChatID:   job.Chat.ID,
-					ChatType: string(job.Chat.Type),
-					Message:  msg,
-				})
+				nameByChatID[*msg.ChatID] = chatName
+				chatTypeByChatID[*msg.ChatID] = chatType
 			}
-		}
-
-		oldestMessage = messageCollection.Messages[len(messageCollection.Messages)-1].CreatedDateTime
-		if oldestMessage.Before(timeRange.Start) {
-			break
-		}
-
-		nextLink = messageCollection.NextLink
-		if nextLink == nil || *nextLink == "" {
-			break
+			results = append(results, &ChatMessageWithContext{
+				ChatName: chatName,
+				ChatID:   *msg.ChatID,
+				ChatType: chatType,
+				Message:  msg.Message,
+			})
 		}
 	}
-
-	return filteredMessages, nil
+	return results
 }

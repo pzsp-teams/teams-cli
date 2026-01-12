@@ -109,5 +109,3 @@ func (r *retriever) processChannelMessages(ctx context.Context, searchResults []
 	}
 	return results
 }
-
-
