@@ -61,7 +61,7 @@ func (f *plainTextFormatter) WriteMessages(w io.Writer, messages []*MessageView)
 			return err
 		}
 		for _, ctx := range msg.Context {
-			if _, err := fmt.Fprintf(w, "% -9s %s\n", strings.ToUpper(ctx.Label)+":", ctx.Value); err != nil {
+			if _, err := fmt.Fprintf(w, "% -8s %s\n", strings.ToUpper(ctx.Label)+":", ctx.Value); err != nil {
 				return err
 			}
 		}

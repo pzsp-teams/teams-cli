@@ -264,13 +264,13 @@ func TestPlainTextFormatter_WriteMessages(t *testing.T) {
 	}
 
 	expected := "FROM:    Alice\n" +
-		"TEAM:     Team A\n" +
-		"CHANNEL:  General\n" +
+		"TEAM:    Team A\n" +
+		"CHANNEL: General\n" +
 		"DATE:    01 Jan 24 12:00 UTC\n\n" +
 		"Hello World\n\n" +
 		"--------------------------------------------------\n\n" +
 		"FROM:    Bob\n" +
-		"CHAT:     OneOnOne\n" +
+		"CHAT:    OneOnOne\n" +
 		"DATE:    01 Jan 24 13:00 UTC\n\n" +
 		"Hi Alice\n\n" +
 		"--------------------------------------------------\n\n"
