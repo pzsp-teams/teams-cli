@@ -23,6 +23,15 @@ func NewRetriever(teamsService lib_teams.Service, channelsService lib_channels.S
 	}
 }
 
+// GetMessages retrieves messages from all channels within the specified time range
+func (r *retriever) GetMessages(ctx context.Context, timeRange coreretriever.TimeRange, teamRef, channelRef *string) ([]*ChannelMessageWithContext, error) {
+	messages, err := r.getMessagesInTimeRange(ctx, timeRange, teamRef, channelRef)
+	if err != nil {
+		return nil, err
+	}
+	return messages, nil
+}
+
 func (r *retriever) getMessagesInTimeRange(ctx context.Context, timeRange coreretriever.TimeRange, teamRef, channelRef *string) ([]*ChannelMessageWithContext, error) {
 	var aggregatedSearchResults []*search.SearchResults
 	var from int32 = 0
@@ -58,10 +67,10 @@ func (r *retriever) getMessagesInTimeRange(ctx context.Context, timeRange corere
 		}
 		from = *searchResult.NextFrom
 	}
-	return r.processChannelMessages(aggregatedSearchResults), nil
+	return r.processChannelMessages(ctx, aggregatedSearchResults), nil
 }
 
-func (r *retriever) processChannelMessages(searchResults []*search.SearchResults) []*ChannelMessageWithContext {
+func (r *retriever) processChannelMessages(ctx context.Context, searchResults []*search.SearchResults) []*ChannelMessageWithContext {
 	var results []*ChannelMessageWithContext
 	var teamNameByID = make(map[string]string)
 	var channelNameByID = make(map[string]string)
@@ -74,7 +83,7 @@ func (r *retriever) processChannelMessages(searchResults []*search.SearchResults
 			if name, ok := teamNameByID[*msg.TeamID]; ok {
 				teamName = name
 			} else if msg.TeamID != nil {
-				team, err := r.teamsService.Get(context.Background(), *msg.TeamID)
+				team, err := r.teamsService.Get(ctx, *msg.TeamID)
 				if err == nil {
 					teamName = team.DisplayName
 					teamNameByID[*msg.TeamID] = team.DisplayName
@@ -83,7 +92,7 @@ func (r *retriever) processChannelMessages(searchResults []*search.SearchResults
 			if name, ok := channelNameByID[*msg.ChannelID]; ok {
 				channelName = name
 			} else if msg.ChannelID != nil {
-				channel, err := r.channelsService.Get(context.Background(), *msg.TeamID, *msg.ChannelID)
+				channel, err := r.channelsService.Get(ctx, *msg.TeamID, *msg.ChannelID)
 				if err == nil {
 					channelName = channel.Name
 					channelNameByID[*msg.ChannelID] = channel.Name
@@ -101,11 +110,4 @@ func (r *retriever) processChannelMessages(searchResults []*search.SearchResults
 	return results
 }
 
-// GetMessages retrieves messages from all channels within the specified time range
-func (r *retriever) GetMessages(ctx context.Context, timeRange coreretriever.TimeRange, teamRef, channelRef *string) ([]*ChannelMessageWithContext, error) {
-	messages, err := r.getMessagesInTimeRange(ctx, timeRange, teamRef, channelRef)
-	if err != nil {
-		return nil, err
-	}
-	return messages, nil
-}
+
