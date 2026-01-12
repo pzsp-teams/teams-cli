@@ -119,13 +119,23 @@ func initializeLogger(cmd *cobra.Command, args []string) {
 
 	stderrLevel := mapVerboseToLevel(verboseCount)
 
-	initializers.InitMultiOutputLogger(initializers.MultiOutputConfig{
-		StderrLevel:         stderrLevel,
-		FileLevel:           logger.LevelDebug,
-		FileWriter:          logFile,
-		StderrOmitTimestamp: verboseCount == 0,
-		FileOmitTimestamp:   false,
+	initializers.StderrLogger = logger.NewCharmFromConfig(&logger.Config{
+		Level:         stderrLevel,
+		Format:        logger.FormatText,
+		Output:        os.Stderr,
+		OmitTimestamp: verboseCount == 0,
+		AddSource:     false,
 	})
+
+	fileLogger := logger.NewCharmFromConfig(&logger.Config{
+		Level:         logger.LevelDebug,
+		Format:        logger.FormatText,
+		Output:        logFile,
+		OmitTimestamp: false,
+		AddSource:     false,
+	})
+
+	initializers.Logger = logger.NewMultiLogger(initializers.StderrLogger, fileLogger)
 }
 
 func mapVerboseToLevel(count int) logger.Level {
@@ -150,6 +160,8 @@ func runTUI(cmd *cobra.Command, args []string) {
 }
 
 func startTUI(ctx context.Context, startPath string) {
+	initializers.DisableStderrLogger()
+
 	if err := tui.Run(ctx, app.Registry, startPath); err != nil {
 		fmt.Fprintf(os.Stderr, "Error running TUI: %v\n", err)
 		os.Exit(1)
