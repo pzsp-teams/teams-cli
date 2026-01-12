@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -173,7 +174,13 @@ func (m *model) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *model) updateForm(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if key, ok := msg.(tea.KeyMsg); ok && key.String() == "enter" && m.form.focused == len(m.form.fieldOrder) {
+	currentVariantIdx := m.form.variantIndex
+	if currentVariantIdx >= len(m.form.variants) {
+		currentVariantIdx = 0
+	}
+	variantSize := len(m.form.variants[currentVariantIdx])
+
+	if key, ok := msg.(tea.KeyMsg); ok && key.String() == "enter" && m.form.focused == variantSize {
 		return m.executeForm()
 	}
 	var cmd tea.Cmd
@@ -190,19 +197,45 @@ func (m *model) updateResults(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *model) executeForm() (tea.Model, tea.Cmd) {
 	flags := make(map[string]any)
 
-	for i := range m.form.fieldOrder {
-		field := m.form.fieldOrder[i]
+	currentVariantIdx := m.form.variantIndex
+	if currentVariantIdx >= len(m.form.variants) {
+		currentVariantIdx = 0
+	}
+	currentVariant := m.form.variants[currentVariantIdx]
+
+	for _, field := range currentVariant {
 		flagDef := &m.form.def.Flags[field.flagIndex]
 
-		if field.fieldType == "text" {
+		switch field.fieldType {
+		case app.InputLongString:
+			val := m.form.textAreas[field.index].Value()
+			if val != "" {
+				flags[flagDef.Name] = val
+			}
+		case app.InputList:
+			val := m.form.textAreas[field.index].Value()
+			if val != "" {
+				lines := strings.Split(val, "\n")
+				var filtered []string
+				for _, line := range lines {
+					trimmed := strings.TrimSpace(line)
+					if trimmed != "" {
+						filtered = append(filtered, trimmed)
+					}
+				}
+				if len(filtered) > 0 {
+					flags[flagDef.Name] = filtered
+				}
+			}
+		case app.InputChoice:
+			choice := m.form.choices[field.index]
+			selectedValue := choice.flagDef.Options[choice.selected]
+			flags[flagDef.Name] = selectedValue
+		default: // Text inputs
 			val := m.form.inputs[field.index].Value()
 			if val != "" {
 				flags[flagDef.Name] = val
 			}
-		} else { // choice
-			choice := m.form.choices[field.index]
-			selectedValue := choice.flagDef.Options[choice.selected]
-			flags[flagDef.Name] = selectedValue
 		}
 	}
 
