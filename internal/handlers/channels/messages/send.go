@@ -63,20 +63,20 @@ func printChannelResults(w io.Writer, results []sender.ChannelSendResult, dryRun
 	if dryRun {
 		for _, res := range results {
 			if res.Error != nil {
-				fmt.Fprintf(w, "Would fail - channel: %s, error: %v\n", res.ChannelRef, res.Error)
+				_, _ = fmt.Fprintf(w, "Would fail - channel: %s, error: %v\n", res.ChannelRef, res.Error)
 			} else {
-				fmt.Fprintf(w, "Would send - channel: %s, message: %s\n", res.ChannelRef, res.Message)
+				_, _ = fmt.Fprintf(w, "Would send - channel: %s, message: %s\n", res.ChannelRef, res.Message)
 			}
 		}
 	} else {
 		successCount := 0
 		for _, res := range results {
 			if res.Error != nil {
-				fmt.Fprintf(w, "Failed - channel: %s, error: %v\n", res.ChannelRef, res.Error)
+				_, _ = fmt.Fprintf(w, "Failed - channel: %s, error: %v\n", res.ChannelRef, res.Error)
 			} else {
 				successCount++
 			}
 		}
-		fmt.Fprintf(w, "Send complete - successful: %d, total: %d\n", successCount, len(results))
+		_, _ = fmt.Fprintf(w, "Send complete - successful: %d, total: %d\n", successCount, len(results))
 	}
 }

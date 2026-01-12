@@ -28,18 +28,18 @@ func ListChats(ctx context.Context, w io.Writer, flags map[string]any) (any, err
 	log.Info("Retrieved chats", "count", len(chats))
 
 	if len(chats) == 0 {
-		fmt.Fprintln(w, "No chats found")
+		_, _ = fmt.Fprintln(w, "No chats found")
 		return nil, nil
 	}
 
-	fmt.Fprintf(w, "Found %d chats:\n\n", len(chats))
+	_, _ = fmt.Fprintf(w, "Found %d chats:\n\n", len(chats))
 	for i, chat := range chats {
-		fmt.Fprintf(w, "Chat %d:\n", i+1)
-		fmt.Fprintf(w, "  ID: %s\n", chat.ID)
+		_, _ = fmt.Fprintf(w, "Chat %d:\n", i+1)
+		_, _ = fmt.Fprintf(w, "  ID: %s\n", chat.ID)
 		if chat.Topic != nil {
-			fmt.Fprintf(w, "  Topic: %s\n", *chat.Topic)
+			_, _ = fmt.Fprintf(w, "  Topic: %s\n", *chat.Topic)
 		}
-		fmt.Fprintf(w, "  Type: %s\n", chat.Type)
+		_, _ = fmt.Fprintf(w, "  Type: %s\n", chat.Type)
 	}
 
 	return chats, nil

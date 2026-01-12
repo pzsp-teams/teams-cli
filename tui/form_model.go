@@ -465,7 +465,7 @@ func (m *formModel) View() string {
 
 func (m *formModel) renderVariantHeader(b *strings.Builder) {
 	if len(m.variants) > 1 {
-		fmt.Fprintf(b, "Variant %d of %d\n", m.variantIndex+1, len(m.variants))
+		_, _ = fmt.Fprintf(b, "Variant %d of %d\n", m.variantIndex+1, len(m.variants))
 	}
 }
 

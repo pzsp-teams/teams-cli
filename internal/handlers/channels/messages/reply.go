@@ -34,10 +34,10 @@ func ReplyToMessage(ctx context.Context, w io.Writer, flags map[string]any) (any
 	result := c.Channels.SendReply(ctx, team, channel, messageID, content)
 
 	if result.Error != nil {
-		fmt.Fprintf(w, "Failed to send reply: %v\n", result.Error)
+		_, _ = fmt.Fprintf(w, "Failed to send reply: %v\n", result.Error)
 		return nil, result.Error
 	}
 
-	fmt.Fprintf(w, "Reply sent successfully to message %s in channel %s\n", messageID, channel)
+	_, _ = fmt.Fprintf(w, "Reply sent successfully to message %s in channel %s\n", messageID, channel)
 	return result, nil
 }

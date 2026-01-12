@@ -23,6 +23,6 @@ func ArchiveTeam(ctx context.Context, w io.Writer, flags map[string]any) (any, e
 		return nil, err
 	}
 
-	fmt.Fprintln(w, "Team archive initiated. The team will be archived shortly.")
+	_, _ = fmt.Fprintln(w, "Team archive initiated. The team will be archived shortly.")
 	return nil, nil
 }
