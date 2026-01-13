@@ -1,5 +1,5 @@
 version: 2
-
+project_name: teams-cli
 before:
   hooks:
     - go mod tidy
@@ -30,7 +30,7 @@ changelog:
 
 release:
   github:
-    owner: "{{ .Env.GITHUB_REPOSITORY_OWNER }}"
+    owner: "pzsp-teams"
     name: "{{ .ProjectName }}"
   name_template: "{{.Tag}}"
   draft: false
