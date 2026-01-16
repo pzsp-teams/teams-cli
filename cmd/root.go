@@ -18,11 +18,10 @@ import (
 
 // RootCmd is the root command for the CLI
 var RootCmd = &cobra.Command{
-	Use:              "teams-cli",
-	Short:            "Microsoft Teams CLI tool",
-	Long:             `A command-line tool for interacting with Microsoft Teams channels and chats`,
-	PersistentPreRun: initializeLogger,
-	Run:              runTUI,
+	Use:   "teams-cli",
+	Short: "Microsoft Teams CLI tool",
+	Long:  `A command-line tool for interacting with Microsoft Teams channels and chats`,
+	Run:   runTUI,
 }
 
 // Execute runs the root command
@@ -48,9 +47,10 @@ func init() {
 
 func toCobraCommand(def *app.CommandDef) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   def.Use,
-		Short: def.Short,
-		Long:  def.Long,
+		Use:    def.Use,
+		Short:  def.Short,
+		Long:   def.Long,
+		PreRun: initializeLoggerAndClient,
 	}
 
 	for i := range def.Flags {
@@ -145,13 +145,19 @@ func initializeLogger(cmd *cobra.Command, args []string) {
 	})
 
 	initializers.Logger = logger.NewMultiLogger(initializers.StderrLogger, fileLogger)
+}
 
-	// Initialize Teams client
+func initializeClient(cmd *cobra.Command) {
 	configPath := getConfigPath(cmd)
 	if err := client.Initialize(cmd.Context(), configPath); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to initialize Teams client: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+func initializeLoggerAndClient(cmd *cobra.Command, args []string) {
+	initializeLogger(cmd, args)
+	initializeClient(cmd)
 }
 
 func mapVerboseToLevel(count int) logger.Level {
