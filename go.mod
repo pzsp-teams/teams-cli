@@ -12,7 +12,7 @@ require (
 	github.com/charmbracelet/log v0.4.2
 	github.com/go-playground/validator/v10 v10.30.1
 	github.com/lcc/bubble-datetime-picker v1.0.0
-	github.com/pzsp-teams/lib v0.0.0-20260112132712-1335fb93c11f
+	github.com/pzsp-teams/lib v0.0.1
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
