@@ -122,7 +122,7 @@ func toCobraCommand(def *app.CommandDef) *cobra.Command {
 func initializeLogger(cmd *cobra.Command, args []string) {
 	verboseCount := viper.GetInt("verbose")
 
-	logFile, err := openLogFile(xdg.StateHome + "/teams-cli/teams-cli.log")
+	logFile, err := openLogFile(filepath.Join(xdg.StateHome, "teams-cli", "teams-cli.log"))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to create log file: %v\n", err)
 		os.Exit(1)
