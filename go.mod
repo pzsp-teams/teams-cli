@@ -97,5 +97,3 @@ require (
 	golang.org/x/sys v0.39.0 // indirect
 	golang.org/x/text v0.32.0 // indirect
 )
-
-replace appliedgo.net/what v0.2.0 => github.com/appliedgocode/what v0.2.0
