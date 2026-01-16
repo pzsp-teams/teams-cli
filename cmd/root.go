@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
+	"github.com/adrg/xdg"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -120,7 +122,7 @@ func toCobraCommand(def *app.CommandDef) *cobra.Command {
 func initializeLogger(cmd *cobra.Command, args []string) {
 	verboseCount := viper.GetInt("verbose")
 
-	logFile, err := os.OpenFile("teams-cli.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	logFile, err := openLogFile(xdg.StateHome + "/teams-cli/teams-cli.log")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to create log file: %v\n", err)
 		os.Exit(1)
@@ -153,6 +155,17 @@ func initializeClient(cmd *cobra.Command) {
 		fmt.Fprintf(os.Stderr, "Failed to initialize Teams client: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+func openLogFile(logPath string) (*os.File, error) {
+	logDir := filepath.Dir(logPath)
+	if logDir != "." && logDir != "" {
+		if err := os.MkdirAll(logDir, 0o755); err != nil {
+			return nil, err
+		}
+	}
+
+	return os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 }
 
 func initializeLoggerAndClient(cmd *cobra.Command, args []string) {
