@@ -11,9 +11,10 @@ import (
 )
 
 var configCmd = &cobra.Command{
-	Use:   "config",
-	Short: "Manage configuration files",
-	Long:  `Generate and manage configuration files for the Teams CLI`,
+	Use:              "config",
+	Short:            "Manage configuration files",
+	Long:             `Generate and manage configuration files for the Teams CLI`,
+	PersistentPreRun: initializeLogger,
 }
 
 var configInitCmd = &cobra.Command{
