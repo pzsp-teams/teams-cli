@@ -22,14 +22,8 @@ Examples:
   # Last 24 hours (default)
   teams-cli chats messages get
 
-  # From 2 hours ago till now
-  teams-cli chats messages get --start "2 hours ago"
-
   # Specific time window
   teams-cli chats messages get --start "2024-01-01 10:00" --end "2024-01-01 11:00"
-
-  # Yesterday
-  teams-cli chats messages get --start yesterday --end now
   
   # Filter by chat
   teams-cli chats messages get --chat-ref "<chat-reference>"`
