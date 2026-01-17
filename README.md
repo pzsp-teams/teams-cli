@@ -49,4 +49,4 @@ A default config file is created under the config directory on first run.
 
 ## Documentation
 
-- Detailed docs: TODO add link to the MkDocs site.
+[Detailed docs](https://pzsp-teams.github.io/teams-cli/)
