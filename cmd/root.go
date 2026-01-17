@@ -20,10 +20,11 @@ import (
 
 // RootCmd is the root command for the CLI
 var RootCmd = &cobra.Command{
-	Use:   "teams-cli",
-	Short: "Microsoft Teams CLI tool",
-	Long:  `A command-line tool for interacting with Microsoft Teams channels and chats`,
-	Run:   runTUI,
+	Use:    "teams-cli",
+	Short:  "Microsoft Teams CLI tool",
+	Long:   `A command-line tool for interacting with Microsoft Teams channels and chats`,
+	PreRun: initializeLoggerAndClient,
+	Run:    runTUI,
 }
 
 // Execute runs the root command
@@ -122,7 +123,7 @@ func toCobraCommand(def *app.CommandDef) *cobra.Command {
 func initializeLogger(cmd *cobra.Command, args []string) {
 	verboseCount := viper.GetInt("verbose")
 
-	logFile, err := openLogFile(filepath.Join(xdg.StateHome, "teams-cli", "teams-cli.log"))
+	logFile, err := openLogFile(filepath.Join("teams-cli", "teams-cli.log"))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to create log file: %v\n", err)
 		os.Exit(1)
@@ -158,14 +159,12 @@ func initializeClient(cmd *cobra.Command) {
 }
 
 func openLogFile(logPath string) (*os.File, error) {
-	logDir := filepath.Dir(logPath)
-	if logDir != "." && logDir != "" {
-		if err := os.MkdirAll(logDir, 0o755); err != nil {
-			return nil, err
-		}
+	logFile, err := xdg.StateFile(logPath)
+	if err != nil {
+		return nil, err
 	}
 
-	return os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	return os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 }
 
 func initializeLoggerAndClient(cmd *cobra.Command, args []string) {
