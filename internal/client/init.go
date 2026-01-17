@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	teamsClientInstance *TeamsClient
+	teamsClientInstance *Client
 	clientInitError     error
 )
 
@@ -36,7 +36,7 @@ func Initialize(ctx context.Context, configPath string) error {
 		return clientInitError
 	}
 
-	teamsClientInstance, clientInitError = NewTeamsClient(ctx, authConfig, senderConfig, cacheConfig)
+	teamsClientInstance, clientInitError = NewClient(ctx, authConfig, senderConfig, cacheConfig)
 	return clientInitError
 }
 
