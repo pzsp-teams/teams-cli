@@ -54,11 +54,11 @@ type cacheSection struct {
 	Path string `json:"path,omitempty" yaml:"path,omitempty" toml:"path,omitempty"`
 }
 
-var defaultConfigPaths = []string{
-	"teams_cli.toml",
-	"teams_cli.json",
-	"teams_cli.yaml",
-	"teams_cli.yml",
+var configFormats = []string{
+	"toml",
+	"json",
+	"yaml",
+	"yml",
 }
 
 // GetDefaultConfigPath returns the default configuration file path for the given format
@@ -71,7 +71,8 @@ func GetDefaultConfigPath(format string) string {
 // FindDefaultConfigFile looks for a config file in the current directory
 // Returns empty string if no config file is found
 func FindDefaultConfigFile() string {
-	for _, path := range defaultConfigPaths {
+	for _, format := range configFormats {
+		path := GetDefaultConfigPath(format)
 		if _, err := os.Stat(path); err == nil {
 			return path
 		}
