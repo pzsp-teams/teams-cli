@@ -1,0 +1,67 @@
+site_name: Teams CLI
+site_description: A CLI and TUI for interacting with Microsoft Teams.
+site_url: https://pzsp-teams.github.io/teams-cli/
+repo_url: https://github.com/pzsp-teams/teams-cli
+docs_dir: docs
+
+theme:
+  name: material
+  features:
+    - content.code.copy
+    - navigation.expand
+  palette:
+    - scheme: default
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+
+plugins:
+  - search
+
+nav:
+  - Home: index.md
+  - Completions: completions.md
+  - Commands:
+      - Overview: commands/teams-cli.md
+      - Channels:
+          - Overview: commands/teams-cli_channels.md
+          - Create: commands/teams-cli_channels_create.md
+          - Messages:
+              - Overview: commands/teams-cli_channels_messages.md
+              - Get: commands/teams-cli_channels_messages_get.md
+              - Reply: commands/teams-cli_channels_messages_reply.md
+              - Send: commands/teams-cli_channels_messages_send.md
+      - Chats:
+          - Overview: commands/teams-cli_chats.md
+          - List: commands/teams-cli_chats_list.md
+          - Messages:
+              - Overview: commands/teams-cli_chats_messages.md
+              - Get: commands/teams-cli_chats_messages_get.md
+              - Send: commands/teams-cli_chats_messages_send.md
+      - Teams:
+          - Overview: commands/teams-cli_teams.md
+          - Archive: commands/teams-cli_teams_archive.md
+          - Create: commands/teams-cli_teams_create.md
+          - Create Single: commands/teams-cli_teams_create-single.md
+          - Delete: commands/teams-cli_teams_delete.md
+          - Get: commands/teams-cli_teams_get.md
+          - List: commands/teams-cli_teams_list.md
+          - Unarchive: commands/teams-cli_teams_unarchive.md
+  - Templates: message-templates/index.md
