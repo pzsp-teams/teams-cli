@@ -36,14 +36,8 @@ Examples:
   # Last 24 hours (default)
   teams-cli channels messages get
 
-  # From 2 hours ago till now
-  teams-cli channels messages get --start "2 hours ago"
-
   # Specific time window
   teams-cli channels messages get --start "2024-01-01 10:00" --end "2024-01-01 11:00"
-
-  # Yesterday
-  teams-cli channels messages get --start yesterday --end now
 	
   # Filter by team
   teams-cli channels messages get --team "My Team"
