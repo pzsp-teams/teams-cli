@@ -41,7 +41,7 @@ func Initialize(ctx context.Context, configPath string) error {
 }
 
 // GetInstance returns the existing TeamsClient instance or an error if not initialized
-func GetInstance() (*TeamsClient, error) {
+func GetInstance() (*Client, error) {
 	if teamsClientInstance != nil {
 		return teamsClientInstance, nil
 	}
@@ -49,4 +49,16 @@ func GetInstance() (*TeamsClient, error) {
 		return nil, clientInitError
 	}
 	return nil, fmt.Errorf("teams client not initialized")
+}
+
+// SetInstance overrides the current TeamsClient instance (useful for tests).
+func SetInstance(instance *Client) {
+	teamsClientInstance = instance
+	clientInitError = nil
+}
+
+// ResetInstance clears the current TeamsClient instance and error.
+func ResetInstance() {
+	teamsClientInstance = nil
+	clientInitError = nil
 }
