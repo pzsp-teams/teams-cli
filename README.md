@@ -27,7 +27,8 @@ Default config locations:
 | macOS   | `~/Library/Application Support/teams-cli`                      |
 | Windows | `%LOCALAPPDATA%\teams-cli` (fallback `LocalAppData\teams-cli`) |
 
-A default config file is created under the config directory on first run.
+A default config can be created on `config init` command or loaded with
+a `--config` flag
 
 ### Config file structure
 
