@@ -72,12 +72,16 @@ func (m *resultsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if !m.ready {
 			m.viewport = viewport.New(msg.Width, msg.Height-verticalMarginHeight)
 			m.viewport.YPosition = headerHeight
-			m.viewport.SetContent(m.content)
 			m.ready = true
 		} else {
 			m.viewport.Width = msg.Width
 			m.viewport.Height = msg.Height - verticalMarginHeight
 		}
+	}
+
+	if m.ready {
+		wrapped := lipgloss.NewStyle().Width(m.viewport.Width).Render(m.content)
+		m.viewport.SetContent(wrapped)
 	}
 
 	m.viewport, cmd = m.viewport.Update(msg)
